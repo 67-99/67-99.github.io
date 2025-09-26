@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B - 导航页面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffce53 0%, #ff7c78 100%);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.2rem;
+        }
+        .content {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .link-list {
+            list-style: none;
+            padding: 0;
+        }
+        .link-list li {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ffce53;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .link-list li:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .link-list a {
+            text-decoration: none;
+            color: #2c3e50;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        .link-list a:hover {
+            color: #1a5d8a;
+        }
+        .link-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>B</h1>
+        <p>导航页面</p>
+    </header>
+    
+    <div class="content">
+        <h2>相关内容</h2>
+        <ul class="link-list">
+            <li><a href="../index.html"><span class="link-icon">📁</span> branch</a></li>
+            <li><a href="../aaa/1/index.html"><span class="link-icon">📁</span> branch/aaa/1</a></li>
+        </ul>
+    </div>
+    
+    <footer>
+        <p>© 2023 项目导航页面 | 生成自 info.json</p>
+    </footer>
+</body>
+</html>
