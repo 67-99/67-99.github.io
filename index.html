@@ -1,8 +1,284 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>67-99主页</title>
+    <style>
+        /* 基础样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        /* 导航栏样式 */
+        nav {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        .nav-links li {
+            margin-left: 2rem;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.3s;
+        }
+        .nav-links a:hover {
+            opacity: 0.8;
+        }
+        /* 主内容区域 */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+        }
+        /* 个人信息区域 */
+        .profile {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+        .profile-img {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 1.5rem;
+            display: block;
+            border: 5px solid #f0f0f0;
+        }
+        .profile h2 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+        .profile-title {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        .profile p {
+            margin-bottom: 1.5rem;
+            color: #555;
+        }
+        .contact-info {
+            margin-top: 1.5rem;
+        }
+        .contact-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        .contact-item i {
+            margin-right: 10px;
+            color: #6a11cb;
+            width: 20px;
+        }
+        /* 作品展示区域 */
+        .works {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        .category {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .category h2 {
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+            color: #2c3e50;
+        }
+        .work-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .work-item {
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            background: #f8f9fa;
+        }
+        .work-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .work-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            display: block;
+        }
+        .work-content {
+            padding: 1rem;
+        }
+        .work-content h3 {
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+        .work-content p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        .work-link {
+            display: inline-block;
+            background: #6a11cb;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        .work-link:hover {
+            background: #2575fc;
+        }
+        /* 响应式设计 */
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .profile {
+                position: static;
+            }
+            .nav-links {
+                display: none;
+            }
+            .mobile-menu {
+                display: block;
+                font-size: 1.5rem;
+                cursor: pointer;
+            }
+        }
+        @media (max-width: 600px) {
+            .work-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
 <body>
-<h1>67-99</h1>
-<p>I'm hosted with GitHub Pages.</p>
-<p>黑客松B题模拟网站<a href="innoseed-B/index.html">InnOSeed黑客松B题</a></p>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">我的作品集</div>
+            <ul class="nav-links">
+                <li><a href="#home">首页</a></li>
+                <!-- <li><a href="#works">作品</a></li>
+                <li><a href="#about">关于</a></li>
+                <li><a href="#contact">联系</a></li> -->
+            </ul>
+            <div class="mobile-menu">☰</div>
+        </div>
+    </nav>
+    
+    <!-- 主内容区域 -->
+    <div class="container">
+        <!-- 左侧个人信息区域 -->
+        <aside class="profile">
+            <img src="https://67-99.github.io/icon/Shade/icon.png" alt="个人头像" class="profile-img">
+            <h2>悦荫</h2>
+            <!-- <p class="profile-title">A</p>
+            <p>B</p> -->
+            <!-- <div class="contact-info">
+                <div class="contact-item">
+                    <i>📧</i> <span>C</span>
+                </div>
+                <div class="contact-item">
+                    <i>📱</i> <span>D</span>
+                </div>
+                <div class="contact-item">
+                    <i>📍</i> <span>E</span>
+                </div>
+            </div> -->
+        </aside>  
+        <!-- 右侧作品展示区域 -->
+        <main class="works">
+            <!-- 程序分类 -->
+            <section class="category">
+                <h2>程序项目</h2>
+                <div class="work-grid">
+                    <div class="work-item">
+                        <img src="https://67-99.github.io/innoseed-B/innoseed.png" alt="InnOSeed黑客松B题" class="work-img">
+                        <div class="work-content">
+                            <h3>InnOSeed黑客松B题</h3>
+                            <p>一个由InnOSeed组织，旨在24内完成demo的项目。</p>
+                            <a href="innoseed-B/index.html" class="work-link">查看模拟网站</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- 其他分类 -->
+            <section class="category">
+                <h2>其他项目</h2>
+                <div class="work-grid">
+                    <div class="work-item">
+                        <img src="https://67-99.github.io/icon/Shade/github-issue.jpg" alt="图片" class="work-img">
+                        <div class="work-content">
+                            <h3>哎嘿</h3>
+                            <p>没有其他内容，只是想放一张内容</p>
+                            <a href="https://67-99.github.io/icon/Shade/github-issue.jpg" class="work-link">查看</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>
+        // 简单的移动端菜单切换
+        document.querySelector('.mobile-menu').addEventListener('click', function() {
+            const navLinks = document.querySelector('.nav-links');
+            navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+        });
+        // 调整移动端导航菜单显示
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 900) {
+                document.querySelector('.nav-links').style.display = 'flex';
+            } else {
+                document.querySelector('.nav-links').style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
