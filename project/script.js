@@ -15,6 +15,27 @@ marked.setOptions({
     gfm: true
 });
 
+// 创建自定义渲染器
+const renderer = new marked.Renderer();
+
+// 重写代码块渲染方法
+renderer.code = function(code, language, isEscaped) {
+    // 如果是mermaid代码块，则使用mermaid的div包装
+    if (language === 'mermaid') {
+        return `<div class="mermaid">${code}</div>`;
+    }
+    
+    // 否则使用默认的代码块渲染
+    if (language) {
+        return `<pre><code class="language-${language}">${isEscaped ? code : escape(code)}</code></pre>`;
+    }
+    
+    return `<pre><code>${isEscaped ? code : escape(code)}</code></pre>`;
+};
+
+// 设置marked使用自定义渲染器
+marked.setOptions({ renderer });
+
 // 加载页面配置
 let pageConfig = [];
 
@@ -41,23 +62,13 @@ async function loadAllContent() {
         // 创建内容容器
         contentArea.innerHTML = '';
         
-        // 并行加载所有内容
-        const contentPromises = pageConfig.map(section => 
-            loadMarkdownContent(section.file, section.id)
-        );
-        
-        const contents = await Promise.all(contentPromises);
-        
-        // 将内容添加到页面
-        contents.forEach((content, index) => {
-            if (content) {
-                const section = document.createElement('section');
-                section.className = 'section';
-                section.id = pageConfig[index].id;
-                section.innerHTML = `<div class="markdown-content">${content}</div>`;
-                contentArea.appendChild(section);
+        // 按顺序加载所有内容
+        for (const section of pageConfig) {
+            const sectionElement = await loadSectionContent(section);
+            if (sectionElement) {
+                contentArea.appendChild(sectionElement);
             }
-        });
+        }
         
         // 初始化导航
         initNavigation();
@@ -71,10 +82,45 @@ async function loadAllContent() {
     }
 }
 
+// 根据配置加载不同类型的内容
+async function loadSectionContent(section) {
+    const sectionElement = document.createElement('section');
+    sectionElement.className = 'section';
+    sectionElement.id = section.id;
+    
+    switch (section.type) {
+        case 'md':
+            const content = await loadMarkdownContent(section.file, section.id);
+            if (content) {
+                sectionElement.innerHTML = `<div class="markdown-content">${content}</div>`;
+            } else {
+                sectionElement.innerHTML = `<h2>${section.title}</h2><p>无法加载此部分内容。</p>`;
+            }
+            break;
+            
+        case 'image-gallery':
+            sectionElement.innerHTML = createImageGallery(section);
+            break;
+            
+        case 'video':
+            sectionElement.innerHTML = createVideoSection(section);
+            break;
+            
+        case 'downloads':
+            sectionElement.innerHTML = createDownloadsSection(section);
+            break;
+            
+        default:
+            sectionElement.innerHTML = `<h2>${section.title}</h2><p>未知的内容类型。</p>`;
+    }
+    
+    return sectionElement;
+}
+
 // 加载Markdown内容
 async function loadMarkdownContent(filePath, sectionId) {
     try {
-        const response = await fetch(filePath);
+        const response = await fetch(`content/${filePath}`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -82,9 +128,61 @@ async function loadMarkdownContent(filePath, sectionId) {
         return marked.parse(markdown);
     } catch (error) {
         console.error(`加载 ${filePath} 时出错:`, error);
-        return `<h2>${pageConfig.find(s => s.id === sectionId).title}</h2>
-                <p>无法加载此部分内容。</p>`;
+        return null;
     }
+}
+
+// 创建图片画廊
+function createImageGallery(section) {
+    let html = `<h2>${section.title}</h2>`;
+    html += '<div class="image-gallery">';
+    
+    section.images.forEach(image => {
+        html += `
+            <div class="gallery-item">
+                <img src="content/${image.src}" alt="${image.alt}" loading="lazy">
+                <div class="image-caption">${image.caption}</div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    return html;
+}
+
+// 创建视频部分
+function createVideoSection(section) {
+    return `
+        <h2>${section.title}</h2>
+        <div class="video-container">
+            <video controls poster="content/${section.poster}" class="responsive-video">
+                <source src="content/${section.src}" type="video/mp4">
+                您的浏览器不支持视频播放。
+            </video>
+            <div class="video-caption">${section.caption}</div>
+        </div>
+    `;
+}
+
+// 创建下载部分
+function createDownloadsSection(section) {
+    let html = `<h2>${section.title}</h2>`;
+    html += '<div class="downloads-list">';
+    
+    section.files.forEach(file => {
+        html += `
+            <div class="download-item">
+                <div class="file-info">
+                    <h3>${file.name}</h3>
+                    <span class="file-size">${file.size}</span>
+                </div>
+                <a href="content/${file.url}" class="download-button" download>下载</a>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    return html;
 }
 
 // 初始化导航

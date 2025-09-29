@@ -1,9 +1,22 @@
 [
-    { "id": "intro", "title": "项目介绍", "file": "content/intro.md" },
-    { "id": "features", "title": "主要功能", "file": "content/features.md" },
-    { "id": "workflow", "title": "工作流程", "file": "content/workflow.md" },
-    { "id": "tech", "title": "技术架构", "file": "content/tech.md" },
-    { "id": "timeline", "title": "项目时间线", "file": "content/timeline.md" },
-    { "id": "team", "title": "团队结构", "file": "content/team.md" },
-    { "id": "results", "title": "成果展示", "file": "content/results.md" }
+    {"id":"intro","title":"项目介绍","type":"md","file":"intro.md"},
+    {"id":"features","title":"主要功能","type":"md","file":"features.md"},
+    {"id":"workflow","title":"工作流程","type":"md","file":"workflow.md"},
+    {"id":"tech","title":"技术架构","type":"md","file":"tech.md"},
+    {"id":"timeline","title":"项目时间线","type":"md","file":"timeline.md"},
+    {"id":"team","title":"团队结构","type":"md","file":"team.md"},
+    {"id":"results","title":"成果展示","type":"md","file":"results.md"},
+    {"id":"gallery","title":"项目截图","type":"image-gallery",
+    "images":[
+        {"src":"screenshot1.jpg","alt":"项目首页截图","caption":"项目首页设计"},
+        {"src":"screenshot2.jpg","alt":"功能模块截图","caption":"主要功能模块"},
+        {"src":"screenshot3.jpg","alt":"管理后台截图","caption":"管理后台界面"}
+        ]},
+    {"id":"video","title":"演示视频","type":"video","src":"demo.mp4","poster":"video-poster.jpg","caption":"项目功能演示视频"},
+    {"id":"download","title":"资源下载","type":"downloads",
+    "files":[
+        {"name":"项目文档.pdf","url":"project-docs.pdf","size":"2.3 MB"},
+        {"name":"技术规范.docx","url":"tech-spec.docx","size":"1.1 MB"},
+        {"name":"演示PPT.pptx","url":"presentation.pptx","size":"4.5 MB"}]
+    }
 ]
