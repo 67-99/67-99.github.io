@@ -15,21 +15,25 @@ marked.setOptions({
     gfm: true
 });
 
-// 页面内容配置
-const pageConfig = {
-    sections: [
-        { id: 'intro', title: '项目介绍', file: 'content/intro.md' },
-        { id: 'features', title: '主要功能', file: 'content/features.md' },
-        { id: 'workflow', title: '工作流程', file: 'content/workflow.md' },
-        { id: 'tech', title: '技术架构', file: 'content/tech.md' },
-        { id: 'timeline', title: '项目时间线', file: 'content/timeline.md' },
-        { id: 'team', title: '团队结构', file: 'content/team.md' },
-        { id: 'results', title: '成果展示', file: 'content/results.md' }
-    ]
-};
+// 加载页面配置
+let pageConfig = [];
 
 // 加载所有内容
 async function loadAllContent() {
+    // 先加载页面配置
+    try {
+        const configResponse = await fetch('content/content.json');
+        if (!configResponse.ok) {
+            throw new Error(`HTTP error! status: ${configResponse.status}`);
+        }
+        pageConfig = await configResponse.json();
+    } catch (error) {
+        console.error('加载页面配置时出错:', error);
+        document.getElementById('content-area').innerHTML = 
+            '<div class="loading">加载页面配置时出错，请刷新页面重试。</div>';
+        return;
+    }
+    
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = '<div class="loading">正在加载内容...</div>';
     
@@ -38,7 +42,7 @@ async function loadAllContent() {
         contentArea.innerHTML = '';
         
         // 并行加载所有内容
-        const contentPromises = pageConfig.sections.map(section => 
+        const contentPromises = pageConfig.map(section => 
             loadMarkdownContent(section.file, section.id)
         );
         
@@ -49,7 +53,7 @@ async function loadAllContent() {
             if (content) {
                 const section = document.createElement('section');
                 section.className = 'section';
-                section.id = pageConfig.sections[index].id;
+                section.id = pageConfig[index].id;
                 section.innerHTML = `<div class="markdown-content">${content}</div>`;
                 contentArea.appendChild(section);
             }
@@ -78,7 +82,7 @@ async function loadMarkdownContent(filePath, sectionId) {
         return marked.parse(markdown);
     } catch (error) {
         console.error(`加载 ${filePath} 时出错:`, error);
-        return `<h2>${pageConfig.sections.find(s => s.id === sectionId).title}</h2>
+        return `<h2>${pageConfig.find(s => s.id === sectionId).title}</h2>
                 <p>无法加载此部分内容。</p>`;
     }
 }
@@ -88,7 +92,7 @@ function initNavigation() {
     const sidebarNav = document.getElementById('sidebar-nav');
     sidebarNav.innerHTML = '';
     
-    pageConfig.sections.forEach(section => {
+    pageConfig.forEach(section => {
         const li = document.createElement('li');
         const a = document.createElement('a');
         a.href = `#${section.id}`;
@@ -96,7 +100,7 @@ function initNavigation() {
         a.setAttribute('data-section', section.id);
         
         // 默认激活第一个
-        if (section.id === pageConfig.sections[0].id) {
+        if (section.id === pageConfig[0].id) {
             a.classList.add('active');
         }
         
