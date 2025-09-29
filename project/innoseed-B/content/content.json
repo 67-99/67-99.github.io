@@ -1,0 +1,9 @@
+[
+    { "id": "intro", "title": "项目介绍", "file": "content/intro.md" },
+    { "id": "features", "title": "主要功能", "file": "content/features.md" },
+    { "id": "workflow", "title": "工作流程", "file": "content/workflow.md" },
+    { "id": "tech", "title": "技术架构", "file": "content/tech.md" },
+    { "id": "timeline", "title": "项目时间线", "file": "content/timeline.md" },
+    { "id": "team", "title": "团队结构", "file": "content/team.md" },
+    { "id": "results", "title": "成果展示", "file": "content/results.md" }
+]
