@@ -1,8 +1,12 @@
 // 初始化mermaid
 mermaid.initialize({
-    startOnLoad: true,
+    startOnLoad: false, // 改为false，我们将手动初始化
     theme: 'default',
-    securityLevel: 'loose'
+    securityLevel: 'loose',
+    flowchart: {
+        htmlLabels: true,
+        curve: 'basis'
+    }
 });
 
 // 配置marked选项
@@ -15,14 +19,16 @@ marked.setOptions({
     gfm: true
 });
 
-// 创建自定义渲染器
+// 创建自定义渲染器 - 这是关键修复
 const renderer = new marked.Renderer();
 
 // 重写代码块渲染方法
 renderer.code = function(code, language, isEscaped) {
     // 如果是mermaid代码块，则使用mermaid的div包装
-    if (language === 'mermaid') {
-        return `<div class="mermaid">${code}</div>`;
+    if (language && language.toLowerCase().trim() === 'mermaid') {
+        // 清理代码中的可能问题
+        const cleanCode = code.trim().replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        return `<div class="mermaid">${cleanCode}</div>`;
     }
     
     // 否则使用默认的代码块渲染
@@ -73,12 +79,49 @@ async function loadAllContent() {
         // 初始化导航
         initNavigation();
         
-        // 重新渲染mermaid图表
-        mermaid.init(undefined, '.mermaid');
+        // 手动初始化mermaid图表
+        await renderMermaidCharts();
         
     } catch (error) {
         console.error('加载内容时出错:', error);
         contentArea.innerHTML = '<div class="loading">加载内容时出错，请刷新页面重试。</div>';
+    }
+}
+
+// 手动渲染所有mermaid图表
+async function renderMermaidCharts() {
+    try {
+        // 等待DOM更新完成
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // 找到所有mermaid元素
+        const mermaidElements = document.querySelectorAll('.mermaid');
+        
+        if (mermaidElements.length > 0) {
+            console.log(`找到 ${mermaidElements.length} 个Mermaid图表`);
+            
+            // 使用try-catch处理每个图表的渲染
+            mermaidElements.forEach((element, index) => {
+                try {
+                    const graphDefinition = element.textContent.trim();
+                    if (graphDefinition) {
+                        // 使用mermaid的render方法
+                        mermaid.mermaidAPI.render(
+                            `mermaid-${index}`,
+                            graphDefinition,
+                            (svgCode) => {
+                                element.innerHTML = svgCode;
+                            }
+                        );
+                    }
+                } catch (error) {
+                    console.error(`渲染Mermaid图表 ${index} 时出错:`, error);
+                    element.innerHTML = `<div class="mermaid-error">图表渲染失败: ${error.message}</div>`;
+                }
+            });
+        }
+    } catch (error) {
+        console.error('渲染Mermaid图表时出错:', error);
     }
 }
 
