@@ -23,7 +23,7 @@ renderer.code = function(code, language, isEscaped) {
     // 处理非字符串code对象
     if (typeof code !== 'string') {
         language = code.lang;
-        code = code.text || String(code);
+        code = code.raw || String(code);
     }
     
     // 如果是mermaid代码块，则使用mermaid的div包装
