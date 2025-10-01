@@ -20,7 +20,7 @@ const renderer = new marked.Renderer();
 
 // 重写代码块渲染方法
 renderer.code = function(code, language, isEscaped) {
-    console.info(code, language);
+    console.log(code, language);
     // 如果是mermaid代码块，则使用mermaid的div包装
     if (language === 'mermaid') {
         return `<div class="mermaid">${code}</div>`;
