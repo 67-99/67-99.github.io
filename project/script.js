@@ -100,25 +100,49 @@ async function renderMermaidCharts() {
         if (mermaidElements.length > 0) {
             console.log(`找到 ${mermaidElements.length} 个Mermaid图表`);
             
-            // 使用try-catch处理每个图表的渲染
-            mermaidElements.forEach((element, index) => {
+            // 检查mermaid版本并选择合适的方法
+            const useModernAPI = typeof mermaid.render === 'function';
+            
+            const renderPromises = Array.from(mermaidElements).map(async (element, index) => {
                 try {
                     const graphDefinition = element.textContent.trim();
-                    if (graphDefinition) {
-                        // 使用mermaid的render方法
-                        mermaid.mermaidAPI.render(
-                            `mermaid-${index}`,
-                            graphDefinition,
-                            (svgCode) => {
-                                element.innerHTML = svgCode;
-                            }
-                        );
+                    if (!graphDefinition) return;
+                    
+                    if (useModernAPI) {
+                        // 现代版本使用 mermaid.render (返回Promise)
+                        const { svg } = await mermaid.render(`mermaid-${index}`, graphDefinition);
+                        element.innerHTML = svg;
+                    } else {
+                        // 旧版本使用 mermaid.mermaidAPI.render (回调方式)
+                        await new Promise((resolve, reject) => {
+                            mermaid.mermaidAPI.render(
+                                `mermaid-${index}`,
+                                graphDefinition,
+                                (renderResult) => {
+                                    try {
+                                        // 检查renderResult是字符串还是对象
+                                        if (typeof renderResult === 'string') {
+                                            element.innerHTML = renderResult;
+                                        } else if (renderResult && renderResult.svg) {
+                                            element.innerHTML = renderResult.svg;
+                                        } else {
+                                            throw new Error('Invalid render result');
+                                        }
+                                        resolve();
+                                    } catch (error) {
+                                        reject(error);
+                                    }
+                                }
+                            );
+                        });
                     }
                 } catch (error) {
                     console.error(`渲染Mermaid图表 ${index} 时出错:`, error);
                     element.innerHTML = `<div class="mermaid-error">图表渲染失败: ${error.message}</div>`;
                 }
             });
+            
+            await Promise.all(renderPromises);
         }
     } catch (error) {
         console.error('渲染Mermaid图表时出错:', error);
@@ -303,6 +327,41 @@ function initNavigation() {
 // 移动端菜单切换
 document.querySelector('.mobile-menu').addEventListener('click', function() {
     document.querySelector('.nav-links').classList.toggle('active');
+});
+
+// 移动端导航切换
+document.querySelector('.mobile-nav-toggle').addEventListener('click', function() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    
+    sidebar.classList.toggle('active');
+    if (overlay) {
+        overlay.classList.toggle('active');
+    }
+});
+
+// 点击遮罩层关闭导航
+document.addEventListener('click', function(e) {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const toggleBtn = document.querySelector('.mobile-nav-toggle');
+    
+    if (overlay && overlay.classList.contains('active') && 
+        !sidebar.contains(e.target) && 
+        !toggleBtn.contains(e.target)) {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+    }
+});
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 创建遮罩层
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+    
+    loadAllContent();
 });
 
 // 页面加载完成后初始化

@@ -132,6 +132,13 @@ nav {
     background-color: #3498db;
     color: white;
 }
+/* 移动端导航切换按钮 */
+.mobile-nav-toggle {
+    display: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    margin-left: 15px;
+}
 /* 右侧内容区 */
 .content {
     flex: 1;
@@ -357,14 +364,46 @@ nav {
     .image-gallery {
         grid-template-columns: 1fr;
     }
-    
     .download-item {
         flex-direction: column;
         align-items: flex-start;
     }
-    
     .download-button {
         margin-top: 10px;
         align-self: flex-end;
+    }
+    /* 显示移动端导航切换按钮 */
+    .mobile-nav-toggle {
+        display: block;
+    }
+    /* 修改左侧导航栏样式，使其可以切换显示 */
+    .sidebar {
+        display: none;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        width: 80%;
+        max-width: 300px;
+        height: calc(100vh - 60px);
+        z-index: 99;
+        border-radius: 0;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .sidebar.active {
+        display: block;
+    }
+    /* 添加遮罩层 */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 98;
+    }
+    .sidebar-overlay.active {
+        display: block;
     }
 }
