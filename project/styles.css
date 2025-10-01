@@ -240,6 +240,31 @@ nav {
     background: none;
     padding: 0;
 }
+.markdown-content img {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.markdown-content figure {
+    text-align: center;
+    margin: 1.5em auto;
+    max-width: 100%;
+}
+.markdown-content figure img {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+.markdown-content figcaption {
+    font-style: italic;
+    color: #666;
+    margin-top: 0.5em;
+    font-size: 0.9em;
+}
 .loading {
     text-align: center;
     padding: 40px;
