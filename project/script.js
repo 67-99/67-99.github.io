@@ -1,12 +1,8 @@
 // 初始化mermaid
 mermaid.initialize({
-    startOnLoad: false, // 改为false，我们将手动初始化
+    startOnLoad: true,
     theme: 'default',
-    securityLevel: 'loose',
-    flowchart: {
-        htmlLabels: true,
-        curve: 'basis'
-    }
+    securityLevel: 'loose'
 });
 
 // 配置marked选项
@@ -19,16 +15,15 @@ marked.setOptions({
     gfm: true
 });
 
-// 创建自定义渲染器 - 这是关键修复
+// 创建自定义渲染器
 const renderer = new marked.Renderer();
 
 // 重写代码块渲染方法
 renderer.code = function(code, language, isEscaped) {
+    console.info(code, language);
     // 如果是mermaid代码块，则使用mermaid的div包装
-    if (language && language.toLowerCase().trim() === 'mermaid') {
-        // 清理代码中的可能问题
-        const cleanCode = code.trim().replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        return `<div class="mermaid">${cleanCode}</div>`;
+    if (language === 'mermaid') {
+        return `<div class="mermaid">${code}</div>`;
     }
     
     // 否则使用默认的代码块渲染
@@ -79,73 +74,12 @@ async function loadAllContent() {
         // 初始化导航
         initNavigation();
         
-        // 手动初始化mermaid图表
-        await renderMermaidCharts();
+        // 重新渲染mermaid图表
+        mermaid.init(undefined, '.mermaid');
         
     } catch (error) {
         console.error('加载内容时出错:', error);
         contentArea.innerHTML = '<div class="loading">加载内容时出错，请刷新页面重试。</div>';
-    }
-}
-
-// 手动渲染所有mermaid图表
-async function renderMermaidCharts() {
-    try {
-        // 等待DOM更新完成
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // 找到所有mermaid元素
-        const mermaidElements = document.querySelectorAll('.mermaid');
-        
-        if (mermaidElements.length > 0) {
-            console.log(`找到 ${mermaidElements.length} 个Mermaid图表`);
-            
-            // 检查mermaid版本并选择合适的方法
-            const useModernAPI = typeof mermaid.render === 'function';
-            
-            const renderPromises = Array.from(mermaidElements).map(async (element, index) => {
-                try {
-                    const graphDefinition = element.textContent.trim();
-                    if (!graphDefinition) return;
-                    
-                    if (useModernAPI) {
-                        // 现代版本使用 mermaid.render (返回Promise)
-                        const { svg } = await mermaid.render(`mermaid-${index}`, graphDefinition);
-                        element.innerHTML = svg;
-                    } else {
-                        // 旧版本使用 mermaid.mermaidAPI.render (回调方式)
-                        await new Promise((resolve, reject) => {
-                            mermaid.mermaidAPI.render(
-                                `mermaid-${index}`,
-                                graphDefinition,
-                                (renderResult) => {
-                                    try {
-                                        // 检查renderResult是字符串还是对象
-                                        if (typeof renderResult === 'string') {
-                                            element.innerHTML = renderResult;
-                                        } else if (renderResult && renderResult.svg) {
-                                            element.innerHTML = renderResult.svg;
-                                        } else {
-                                            throw new Error('Invalid render result');
-                                        }
-                                        resolve();
-                                    } catch (error) {
-                                        reject(error);
-                                    }
-                                }
-                            );
-                        });
-                    }
-                } catch (error) {
-                    console.error(`渲染Mermaid图表 ${index} 时出错:`, error);
-                    element.innerHTML = `<div class="mermaid-error">图表渲染失败: ${error.message}</div>`;
-                }
-            });
-            
-            await Promise.all(renderPromises);
-        }
-    } catch (error) {
-        console.error('渲染Mermaid图表时出错:', error);
     }
 }
 

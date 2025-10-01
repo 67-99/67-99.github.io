@@ -28,7 +28,33 @@ graph TB
 ### 树状文件系统存储
 
 在树状系统中，我们以文件夹架构构建网络架构，同级域名间在同一个文件夹中（父域名相同）。网站的每个网页为一个文件夹，文件夹内包含多个网页快照（以日期存储）和一个json文件，里面包含了这个网页相关的超链接信息。
-![文件系统数据库结构](content/source/file-database-structure.png)
+```
+dataset/
+└── branch/
+    ├── aaa/
+    │   ├── 1/
+    │   │   └── index/
+    │   │       ├── 20250920.html
+    │   │       └── info.json
+    │   ├── 2/
+    │   │   └── index/
+    │   │       ├── 20250920.html
+    │   │       └── info.json
+    │   └── 3/
+    │       └── index/
+    │           ├── 20250920.html
+    │           └── info.json
+    ├── aab/
+    │   └── index/
+    │       ├── 20250920.html
+    │       └── info.json
+    ├── b/
+    │   └── index/
+    │       └── info.json
+    └── index/
+        ├── 20250920.html
+        └── info.json
+```
 
 超链接由其父列表与子列表组成，每一个元素由<code>描述信息</code>与<code>连接</code>组成，父列表表示指向它的所有网址，子列表表示它指向的所有网址。
 
