@@ -27,7 +27,7 @@ const renderer = new marked.Renderer();
 renderer.code = function(code, language, isEscaped) {
     console.log(code, language);
     // 如果是mermaid代码块，则使用mermaid的div包装
-    if (language === 'mermaid' || (typeof code !== 'string' && code.lang === "mermaid")) {
+    if (language === 'mermaid') {
         return `<div class="mermaid">${code}</div>`;
     }
     
