@@ -2,7 +2,12 @@
 mermaid.initialize({
     startOnLoad: true,
     theme: 'default',
-    securityLevel: 'loose'
+    securityLevel: 'loose',
+    flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+    }
 });
 
 // 配置marked选项
@@ -15,17 +20,38 @@ marked.setOptions({
     gfm: true
 });
 
+// 添加HTML转义函数
+function escapeHtml(unsafe) {
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // 创建自定义渲染器
 const renderer = new marked.Renderer();
 
 // 重写代码块渲染方法
 renderer.code = function(code, language, isEscaped) {
+    console.log(code, language);
     // 处理非字符串code对象
     if (typeof code !== 'string') {
         language = code.lang;
         code = code.raw || String(code);
     }
     
+    // 解码URL编码的内容
+    try {
+        // 如果是URL编码的内容，尝试解码
+        if (code.includes('%') && code.match(/%[0-9A-Fa-f]{2}/g)) {
+            code = decodeURIComponent(code);
+        }
+    } catch (e) {
+        console.warn('URL解码失败:', e);
+    }
+
     // 如果是mermaid代码块，则使用mermaid的div包装
     if (language === 'mermaid') {
         return `<div class="mermaid">${code}</div>`;
