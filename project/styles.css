@@ -242,6 +242,10 @@ nav {
     padding: 0.2em 0.4em;
     font-size: 0.9em;
     font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+    white-space: pre;
+    overflow-x: auto;
+    max-width: 100%;
+    display: block;
 }
 .markdown-content pre {
     background: #f6f8fa;
@@ -252,11 +256,14 @@ nav {
     margin: 1em 0;
     font-size: 14px;
     line-height: 1.45;
+    white-space: pre;
 }
 .markdown-content pre code {
     background: none;
     padding: 0;
     border-radius: 0;
+    white-space: inherit;
+    display: inline;
 }
 .markdown-content img {
     display: block;

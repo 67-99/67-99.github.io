@@ -25,22 +25,29 @@ const renderer = new marked.Renderer();
 
 // 重写代码块渲染方法
 renderer.code = function(code, language, isEscaped) {
-    console.log(code, language);
     if(typeof code !== 'string'){
         language = code.lang;
-        code = code.text || String(code);
     }
     // 如果是mermaid代码块，则使用mermaid的div包装
     if (language === 'mermaid') {
-        return `<div class="mermaid">${code}</div>`;
+        return `<div class="mermaid">${typeof code === 'string'? code: code.text || String(code)}</div>`;
     }
-    
+
+    // HTML转义函数
+    const escapeHtml = (text) => {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    };
     // 否则使用默认的代码块渲染
     if (language) {
         return `<pre><code class="language-${language}">${code}</code></pre>`;
     }
 
-    return `<pre><code>${code}</code></pre>`;
+    return `<pre><code>${isEscaped ? code : escape(code)}</code></pre>`;
 };
 
 // 设置marked使用自定义渲染器
