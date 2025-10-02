@@ -28,6 +28,7 @@ renderer.code = function(code, language, isEscaped) {
     console.log(code, language);
     if(typeof code !== 'string'){
         language = code.lang;
+        code = code.text || String(code);
     }
     // 如果是mermaid代码块，则使用mermaid的div包装
     if (language === 'mermaid') {
@@ -38,10 +39,7 @@ renderer.code = function(code, language, isEscaped) {
     if (language) {
         return `<pre><code class="language-${language}">${isEscaped ? code : escape(code)}</code></pre>`;
     }
-    
-    if(typeof code !== 'string'){
-        code = code.text | String(code);
-    }
+
     return `<pre><code>${isEscaped ? code : escape(code)}</code></pre>`;
 };
 
