@@ -4,18 +4,19 @@
 
 ```mermaid
 gantt
+    title 项目时间安排
     dateFormat HH:mm
     axisFormat %H:%M
-    签到: vert, v1, 08:00, 1m
-    听取规则: done, 08:00, 45m
-    实现方式讨论: 45m
-    搭建虚拟网站: 30m
-    实现网站接口: 1h
-    搭建数据库: 2.5h
-    实现网络遍历: 1h
-    实现网络修复: 2h
-    最终debug: 16:00, 16:50
-    项目提交: milestone, m2, 17:27, 
-    项目截至: vert, v1, 18:00, 1m
-    项目汇报: active, 19:30, 20m
+    签到: vert, sign, 08:00, 1m
+    听取规则 : done, rules, after sign, 45m
+    实现方式讨论 : discuss, after rules, 45m
+    搭建虚拟网站 : website, after discuss, 30m
+    实现网站接口 : interface, after website, 1h
+    搭建数据库 : database, after interface, 2.5h
+    实现网络遍历 : traverse, after database, 1h
+    实现网络修复 : repair, after traverse, 2h
+    最终debug : debug, 16:00, 50m
+    项目提交 : milestone, m2, 17:27, 0m
+    项目截至 : vert, deadline, 18:00, 1m
+    项目汇报 : active, report, 19:30, 20m
 ```

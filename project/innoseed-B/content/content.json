@@ -1,10 +1,8 @@
 [
     {"id":"intro","title":"项目介绍","type":"md","file":"intro.md"},
     {"id":"features","title":"主要功能","type":"md","file":"features.md"},
-    {"id":"workflow","title":"工作流程","type":"md","file":"workflow.md"},
     {"id":"tech","title":"技术架构","type":"md","file":"tech.md"},
     {"id":"timeline","title":"项目时间线","type":"md","file":"timeline.md"},
-    {"id":"team","title":"团队结构","type":"md","file":"team.md"},
     {"id":"results","title":"成果展示","type":"md","file":"results.md"},
     {"id":"gallery","title":"项目截图","type":"image-gallery",
     "images":[
