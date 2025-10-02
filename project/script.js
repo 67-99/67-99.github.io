@@ -37,10 +37,10 @@ renderer.code = function(code, language, isEscaped) {
     
     // 否则使用默认的代码块渲染
     if (language) {
-        return `<pre><code class="language-${language}">${isEscaped ? code : escape(code)}</code></pre>`;
+        return `<pre><code class="language-${language}">${code}</code></pre>`;
     }
 
-    return `<pre><code>${isEscaped ? code : escape(code)}</code></pre>`;
+    return `<pre><code>${code}</code></pre>`;
 };
 
 // 设置marked使用自定义渲染器
