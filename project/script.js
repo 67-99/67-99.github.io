@@ -20,6 +20,45 @@ marked.setOptions({
     gfm: true
 });
 
+// HTML转义函数
+function escapeHtml(encodedStr) {
+    let result = '';
+    let i = 0;
+    
+    while (i < encodedStr.length) {
+        if (encodedStr[i] === '%') {
+            // 处理编码序列
+            if (i + 1 < encodedStr.length && encodedStr[i + 1] === 'u') {
+                // 处理 %uXXXX 格式
+                if (i + 5 < encodedStr.length) {
+                    const hexCode = encodedStr.substring(i + 2, i + 6);
+                    if (/^[0-9A-Fa-f]{4}$/.test(hexCode)) {
+                        result += String.fromCharCode(parseInt(hexCode, 16));
+                        i += 6;
+                        continue;
+                    }
+                }
+            } else {
+                // 处理 %XX 格式
+                if (i + 2 < encodedStr.length) {
+                    const hexCode = encodedStr.substring(i + 1, i + 3);
+                    if (/^[0-9A-Fa-f]{2}$/.test(hexCode)) {
+                        result += String.fromCharCode(parseInt(hexCode, 16));
+                        i += 3;
+                        continue;
+                    }
+                }
+            }
+        }
+        
+        // 如果不是有效的编码，直接添加字符
+        result += encodedStr[i];
+        i++;
+    }
+    
+    return result;
+}
+
 // 创建自定义渲染器
 const renderer = new marked.Renderer();
 
@@ -27,27 +66,19 @@ const renderer = new marked.Renderer();
 renderer.code = function(code, language, isEscaped) {
     if(typeof code !== 'string'){
         language = code.lang;
+        code = code.text || String(code);
     }
     // 如果是mermaid代码块，则使用mermaid的div包装
     if (language === 'mermaid') {
-        return `<div class="mermaid">${typeof code === 'string'? code: code.text || String(code)}</div>`;
+        return `<div class="mermaid">${code}</div>`;
     }
 
-    // HTML转义函数
-    const escapeHtml = (text) => {
-        return text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    };
     // 否则使用默认的代码块渲染
     if (language) {
-        return `<pre><code class="language-${language}">${code}</code></pre>`;
+        return `<pre><code class="language-${language}">${isEscaped ? code : escapeHtml(code)}</code></pre>`;
     }
 
-    return `<pre><code>${isEscaped ? code : escape(code)}</code></pre>`;
+    return `<pre><code>${isEscaped ? code : escapeHtml(code)}</code></pre>`;
 };
 
 // 设置marked使用自定义渲染器
