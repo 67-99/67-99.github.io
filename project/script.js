@@ -26,6 +26,9 @@ const renderer = new marked.Renderer();
 // 重写代码块渲染方法
 renderer.code = function(code, language, isEscaped) {
     console.log(code, language);
+    if(typeof code !== 'string'){
+        language = code.lang;
+    }
     // 如果是mermaid代码块，则使用mermaid的div包装
     if (language === 'mermaid') {
         return `<div class="mermaid">${code}</div>`;
@@ -36,6 +39,9 @@ renderer.code = function(code, language, isEscaped) {
         return `<pre><code class="language-${language}">${isEscaped ? code : escape(code)}</code></pre>`;
     }
     
+    if(typeof code !== 'string'){
+        code = code.text | String(code);
+    }
     return `<pre><code>${isEscaped ? code : escape(code)}</code></pre>`;
 };
 
@@ -300,10 +306,5 @@ document.addEventListener('DOMContentLoaded', function() {
     overlay.className = 'sidebar-overlay';
     document.body.appendChild(overlay);
     
-    loadAllContent();
-});
-
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
     loadAllContent();
 });
