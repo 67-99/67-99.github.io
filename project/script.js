@@ -1,3 +1,11 @@
+// 获取导航栏高度
+const navHeight = document.querySelector('nav').offsetHeight;
+
+// 更新所有section的scroll-margin-top
+document.querySelectorAll('.section').forEach(section => {
+    section.style.scrollMarginTop = `${navHeight + 10}px`; // 导航栏高度 + 额外空间
+});
+
 // 初始化mermaid
 mermaid.initialize({
     startOnLoad: true,
@@ -291,7 +299,7 @@ function initNavigation() {
         sections.forEach(section => {
             const sectionTop = section.offsetTop;
             const sectionHeight = section.clientHeight;
-            if (pageYOffset >= sectionTop - 100) {
+            if (pageYOffset >= sectionTop - navHeight) {
                 current = section.getAttribute('id');
             }
         });
