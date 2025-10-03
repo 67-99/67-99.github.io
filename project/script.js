@@ -263,22 +263,29 @@ function createVideoSection(section) {
 async function createDownloadsSection(section) {
     let html = `<h2>${section.title}</h2>`;
     html += '<div class="downloads-list">';
-    
-    // 为每个文件获取大小
-    for (const file of section.files) {
-        const fileSize = await getFileSize(`content/${file.src}`);
-        const formattedSize = fileSize > 0 ? formatFileSize(fileSize) : '大小未知';
-        html += `
-            <div class="download-item">
-                <div class="file-info">
-                    <h3>${file.name}</h3>
-                    <span class="file-size">${formattedSize}</span>
+    try {
+        // 为每个文件获取大小
+        for (const file of section.files) {
+            const fileSize = await getFileSize(`content/${file.src}`);
+            const formattedSize = fileSize > 0 ? formatFileSize(fileSize) : '大小未知';
+            html += `
+                <div class="download-item">
+                    <div class="file-info">
+                        <h3>${file.name}</h3>
+                        <span class="file-size">${formattedSize}</span>
+                    </div>
+                    <a href="content/${file.src}" class="download-button" download>下载</a>
                 </div>
-                <a href="content/${file.src}" class="download-button" download>下载</a>
+            `;
+        }
+    } catch (error) {
+        html += `
+            <div class="error-message">
+                <p>加载下载内容时出现错误，请刷新页面重试。</p>
+                <p>错误详情: ${error.message}</p>
             </div>
         `;
     }
-    
     html += '</div>';
     return html;
 }
