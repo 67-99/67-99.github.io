@@ -17,7 +17,7 @@
         "id": str, 
         "title": "文字标题", 
         "type":"类型关键字", 
-        "file":"文件地址", 
+        "src":"文件地址", 
         ...
     },
     ...
@@ -55,7 +55,7 @@
 {
     "id":"download", "title":"...", "type":"downloads",
     "files":[
-        {"name": "文件描述", "url":"path", "size":"大小"},
+        {"name": "文件描述", "src":"path", "size":"大小"},
         ...
     ]
 }

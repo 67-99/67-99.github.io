@@ -171,7 +171,7 @@ async function loadSectionContent(section) {
     switch (section.type) {
         case 'md':
         case "markdown":
-            const content = await loadMarkdownContent(section.file, section.id);
+            const content = await loadMarkdownContent(section.src, section.id);
             if (content) {
                 sectionElement.innerHTML = `<div class="markdown-content">${content}</div>`;
             } else {
@@ -266,7 +266,7 @@ async function createDownloadsSection(section) {
     
     // 为每个文件获取大小
     for (const file of section.files) {
-        const fileSize = await getFileSize(`content/${file.url}`);
+        const fileSize = await getFileSize(`content/${file.src}`);
         const formattedSize = fileSize > 0 ? formatFileSize(fileSize) : '大小未知';
         html += `
             <div class="download-item">
@@ -274,7 +274,7 @@ async function createDownloadsSection(section) {
                     <h3>${file.name}</h3>
                     <span class="file-size">${formattedSize}</span>
                 </div>
-                <a href="content/${file.url}" class="download-button" download>下载</a>
+                <a href="content/${file.src}" class="download-button" download>下载</a>
             </div>
         `;
     }
