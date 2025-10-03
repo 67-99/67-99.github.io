@@ -7,7 +7,9 @@ gantt
     title 项目时间安排
     dateFormat HH:mm
     axisFormat %H:%M
-    签到: vert, sign, 08:00, 1m
+
+    section 活动安排
+    签到 : sign, 08:00, 1m
     听取规则 : done, rules, after sign, 45m
     实现方式讨论 : discuss, after rules, 45m
     搭建虚拟网站 : website, after discuss, 30m
@@ -17,6 +19,8 @@ gantt
     实现网络修复 : repair, after traverse, 2h
     最终debug : debug, 16:00, 50m
     项目提交 : milestone, m2, 17:27, 0m
-    项目截至 : vert, deadline, 18:00, 1m
-    项目汇报 : active, report, 19:30, 20m
+
+    section 项目汇报
+    项目截至 : milestone, deadline, 18:00, 0m
+    项目汇报 : report, 19:30, 20m
 ```
