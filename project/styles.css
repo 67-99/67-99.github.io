@@ -11,7 +11,7 @@ body {
 }
 /* 导航栏样式 */
 nav {
-    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
     color: white;
     padding: 1rem 2rem;
     position: sticky;
@@ -135,8 +135,9 @@ nav {
 /* 移动端导航切换按钮 */
 .mobile-nav-toggle {
     display: none;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     cursor: pointer;
+    font-weight: 500;
     margin-left: 15px;
 }
 /* 右侧内容区 */
@@ -400,6 +401,8 @@ nav {
         padding: 25px;
     }
     .mobile-menu {
+        font-size: 1.5rem;
+        font-weight: 600;
         display: block;
     }
     .nav-links {

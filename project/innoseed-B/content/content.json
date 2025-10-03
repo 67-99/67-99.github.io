@@ -1,4 +1,6 @@
 [
+    {"id":"info1","title":"赛题","type":"image","file":"source/info1.jpg", "showNav": false},
+    {"id":"info2","title":"赛题","type":"image","file":"source/info2.jpg", "showNav": false},
     {"id":"intro","title":"项目介绍","type":"markdown","file":"intro.md"},
     {"id":"features","title":"主要功能","type":"markdown","file":"features.md"},
     {"id":"tech","title":"技术架构","type":"markdown","file":"tech.md"},
@@ -6,7 +8,8 @@
     {"id":"results","title":"成果展示","type":"markdown","file":"results.md"},
     {"id":"download","title":"资源下载","type":"downloads",
     "files":[
-        {"name":"虚拟网站模拟","url":"source/web.py"},
+        {"name":"虚拟网站","url":"source/web.zip"},
+        {"name":"虚拟网站接口","url":"source/web.py"},
         {"name":"修复程序","url":"source/fix.py"}]
     },
     {"id":"future","title":"未来展望","type":"markdown","file":"future.md"}

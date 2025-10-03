@@ -290,7 +290,7 @@ function initNavigation() {
     
     pageConfig.forEach(section => {
         // 跳过不在导航中显示的部分（如图片类型）
-        if (section.showInNav === false) {
+        if (section.showNav === false) {
             return;
         }
         
