@@ -7,7 +7,7 @@
     {"id":"timeline","title":"项目时间线","type":"markdown","src":"timeline.md"},
     {"id":"results","title":"成果展示","type":"markdown","src":"results.md"},
     {"id":"download","title":"资源下载","type":"downloads",
-    "srcs":[
+    "files":[
         {"name":"虚拟网站","src":"source/web.zip"},
         {"name":"虚拟网站接口","src":"source/web.py"},
         {"name":"修复程序","src":"source/fix.py"}]
