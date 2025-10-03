@@ -340,44 +340,53 @@ nav {
     font-style: italic;
     color: #666;
 }
-/* 下载列表样式 */
-.downloads-list {
-    margin-top: 20px;
+/* 单张图片样式 */
+.single-image-container {
+    text-align: center;
+    margin: 2rem 0;
 }
+.single-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.image-caption {
+    margin-top: 0.5rem;
+    font-style: italic;
+    color: #666;
+    font-size: 0.9rem;
+}
+/* 下载列表样式 */
 .download-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
-    border: 1px solid #eaeaea;
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
-    margin-bottom: 15px;
-    transition: background-color 0.3s;
+    margin-bottom: 1rem;
+    background: #f9f9f9;
 }
-.download-item:hover {
-    background-color: #f8f9fa;
+.download-item .file-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
 }
-.file-info h3 {
-    margin: 0 0 5px 0;
-    color: #2c3e50;
-}
-.file-size {
+.download-item .file-size {
     color: #666;
     font-size: 0.9rem;
 }
 .download-button {
-    background-color: #3498db;
+    background: #007bff;
     color: white;
-    padding: 8px 15px;
+    padding: 0.5rem 1rem;
     border-radius: 4px;
     text-decoration: none;
-    font-weight: 500;
-    transition: background-color 0.3s;
+    transition: background 0.3s;
 }
 .download-button:hover {
-    background-color: #2980b9;
+    background: #0056b3;
 }
-
 /* 响应式设计 */
 @media (max-width: 768px) {
     .main-container {

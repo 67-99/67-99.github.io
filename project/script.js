@@ -95,6 +95,30 @@ marked.setOptions({ renderer });
 // 加载页面配置
 let pageConfig = [];
 
+// 格式化文件大小
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 获取文件大小
+async function getFileSize(url) {
+    try {
+        const response = await fetch(url, { method: 'HEAD' });
+        if (response.ok) {
+            const size = response.headers.get('content-length');
+            return size ? parseInt(size) : 0;
+        }
+        return 0;
+    } catch (error) {
+        console.error(`获取文件大小失败: ${url}`, error);
+        return 0;
+    }
+}
+
 // 加载所有内容
 async function loadAllContent() {
     // 先加载页面配置
@@ -146,6 +170,7 @@ async function loadSectionContent(section) {
     
     switch (section.type) {
         case 'md':
+        case "markdown":
             const content = await loadMarkdownContent(section.file, section.id);
             if (content) {
                 sectionElement.innerHTML = `<div class="markdown-content">${content}</div>`;
@@ -158,12 +183,16 @@ async function loadSectionContent(section) {
             sectionElement.innerHTML = createImageGallery(section);
             break;
             
+        case 'image':
+            sectionElement.innerHTML = createImageSection(section);
+            break;
+            
         case 'video':
             sectionElement.innerHTML = createVideoSection(section);
             break;
             
         case 'downloads':
-            sectionElement.innerHTML = createDownloadsSection(section);
+            sectionElement.innerHTML = await createDownloadsSection(section)
             break;
             
         default:
@@ -206,6 +235,16 @@ function createImageGallery(section) {
     return html;
 }
 
+// 创建单张图片部分
+function createImageSection(section) {
+    return `
+        <div class="single-image-container">
+            <img src="content/${section.src}" alt="${section.alt || ''}" loading="lazy" class="single-image">
+            ${section.caption ? `<div class="image-caption">${section.caption}</div>` : ''}
+        </div>
+    `;
+}
+
 // 创建视频部分
 function createVideoSection(section) {
     return `
@@ -221,21 +260,24 @@ function createVideoSection(section) {
 }
 
 // 创建下载部分
-function createDownloadsSection(section) {
+async function createDownloadsSection(section) {
     let html = `<h2>${section.title}</h2>`;
     html += '<div class="downloads-list">';
     
-    section.files.forEach(file => {
+    // 为每个文件获取大小
+    for (const file of section.files) {
+        const fileSize = await getFileSize(`content/${file.url}`);
+        const formattedSize = fileSize > 0 ? formatFileSize(fileSize) : '大小未知';
         html += `
             <div class="download-item">
                 <div class="file-info">
                     <h3>${file.name}</h3>
-                    <span class="file-size">${file.size}</span>
+                    <span class="file-size">${formattedSize}</span>
                 </div>
                 <a href="content/${file.url}" class="download-button" download>下载</a>
             </div>
         `;
-    });
+    }
     
     html += '</div>';
     return html;
@@ -247,6 +289,11 @@ function initNavigation() {
     sidebarNav.innerHTML = '';
     
     pageConfig.forEach(section => {
+        // 跳过不在导航中显示的部分（如图片类型）
+        if (section.showInNav === false) {
+            return;
+        }
+        
         const li = document.createElement('li');
         const a = document.createElement('a');
         a.href = `#${section.id}`;
