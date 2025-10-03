@@ -7,6 +7,7 @@ gantt
     title 项目时间安排
     dateFormat HH:mm
     axisFormat %H:%M
+    todayMarker off
 
     section 活动安排
     签到 : sign, 08:00, 1m
