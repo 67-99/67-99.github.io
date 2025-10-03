@@ -1,6 +1,5 @@
 [
     {"id":"info1","title":"赛题","type":"image","src":"source/info1.jpg", "alt":"B题1", "caption":"B题描述", "showNav": false},
-    {"id":"info2","title":"赛题","type":"image","src":"source/info2.jpg", "alt":"B题2", "caption":"B题参考", "showNav": false},
     {"id":"intro","title":"项目介绍","type":"markdown","src":"intro.md"},
     {"id":"features","title":"主要功能","type":"markdown","src":"features.md"},
     {"id":"tech","title":"技术架构","type":"markdown","src":"tech.md"},
