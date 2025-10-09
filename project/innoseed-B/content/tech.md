@@ -77,7 +77,7 @@ info.json:
 ### 数据库存储
 
 在以表为基础的数据库中，我们以表构建树状网络架构。网站的每个网页为一个单独的表，表内包含多个网页快照（以日期存储）和一个json文件，里面包含了这个网页相关的超链接信息。
-![数据库结构](content/source/sql-database-structure.png)
+![数据库结构](content/resource/sql-database-structure.png)
 
 超链接由其父列表组成，每一个元素由<code>描述信息</code>与<code>父节点ID</code>组成，父列表表示指向它的所有网址。
 
