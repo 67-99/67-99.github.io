@@ -45,6 +45,7 @@ class ClassCheckWindow {
         const file = event.target.files[0];
         if (file) {
             try {
+                this.data = null;
                 this.loadingText.textContent = '正在读取文件...';
                 this.showLoadingPage();
                 this.updateProgress(0);
