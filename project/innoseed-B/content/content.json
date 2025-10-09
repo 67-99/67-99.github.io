@@ -1,5 +1,5 @@
 [
-    {"id":"info1","title":"赛题","type":"image","src":"source/info1.jpg", "alt":"B题1", "caption":"B题描述", "showNav": false},
+    {"id":"info1","title":"赛题","type":"image","src":"resource/info1.jpg", "alt":"B题1", "caption":"B题描述", "showNav": false},
     {"id":"intro","title":"项目介绍","type":"markdown","src":"intro.md"},
     {"id":"features","title":"主要功能","type":"markdown","src":"features.md"},
     {"id":"tech","title":"技术架构","type":"markdown","src":"tech.md"},
@@ -7,9 +7,9 @@
     {"id":"results","title":"成果展示","type":"markdown","src":"results.md"},
     {"id":"download","title":"资源下载","type":"downloads",
     "files":[
-        {"name":"虚拟网站","src":"source/web.zip"},
-        {"name":"虚拟网站接口","src":"source/web.py"},
-        {"name":"修复程序","src":"source/fix.py"}]
+        {"name":"虚拟网站","src":"resource/web.zip"},
+        {"name":"虚拟网站接口","src":"resource/web.py"},
+        {"name":"修复程序","src":"resource/fix.py"}]
     },
     {"id":"future","title":"未来展望","type":"markdown","src":"future.md"}
 ]
