@@ -118,7 +118,7 @@ button:hover {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: center;
-    min-width: 80px;
+    min-width: 60px;
 }
 #class-table th {
     background-color: #f2f2f2;
