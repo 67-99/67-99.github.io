@@ -46,11 +46,12 @@ class ClassCheckWindow {
         if (file) {
             try {
                 this.loadingText.textContent = '正在读取文件...';
+                const fileName = file.name;
+                this.oldInfo.source = fileName;
                 this.showLoadingPage();
                 this.updateProgress(0);
                 
                 const fileContent = await this.readLocalFile(file);
-                const fileName = file.name;
                 
                 // 存储文件内容
                 this.userFiles.set(fileName, fileContent);
@@ -80,7 +81,6 @@ class ClassCheckWindow {
         }
     }
     
-    // 实现readLocalFile功能
     readLocalFile(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -119,6 +119,7 @@ class ClassCheckWindow {
         this.showLoadingPage();
         
         const sourcePath = this.sourceList[index];
+        this.oldInfo.source = sourcePath;
         let fileContent = '';
         
         try {
