@@ -2,8 +2,8 @@ class ClassCheckWindow {
     constructor() {
         this.sourceList = ['默认表.def'];
         this.data = null;
-        this.oldInfo = { week: 0, day: 0, site: '' };
-        this.newInfo = { week: 0, day: 0, site: '' };
+        this.oldInfo = { source: "", week: 0, day: 0, site: '' };
+        this.newInfo = { source: "", week: 0, day: 0, site: '' };
         this.isGenerating = false;
         this.userFiles = new Map(); // 存储用户上传的文件内容
         
@@ -306,32 +306,37 @@ class ClassCheckWindow {
         const week = parseInt(this.weekInput.value);
         const day = parseInt(this.daySelect.value);
         const site = this.siteSelect.value;
+        const source = this.sourceSelect.value;
         
         // 如果没有选择地点，选择第一个
         if (!site && this.siteSelect.options.length > 0) {
             this.siteSelect.value = this.siteSelect.options[0].value;
-            this.newInfo = { week, day, site: this.siteSelect.value };
+            this.newInfo = { source, week, day, site: this.siteSelect.value };
         } else {
-            this.newInfo = { week, day, site };
+            this.newInfo = { source, week, day, site };
         }
         
-        if (!this.isGenerating && JSON.stringify(this.newInfo) !== JSON.stringify(this.oldInfo)) {
-            this.isGenerating = true;
-            
-            if (this.data && this.data.generateGrid(this.newInfo)) {
+        if (!this.isGenerating){ 
+            if(JSON.stringify(this.newInfo) !== JSON.stringify(this.oldInfo)){
+                this.isGenerating = true;
+                
+                if (this.data && this.data.generateGrid(this.newInfo)) {
+                    this.showTablePage();
+                } else {
+                    this.showLoadingPage();
+                    this.loadingText.textContent = '生成错误！';
+                }
+                
+                this.oldInfo = { ...this.newInfo };
+                this.isGenerating = false;
+                
+                // 如果信息在生成过程中发生了变化，重新生成
+                if (JSON.stringify(this.newInfo) !== JSON.stringify(this.oldInfo)) {
+                    this.generateGrid();
+                }
+            }
+            else if(this.data && this.loadingPage.classList.contains('active'))
                 this.showTablePage();
-            } else {
-                this.showLoadingPage();
-                this.loadingText.textContent = '生成错误！';
-            }
-            
-            this.oldInfo = { ...this.newInfo };
-            this.isGenerating = false;
-            
-            // 如果信息在生成过程中发生了变化，重新生成
-            if (JSON.stringify(this.newInfo) !== JSON.stringify(this.oldInfo)) {
-                this.generateGrid();
-            }
         }
     }
     
