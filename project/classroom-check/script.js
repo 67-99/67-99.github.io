@@ -278,7 +278,7 @@ class ClassCheckWindow {
                 // 延迟一下，确保UI更新完成，然后自动生成表格
                 setTimeout(() => {
                     this.generateGrid();
-                }, 100);
+                }, 1000);
                 
             } else {
                 throw new Error('文件信息缺失！');

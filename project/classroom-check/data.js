@@ -283,12 +283,21 @@ class Data {
                 let j = block.first;
                 let remaining = block.length;
                 
-                while (j <= this.sectionMax && remaining > 0) {
+                for (; j <= this.sectionMax; j++) {
+                    if (remaining <= 0) {
+                        // 块结束后，标记第一个未设置的位置为部分占用
+                        const index = j - this.sectionMin;
+                        if (index >= 0 && index < sectionStatus.length && sectionStatus[index] < 0) {
+                            sectionStatus[index] = -1;
+                        }
+                        break;
+                    }
+                    
+                    // 标记块内节次为完全占用
                     const index = j - this.sectionMin;
                     if (index >= 0 && index < sectionStatus.length) {
                         sectionStatus[index] = i;
                     }
-                    j++;
                     remaining--;
                 }
             }
