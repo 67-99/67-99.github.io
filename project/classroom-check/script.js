@@ -45,7 +45,6 @@ class ClassCheckWindow {
         const file = event.target.files[0];
         if (file) {
             try {
-                this.data = null;
                 this.loadingText.textContent = '正在读取文件...';
                 this.showLoadingPage();
                 this.updateProgress(0);
@@ -336,7 +335,7 @@ class ClassCheckWindow {
                     this.generateGrid();
                 }
             }
-            else if(this.data && this.loadingPage.classList.contains('active'))
+            else if(this.data && source === this.data.path && this.loadingPage.classList.contains('active'))
                 this.showTablePage();
         }
     }
