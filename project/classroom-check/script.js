@@ -23,6 +23,15 @@ class ClassCheckWindow {
         this.loadingText = document.getElementById('loading-text');
         this.progressFill = document.getElementById('progress-fill');
         
+        // 添加所有数据源
+        this.sourceSelect.innerHTML = ''; // 清空现有选项
+        this.sourceList.forEach(source => {
+            const option = document.createElement('option');
+            option.textContent = this.getBaseName(source);
+            option.value = source;
+            this.sourceSelect.appendChild(option);
+        });
+        
         // 设置事件监听器
         this.addFileBtn.addEventListener('click', () => this.addFile());
         this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
