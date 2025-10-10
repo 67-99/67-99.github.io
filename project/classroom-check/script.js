@@ -1,6 +1,6 @@
 class ClassCheckWindow {
     constructor() {
-        this.sourceList = ['默认表.def'];
+        this.sourceList = ['默认表.def', "杏林202510.def"];
         this.data = null;
         this.oldInfo = { source: "", week: 0, day: 0, site: '' };
         this.newInfo = { source: "", week: 0, day: 0, site: '' };
@@ -123,12 +123,15 @@ class ClassCheckWindow {
         let fileContent = '';
         
         try {
-            if (sourcePath === '默认表.def') {
+            if (this.getExtName(sourcePath) === '.def') {
                 this.loadingText.textContent = '正在加载默认文件...';
                 this.updateProgress(4);
                 
                 // 加载默认文件
-                const response = await fetch('content/resource/defaultResource.csv');
+                let baseName = this.getBaseName(sourcePath).replace(/\.def$/, '');
+                if(baseName === '默认表')
+                    baseName = "defaultResource";
+                const response = await fetch(`content/resource/${baseName}.csv`);
                 if (!response.ok) {
                     throw new Error('无法加载默认文件');
                 }
