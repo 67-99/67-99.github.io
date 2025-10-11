@@ -140,7 +140,7 @@ class ClassCheckWindow {
                 let baseName = this.getBaseName(sourcePath).replace(/\.def$/, '');
                 if(baseName === '默认表')
                     baseName = "defaultResource";
-                const response = await fetch(`content/resource/${baseName}.csv`);
+                const response = await fetch(`resource/${baseName}.csv`);
                 if (!response.ok) {
                     throw new Error('无法加载默认文件');
                 }
