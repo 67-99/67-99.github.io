@@ -284,7 +284,7 @@ async function createDownloadsSection(section) {
     return html;
 }
 
-// 增强的网页组件创建函数
+// 创建网页组件部分
 async function createWebComponentSection(section) {
     let html = '';
     
@@ -303,14 +303,14 @@ async function createWebComponentSection(section) {
                 <p>正在加载组件...</p>
             </div>
             <iframe 
+                class="web-component-frame"
                 src="content/${section.src}"
-                class="web-component-frame ${section.height ? 'fixed-height' : 'auto-height'}"
                 ${section.height ? `style="height: ${section.height}px;"` : ''}
                 ${section.sandbox ? `sandbox="${section.sandbox}"` : 'sandbox="allow-scripts allow-same-origin"'}
                 ${section.loading ? `loading="${section.loading}"` : 'loading="lazy"'}
                 frameborder="0"
                 allowfullscreen
-                onload="hideComponentLoading('${section.id}')"
+                onload="handleIframeLoad('${section.id}', ${section.height || 'null'})"
                 onerror="showComponentError('${section.id}')"
             ></iframe>
             ${section.caption ? `<div class="component-caption">${section.caption}</div>` : ''}
@@ -318,6 +318,75 @@ async function createWebComponentSection(section) {
     `;
     
     return html;
+}
+
+// 处理 iframe 加载完成
+function handleIframeLoad(componentId, fixedHeight) {
+    const container = document.getElementById(`component-${componentId}`);
+    if (!container) return;
+    
+    const loadingElement = container.querySelector('.component-loading');
+    const iframe = container.querySelector('.web-component-frame');
+    
+    // 隐藏加载状态
+    if (loadingElement) {
+        loadingElement.style.display = 'none';
+    }
+    
+    // 如果没有固定高度，则尝试调整高度到内容
+    if (!fixedHeight) {
+        adjustIframeHeight(iframe, componentId);
+    }
+}
+
+// 调整 iframe 高度到内容
+function adjustIframeHeight(iframe, componentId) {
+    try {
+        // 等待一小段时间确保内容完全加载
+        setTimeout(() => {
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const iframeBody = iframeDoc.body;
+                const iframeHtml = iframeDoc.documentElement;
+                
+                // 获取内容的高度
+                const height = Math.max(
+                    iframeBody.scrollHeight,
+                    iframeBody.offsetHeight,
+                    iframeHtml.clientHeight,
+                    iframeHtml.scrollHeight,
+                    iframeHtml.offsetHeight
+                );
+                
+                // 设置 iframe 高度，添加一些边距
+                iframe.style.height = (height + 20) + 'px';
+                
+            } catch (error) {
+                // 如果因为跨域无法访问内容，使用备用方案
+                handleCrossDomainIframe(iframe, componentId);
+            }
+        }, 100);
+    } catch (error) {
+        console.warn(`无法调整 iframe ${componentId} 的高度:`, error);
+        // 设置一个合理的默认高度
+        iframe.style.height = '600px';
+    }
+}
+
+// 处理跨域 iframe 的高度调整
+function handleCrossDomainIframe(iframe, componentId) {
+    // 对于跨域 iframe，我们无法直接访问内容
+    // 可以使用 postMessage 通信或设置一个较大的默认高度
+    console.log(`iframe ${componentId} 可能是跨域的，使用默认高度`);
+    iframe.style.height = '800px'; // 较大的默认高度
+    
+    // 监听窗口大小变化
+    window.addEventListener('message', function(event) {
+        // 如果内部页面通过 postMessage 发送高度信息
+        if (event.data && event.data.type === 'iframeHeight' && event.data.height) {
+            iframe.style.height = event.data.height + 'px';
+        }
+    });
 }
 
 // 隐藏加载状态
