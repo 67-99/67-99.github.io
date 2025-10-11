@@ -303,10 +303,10 @@ async function createWebComponentSection(section) {
                 <p>正在加载组件...</p>
             </div>
             <iframe 
-                src="${section.src}" 
+                src="content/${section.src}"
                 class="web-component-frame"
-                ${section.width ? `width="${section.width}"` : ''}
-                ${section.height ? `height="${section.height}"` : ''}
+                style="width: 100%;
+                ${section.height ? `height: ${section.height}px;` : 'min-height: 400px;'}"
                 ${section.sandbox ? `sandbox="${section.sandbox}"` : 'sandbox="allow-scripts allow-same-origin"'}
                 ${section.loading ? `loading="${section.loading}"` : 'loading="lazy"'}
                 frameborder="0"
