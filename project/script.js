@@ -18,16 +18,6 @@ mermaid.initialize({
     }
 });
 
-// 配置marked选项
-marked.setOptions({
-    highlight: function(code, lang) {
-        // 在实际项目中，可以集成highlight.js等语法高亮库
-        return code;
-    },
-    breaks: true,
-    gfm: true
-});
-
 // HTML转义函数
 function escapeHtml(encodedStr) {
     let result = '';
@@ -195,7 +185,7 @@ async function loadSectionContent(section) {
             sectionElement.innerHTML = await createDownloadsSection(section)
             break;
 
-        case 'web-component':
+        case 'html':
             sectionElement.innerHTML = await createWebComponentSection(section);
             break;
             
