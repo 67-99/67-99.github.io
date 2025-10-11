@@ -85,7 +85,7 @@ nav {
 }
 /* 主内容区布局 */
 .main-container {
-    max-width: 1600px;
+    max-width: 1200px;
     margin: 30px auto;
     display: flex;
     gap: 30px;
@@ -147,6 +147,35 @@ nav {
     border-radius: 8px;
     padding: 40px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+/* 组件标题链接样式 */
+.component-title-link {
+    color: #2c3e50;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    display: inline-block;
+    position: relative;
+}
+.component-title-link:hover {
+    color: #3498db;
+    text-decoration: underline;
+}
+.component-title-link::after {
+    content: "🔗";
+    font-size: 0.8em;
+    margin-left: 8px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+.component-title-link:hover::after {
+    opacity: 1;
+}
+.component-title-link {
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    display: block;
+    width: 100%;
 }
 /* 章节样式 */
 .section {

@@ -289,7 +289,7 @@ async function createWebComponentSection(section) {
     let html = '';
     
     if (section.title) {
-        html += `<h2>${section.title}</h2>`;
+        html += `<h2><a href="content/${section.src}" class="component-title-link" target="_blank">${section.title}</a></h2>`;
     }
     
     if (section.description) {
