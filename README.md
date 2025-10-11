@@ -1,4 +1,6 @@
-在project部分中，有一组<code>script.js</code>可以读取并链接<code>./contents</code>里面的内容。组织架构如下：
+# Project页面
+
+在project表下，有一组<code>script.js</code>,<code>style.css</code>可以帮助分页面读取并链接显示<code>./contents</code>里面的内容。分页面的组织架构如下：
 ```
 分页面/
 ├── content/
@@ -9,6 +11,10 @@
 └── index.html
 ```
 其中<code>content</code>中放置所有页面正文依赖文件，<code>content/content.json</code>包含页面的所有链接信息，<code>content/source</code>中推荐存储所有正文依赖资源。
+
+> 注：若要使用project默认框架，则<code>index.html</code>建议包含[以下架构](project/template.html.md)。
+
+## content.json配置
 
 正文支持配置markdown、图片、视频与下载源。<code>content.json</code>中格式为：
 ```
@@ -23,7 +29,7 @@
     ...
 ]
 ```
-其中，类型关键字为<code>markdown</code>, <code>image</code>, <code>image-gallery</code>, <code>video</code>, <code>downloads</code>之一，文件加载地址为<code>content/文件地址</code>。
+其中，类型关键字为<code>markdown</code>, <code>image</code>, <code>image-gallery</code>, <code>video</code>, <code>downloads</code>, <code>html</code>之一，文件加载地址为<code>content/文件地址</code>。
 
 <code>image</code>关键字需要提供图片地址，格式为：
 ```
@@ -59,4 +65,12 @@
         ...
     ]
 }
+```
+<code>html</code>关键字需要提供嵌套网站网址，格式为：
+```
+    {
+        "id": "url", "title": ...","type": "html",
+        "src": "path", "height": "iFrame高", "sandbox": "",
+        "description": "网页描述", "caption": "网页注释"
+    }
 ```
