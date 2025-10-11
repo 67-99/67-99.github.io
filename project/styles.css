@@ -155,10 +155,6 @@ nav {
     transition: color 0.3s ease;
     display: inline-block;
     position: relative;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-    display: block;
-    width: 100%;
 }
 .component-title-link:hover {
     color: #3498db;
@@ -434,6 +430,7 @@ nav {
     display: block;
     background: white;
     min-height: 400px; /* 默认最小高度 */
+    flex: 1; /* 填充剩余空间 */
     transition: height 0.3s ease; /* 高度变化动画 */
 }
 /* 组件加载状态 */
