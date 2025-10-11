@@ -85,7 +85,7 @@ nav {
 }
 /* 主内容区布局 */
 .main-container {
-    max-width: 1200px;
+    max-width: 1600px;
     margin: 30px auto;
     display: flex;
     gap: 30px;
@@ -93,7 +93,7 @@ nav {
 }
 /* 左侧导航 */
 .sidebar {
-    flex: 0 0 250px;
+    flex: 0 0 200px;
     background-color: white;
     border-radius: 8px;
     padding: 20px;
@@ -389,6 +389,11 @@ nav {
     background: #0056b3;
 }
 /* Web组件容器样式 */
+.component-description {
+    color: #666;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
 .web-component-container {
     width: 100%;
     margin: 1rem 0;
@@ -396,20 +401,15 @@ nav {
     border-radius: 8px;
     overflow: hidden;
     background: #f8f9fa;
+    position: relative;
 }
-.web-component-frame.fixed-height {
+.web-component-frame {
     width: 100%;
     border: none;
     display: block;
     background: white;
-}
-.web-component-frame.auto-height {
-    width: 100%;
-    border: none;
-    display: block;
-    background: white;
-    height: auto;
-    min-height: 200px;
+    min-height: 400px; /* 默认最小高度 */
+    transition: height 0.3s ease; /* 高度变化动画 */
 }
 /* 组件加载状态 */
 .component-loading {
@@ -418,7 +418,7 @@ nav {
     align-items: center;
     justify-content: center;
     padding: 3rem;
-    min-height: 200px;
+    height: 200px;
     background: #f8f9fa;
 }
 .loading-spinner {
@@ -447,10 +447,7 @@ nav {
     font-size: 0.9rem;
     text-align: center;
 }
-.web-component-frame.auto-height {
-    aspect-ratio: auto;
-}
-.content .web-component-container {
+.web-component-container {
     max-width: 100%;
 }
 /* 响应式设计 */
@@ -496,6 +493,9 @@ nav {
     .download-button {
         margin-top: 10px;
         align-self: flex-end;
+    }
+    .web-component-frame {
+        min-height: 300px;
     }
     /* 显示移动端导航切换按钮 */
     .mobile-nav-toggle {
