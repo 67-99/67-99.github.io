@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教室查询系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="control-panel">
+            <div class="control-group">
+                <label for="source-select">数据源:</label>
+                <select id="source-select">
+                    <!-- 选项将通过JavaScript动态生成 -->
+                </select>
+                <button id="add-file-btn">添加课表文件</button>
+                <input type="file" id="file-input" accept=".csv,.def" style="display: none;">
+            </div>
+            
+            <div class="control-group">
+                <label for="week-input">周次:</label>
+                <input type="number" id="week-input" min="1" max="28" value="1">
+                
+                <label for="day-select">星期:</label>
+                <select id="day-select">
+                    <option value="1">星期一</option>
+                    <option value="2">星期二</option>
+                    <option value="3">星期三</option>
+                    <option value="4">星期四</option>
+                    <option value="5">星期五</option>
+                    <option value="6">星期六</option>
+                    <option value="7">星期日</option>
+                </select>
+                
+                <label for="site-select">地点:</label>
+                <select id="site-select"></select>
+            </div>
+        </div>
+        
+        <div class="display-area">
+            <div id="loading-page" class="page active">
+                <div class="loading-content">
+                    <p id="loading-text">请选择数据源</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="table-page" class="page">
+                <div class="table-container">
+                    <table id="class-table">
+                        <!-- 表格内容将通过JavaScript动态生成 -->
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -3,64 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教室查询系统</title>
-    <link rel="stylesheet" href="style.css">
+    <title>课表查询</title>
+    <!-- 引入样式文件 -->
+    <link rel="stylesheet" href="../styles.css">
+    <!-- 引入mermaid -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <!-- 引入marked.js用于解析Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1 class="title">教室查询</h1>
-        
-        <div class="control-panel">
-            <div class="control-group">
-                <label for="source-select">数据源:</label>
-                <select id="source-select">
-                    <!-- 选项将通过JavaScript动态生成 -->
-                </select>
-                <button id="add-file-btn">添加课表文件</button>
-                <input type="file" id="file-input" accept=".csv,.def" style="display: none;">
-            </div>
-            
-            <div class="control-group">
-                <label for="week-input">周次:</label>
-                <input type="number" id="week-input" min="1" max="28" value="1">
-                
-                <label for="day-select">星期:</label>
-                <select id="day-select">
-                    <option value="1">星期一</option>
-                    <option value="2">星期二</option>
-                    <option value="3">星期三</option>
-                    <option value="4">星期四</option>
-                    <option value="5">星期五</option>
-                    <option value="6">星期六</option>
-                    <option value="7">星期日</option>
-                </select>
-                
-                <label for="site-select">地点:</label>
-                <select id="site-select"></select>
-            </div>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">67-99</div>
+            <ul class="nav-links">
+                <li><a href="../../index.html">首页</a></li>
+                <li class="dropdown">
+                    <a href="../index.html">项目</a>
+                <!--<ul class="dropdown-menu">
+                        <li><a href="#online-preview">网上预览</a></li>
+                        <li><a href="#reference">参考</a></li>
+                    </ul> -->
+                </li>
+            </ul>
+            <div class="mobile-menu">☰</div>
+            <!-- 添加移动端导航切换按钮 -->
+            <div class="mobile-nav-toggle">导航</div>
         </div>
-        
-        <div class="display-area">
-            <div id="loading-page" class="page active">
-                <div class="loading-content">
-                    <p id="loading-text">请选择数据源</p>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progress-fill"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="table-page" class="page">
-                <div class="table-container">
-                    <table id="class-table">
-                        <!-- 表格内容将通过JavaScript动态生成 -->
-                    </table>
-                </div>
-            </div>
-        </div>
+    </nav>
+    <!-- 主内容区 -->
+    <div class="main-container">
+        <!-- 左侧导航 -->
+        <aside class="sidebar">
+            <h2>页面导航</h2>
+            <ul id="sidebar-nav">
+                <!-- 导航将由JavaScript动态生成 -->
+            </ul>
+        </aside>
+        <!-- 右侧内容区 -->
+        <main class="content" id="content-area">
+            <!-- 内容将由JavaScript动态加载 -->
+            <div class="loading">正在加载内容...</div>
+        </main>
     </div>
-    
-    <script src="data.js"></script>
-    <script src="script.js"></script>
+    <!-- 引入JavaScript -->
+    <script src="../script.js"></script>
 </body>
 </html>

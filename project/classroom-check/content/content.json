@@ -1,0 +1,13 @@
+[
+    {
+        "id": "class-checker","title": "教室查询系统","type": "html","src": "table.html",
+        "description": "这是一个教室查询系统组件，可以查看教室使用情况","caption": "教室查询系统 - 基于网页的教室占用情况查看工具",
+        "sandbox": "allow-scripts allow-same-origin allow-forms"
+    },
+    {
+        "id": "conclusion",
+        "title": "总结",
+        "type": "markdown",
+        "src": "conclusion.md"
+    }
+]

@@ -194,6 +194,10 @@ async function loadSectionContent(section) {
         case 'downloads':
             sectionElement.innerHTML = await createDownloadsSection(section)
             break;
+
+        case 'web-component':
+            sectionElement.innerHTML = await createWebComponentSection(section);
+            break;
             
         default:
             sectionElement.innerHTML = `<h2>${section.title}</h2><p>未知的内容类型。</p>`;
@@ -288,6 +292,65 @@ async function createDownloadsSection(section) {
     }
     html += '</div>';
     return html;
+}
+
+// 增强的网页组件创建函数
+async function createWebComponentSection(section) {
+    let html = '';
+    
+    if (section.title) {
+        html += `<h2>${section.title}</h2>`;
+    }
+    
+    if (section.description) {
+        html += `<p class="component-description">${section.description}</p>`;
+    }
+    
+    html += `
+        <div class="web-component-container" id="component-${section.id}">
+            <div class="component-loading">
+                <div class="loading-spinner"></div>
+                <p>正在加载组件...</p>
+            </div>
+            <iframe 
+                src="${section.src}" 
+                class="web-component-frame"
+                ${section.width ? `width="${section.width}"` : ''}
+                ${section.height ? `height="${section.height}"` : ''}
+                ${section.sandbox ? `sandbox="${section.sandbox}"` : 'sandbox="allow-scripts allow-same-origin"'}
+                ${section.loading ? `loading="${section.loading}"` : 'loading="lazy"'}
+                frameborder="0"
+                allowfullscreen
+                onload="hideComponentLoading('${section.id}')"
+                onerror="showComponentError('${section.id}')"
+            ></iframe>
+            ${section.caption ? `<div class="component-caption">${section.caption}</div>` : ''}
+        </div>
+    `;
+    
+    return html;
+}
+
+// 隐藏加载状态
+function hideComponentLoading(componentId) {
+    const container = document.getElementById(`component-${componentId}`);
+    if (container) {
+        const loadingElement = container.querySelector('.component-loading');
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
+    }
+}
+
+// 显示错误状态
+function showComponentError(componentId) {
+    const container = document.getElementById(`component-${componentId}`);
+    if (container) {
+        const loadingElement = container.querySelector('.component-loading');
+        if (loadingElement) {
+            loadingElement.innerHTML = '<p style="color: red;">组件加载失败，请检查网络连接或组件地址</p>';
+        }
+    }
 }
 
 // 初始化导航
