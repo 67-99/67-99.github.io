@@ -388,11 +388,34 @@ nav {
 .download-button:hover {
     background: #0056b3;
 }
+/* Web组件容器样式 */
+.web-component-container {
+    width: 100%;
+    margin: 1rem 0;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+.component-description {
+    color: #666;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+/* Web组件iframe样式 */
+.web-component-frame {
+    width: 100%;
+    border: none;
+    display: block;
+    background: white;
+}
+/* 组件加载状态 */
 .component-loading {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 3rem;
     height: 200px;
     background: #f8f9fa;
 }
@@ -412,6 +435,18 @@ nav {
 .component-loading p {
     color: #666;
     margin: 0;
+}
+/* 组件标题 */
+.component-caption {
+    padding: 0.75rem 1rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e1e4e8;
+    color: #666;
+    font-size: 0.9rem;
+    text-align: center;
+}
+.content .web-component-container {
+    max-width: 100%;
 }
 /* 响应式设计 */
 @media (max-width: 768px) {
