@@ -304,9 +304,8 @@ async function createWebComponentSection(section) {
             </div>
             <iframe 
                 src="content/${section.src}"
-                class="web-component-frame"
-                style="width: 100%;
-                ${section.height ? `height: ${section.height}px;` : 'min-height: 400px;'}"
+                class="web-component-frame ${section.height ? 'fixed-height' : 'auto-height'}"
+                ${section.height ? `style="height: ${section.height}px;"` : ''}
                 ${section.sandbox ? `sandbox="${section.sandbox}"` : 'sandbox="allow-scripts allow-same-origin"'}
                 ${section.loading ? `loading="${section.loading}"` : 'loading="lazy"'}
                 frameborder="0"
