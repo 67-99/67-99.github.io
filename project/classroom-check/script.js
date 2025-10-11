@@ -1,6 +1,6 @@
 class ClassCheckWindow {
     constructor() {
-        this.sourceList = ['默认表.def', "杏林202510.def"];
+        this.sourceList = ["潇湘202510.def", "杏林202510.def", '默认表.def'];
         this.data = null;
         this.oldInfo = { source: "", week: 0, day: 0, site: '' };
         this.newInfo = { source: "", week: 0, day: 0, site: '' };
