@@ -1,3 +1,4 @@
+/* 全局重置与基础样式 */
 * {
     margin: 0;
     padding: 0;
@@ -9,6 +10,7 @@ body {
     color: #333;
     line-height: 1.6;
 }
+
 /* 导航栏样式 */
 nav {
     background: linear-gradient(135deg, #006600 0%, #11998e 100%);
@@ -49,6 +51,7 @@ nav {
 .nav-links a:hover {
     opacity: 0.8;
 }
+
 /* 下拉菜单样式 */
 .dropdown-menu {
     position: absolute;
@@ -83,6 +86,7 @@ nav {
     background-color: #f5f5f5;
     opacity: 1;
 }
+
 /* 主内容区布局 */
 .main-container {
     max-width: 1300px;
@@ -91,7 +95,8 @@ nav {
     gap: 30px;
     padding: 0 20px;
 }
-/* 左侧导航 */
+
+/* 左侧导航样式 */
 .sidebar {
     flex: 0 0 250px;
     background-color: white;
@@ -132,15 +137,8 @@ nav {
     background-color: #3498db;
     color: white;
 }
-/* 移动端导航切换按钮 */
-.mobile-nav-toggle {
-    display: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    font-weight: 500;
-    margin-left: 15px;
-}
-/* 右侧内容区 */
+
+/* 右侧内容区样式 */
 .content {
     flex: 1;
     background-color: white;
@@ -148,28 +146,8 @@ nav {
     padding: 40px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
-/* 组件标题链接样式 */
-.component-title-link {
-    color: #2c3e50;
-    text-decoration: none;
-    transition: color 0.3s ease;
-    display: inline-block;
-    position: relative;
-}
-.component-title-link:hover {
-    color: #3498db;
-}
-.component-title-link::after {
-    content: "🔗";
-    font-size: 0.8em;
-    margin-left: 8px;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-.component-title-link:hover::after {
-    opacity: 1;
-}
-/* 章节样式 */
+
+/* 章节标题和内容样式 */
 .section {
     margin-bottom: 50px;
 }
@@ -201,28 +179,7 @@ nav {
 .section li {
     margin-bottom: 8px;
 }
-/* mermaid图表样式 */
-.mermaid {
-    margin: 20px 0;
-    text-align: center;
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 6px;
-    border: 1px solid #eaeaea;
-}
-.markdown-content .mermaid {
-    text-align: center;
-    margin: 2em 0;
-    padding: 1em;
-    background: white;
-    border: 1px solid #e1e4e8;
-    border-radius: 6px;
-    overflow: auto;
-}
-.markdown-content .mermaid svg {
-    max-width: 100%;
-    height: auto;
-}
+
 /* Markdown内容样式 */
 .markdown-content h1 {
     color: #2c3e50;
@@ -285,6 +242,52 @@ nav {
     display: block;
     overflow-x: auto;
 }
+
+/* Markdown表格样式 */
+.markdown-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5em 0;
+    font-size: 0.95em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.markdown-content th, .markdown-content td {
+    padding: 12px 15px;
+    text-align: left;
+    border: 1px solid #e1e4e8;
+}
+.markdown-content th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #e1e4e8;
+}
+.markdown-content tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+.markdown-content tr:hover {
+    background-color: #f0f7ff;
+    transition: background-color 0.2s ease;
+}
+.markdown-content table th:first-child, .markdown-content table td:first-child {
+    border-left: none;
+}
+.markdown-content table th:last-child, .markdown-content table td:last-child {
+    border-right: none;
+}
+.markdown-content table th[align="left"], .markdown-content table td[align="left"] {
+    text-align: left;
+}
+.markdown-content table th[align="center"], .markdown-content table td[align="center"] {
+    text-align: center;
+}
+.markdown-content table th[align="right"], .markdown-content table td[align="right"] {
+    text-align: right;
+}
+
+/* 图片和媒体样式 */
 .markdown-content img {
     display: block;
     margin: 0 auto;
@@ -310,12 +313,7 @@ nav {
     margin-top: 0.5em;
     font-size: 0.9em;
 }
-.loading {
-    text-align: center;
-    padding: 40px;
-    color: #666;
-    font-style: italic;
-}
+
 /* 图片画廊样式 */
 .image-gallery {
     display: grid;
@@ -346,22 +344,7 @@ nav {
     font-weight: 500;
     color: #555;
 }
-/* 视频样式 */
-.video-container {
-    margin-top: 20px;
-    text-align: center;
-}
-.responsive-video {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-.video-caption {
-    margin-top: 15px;
-    font-style: italic;
-    color: #666;
-}
+
 /* 单张图片样式 */
 .single-image-container {
     text-align: center;
@@ -379,6 +362,24 @@ nav {
     color: #666;
     font-size: 0.9rem;
 }
+
+/* 视频样式 */
+.video-container {
+    margin-top: 20px;
+    text-align: center;
+}
+.responsive-video {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+.video-caption {
+    margin-top: 15px;
+    font-style: italic;
+    color: #666;
+}
+
 /* 下载列表样式 */
 .download-item {
     display: flex;
@@ -409,7 +410,51 @@ nav {
 .download-button:hover {
     background: #0056b3;
 }
-/* Web组件容器样式 */
+
+/* mermaid图表样式 */
+.mermaid {
+    margin: 20px 0;
+    text-align: center;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #eaeaea;
+}
+.markdown-content .mermaid {
+    text-align: center;
+    margin: 2em 0;
+    padding: 1em;
+    background: white;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    overflow: auto;
+}
+.markdown-content .mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* 组件相关样式 */
+.component-title-link {
+    color: #2c3e50;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    display: inline-block;
+    position: relative;
+}
+.component-title-link:hover {
+    color: #3498db;
+}
+.component-title-link::after {
+    content: "🔗";
+    font-size: 0.8em;
+    margin-left: 8px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+.component-title-link:hover::after {
+    opacity: 1;
+}
 .component-description {
     color: #666;
     margin-bottom: 1rem;
@@ -429,11 +474,18 @@ nav {
     border: none;
     display: block;
     background: white;
-    min-height: 400px; /* 默认最小高度 */
-    flex: 1; /* 填充剩余空间 */
-    transition: height 0.3s ease; /* 高度变化动画 */
+    min-height: 400px;
+    flex: 1;
+    transition: height 0.3s ease;
 }
-/* 组件加载状态 */
+
+/* 加载状态样式 */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
 .component-loading {
     display: flex;
     flex-direction: column;
@@ -460,7 +512,6 @@ nav {
     color: #666;
     margin: 0;
 }
-/* 组件标题 */
 .component-caption {
     padding: 0.75rem 1rem;
     background: #f8f9fa;
@@ -472,6 +523,16 @@ nav {
 .web-component-container {
     max-width: 100%;
 }
+
+/* 移动端导航切换按钮 */
+.mobile-nav-toggle {
+    display: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    font-weight: 500;
+    margin-left: 15px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .main-container {
@@ -519,11 +580,9 @@ nav {
     .web-component-frame {
         min-height: 300px;
     }
-    /* 显示移动端导航切换按钮 */
     .mobile-nav-toggle {
         display: block;
     }
-    /* 修改左侧导航栏样式，使其可以切换显示 */
     .sidebar {
         display: none;
         position: fixed;
@@ -539,7 +598,6 @@ nav {
     .sidebar.active {
         display: block;
     }
-    /* 添加遮罩层 */
     .sidebar-overlay {
         display: none;
         position: fixed;
@@ -552,5 +610,13 @@ nav {
     }
     .sidebar-overlay.active {
         display: block;
+    }
+    .markdown-content table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    .markdown-content th, .markdown-content td {
+        padding: 8px 12px;
     }
 }
