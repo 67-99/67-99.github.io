@@ -1,9 +1,4 @@
 [
     {"id": "class-checker","title": "教室查询系统","type": "html","src": "table.html","sandbox": "allow-scripts allow-same-origin allow-forms"},
-    {
-        "id": "conclusion",
-        "title": "总结",
-        "type": "markdown",
-        "src": "conclusion.md"
-    }
+    {"id": "form","title": "可读取文件格式","type": "markdown","src": "form.md"}
 ]
