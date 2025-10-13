@@ -264,7 +264,6 @@ function initNavigation() {
             
             const target = document.getElementById(this.getAttribute('href').substring(1));
             if (target) {
-                console.log(target.id, "jump ->", target.offsetTop - navHeight - 10)
                 window.scrollTo({
                     top: Math.max(0, target.offsetTop - navHeight - 10),
                     behavior: 'smooth'
@@ -279,8 +278,7 @@ function initNavigation() {
         
         let current = '';
         sections.forEach(s => {
-            console.log(pageYOffset, s.id , ":", s.offsetTop - navHeight)
-            if (pageYOffset >= s.offsetTop - navHeight - 5)
+            if (pageYOffset >= s.offsetTop - navHeight - 20)
                 current = s.id;
         });
         
