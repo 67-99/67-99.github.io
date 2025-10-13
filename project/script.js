@@ -13,29 +13,58 @@ mermaid.initialize({
 });
 
 // HTML转义
-function escapeHtml(str) {
+function escapeHtml(encodedStr) {
     let result = '';
-    for (let i = 0; i < str.length; i++) {
-        if (str[i] === '%' && str[i + 1] === 'u' && i + 5 < str.length) {
-            const hex = str.substring(i + 2, i + 6);
-            if (/^[0-9A-Fa-f]{4}$/.test(hex)) {
-                result += String.fromCharCode(parseInt(hex, 16));
-                i += 5;
-                continue;
+    let i = 0;
+    
+    while (i < encodedStr.length) {
+        if (encodedStr[i] === '%') {
+            if (i + 1 < encodedStr.length && encodedStr[i + 1] === 'u') {
+                if (i + 5 < encodedStr.length) {
+                    const hexCode = encodedStr.substring(i + 2, i + 6);
+                    if (/^[0-9A-Fa-f]{4}$/.test(hexCode)) {
+                        result += String.fromCharCode(parseInt(hexCode, 16));
+                        i += 6;
+                        continue;
+                    }
+                }
+            } else {
+                if (i + 2 < encodedStr.length) {
+                    const hexCode = encodedStr.substring(i + 1, i + 3);
+                    if (/^[0-9A-Fa-f]{2}$/.test(hexCode)) {
+                        result += String.fromCharCode(parseInt(hexCode, 16));
+                        i += 3;
+                        continue;
+                    }
+                }
             }
         }
-        result += str[i];
+        
+        result += encodedStr[i];
+        i++;
     }
+    
     return result;
 }
 
 // 自定义markdown渲染器
 const renderer = new marked.Renderer();
-renderer.code = function(code, language) {
-    if (language === 'mermaid') return `<div class="mermaid">${code}</div>`;
-    const escaped = typeof code === 'string' ? escapeHtml(code) : code;
-    return `<pre><code${language ? ` class="language-${language}"` : ''}>${escaped}</code></pre>`;
+renderer.code = function(code, language, isEscaped) {
+    if(typeof code !== 'string'){
+        language = code.lang;
+        code = code.text || String(code);
+    }
+    if (language === 'mermaid') {
+        return `<div class="mermaid">${code}</div>`;
+    }
+
+    if (language) {
+        return `<pre><code class="language-${language}">${isEscaped ? code : escapeHtml(code)}</code></pre>`;
+    }
+
+    return `<pre><code>${isEscaped ? code : escapeHtml(code)}</code></pre>`;
 };
+
 marked.setOptions({ renderer });
 
 // 加载配置和内容
@@ -55,7 +84,8 @@ async function loadAllContent() {
     contentArea.innerHTML = '';
     for (const section of pageConfig) {
         const el = await loadSection(section);
-        if (el) contentArea.appendChild(el);
+        if (el)
+            contentArea.appendChild(el);
     }
     
     initNavigation();
@@ -248,7 +278,7 @@ function initNavigation() {
         
         let current = '';
         sections.forEach(s => {
-            if (pageYOffset >= s.offsetTop - navHeight - 2)
+            if (pageYOffset >= s.offsetTop - navHeight - 5)
                 current = s.id;
         });
         
@@ -267,15 +297,17 @@ document.querySelector('.mobile-nav-toggle').addEventListener('click', () => {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     sidebar.classList.toggle('active');
-    overlay?.classList.toggle('active');
+    if (overlay) {
+        overlay.classList.toggle('active');
+    }
 });
 
 document.addEventListener('click', (e) => {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
-    const toggle = document.querySelector('.mobile-nav-toggle');
+    const toggleBtn = document.querySelector('.mobile-nav-toggle');
     
-    if (overlay?.classList.contains('active') && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+    if (overlay && overlay.classList.contains('active') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
         sidebar.classList.remove('active');
         overlay.classList.remove('active');
     }
