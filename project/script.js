@@ -452,10 +452,16 @@ function initNavigation() {
             
             // 滚动到对应部分
             const targetId = this.getAttribute('href').substring(1);
-            const targetElement = document.getElementById(targetId);
-            if (targetElement) {
-                targetElement.scrollIntoView({ behavior: 'smooth' });
-            }
+            const section = document.getElementById(targetId);
+            if (!section) return;
+            
+            const sectionTop = section.offsetTop;
+            const scrollPosition = sectionTop - navHeight - 10;
+            
+            window.scrollTo({
+                top: Math.max(0, scrollPosition), // 确保不为负数
+                behavior: 'smooth'
+            });
             
             // 在移动设备上点击后关闭导航
             if (window.innerWidth <= 768) {
