@@ -12,7 +12,7 @@
 
 在最一开始设计时使用的是<code>pyQt</code>框架，所以支持读取**Excel**文件；后来将整个程序迁移至<code>C++</code>的<code>Qt</code>框架，为了不引入其他库（一是C++使用库过于麻烦，二是引入新的库会增加编写与打包的难度），仅支持**以逗号分隔的csv**文件。于是在移植到html文件中时便于<code>Qt</code>版保持一致，仅支持**以逗号分隔的csv**文件。
 
-![pyQt版](content/resource/pyQt版.png) ![Qt版](content/resource/Qt版.png)
+![桌面版](content/resource/app.png)
 
 ### 功能设计
 
