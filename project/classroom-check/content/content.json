@@ -1,4 +1,5 @@
 [
     {"id": "class-checker","title": "教室查询系统","type": "html","src": "table.html","sandbox": "allow-scripts allow-same-origin allow-forms"},
-    {"id": "form","title": "可读取文件格式","type": "markdown","src": "form.md"}
+    {"id": "form","title": "可读取文件格式","type": "markdown","src": "form.md"},
+    {"id": "purpose","title": "设计初衷","type": "markdown", "src": "purpose.md"}
 ]

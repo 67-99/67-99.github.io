@@ -278,7 +278,7 @@ function initNavigation() {
         
         let current = '';
         sections.forEach(s => {
-            if (pageYOffset >= s.offsetTop - navHeight - 20)
+            if (pageYOffset >= s.offsetTop - navHeight - 30)
                 current = s.id;
         });
         
