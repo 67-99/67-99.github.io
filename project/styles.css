@@ -548,14 +548,14 @@ nav {
         padding: 25px;
     }
     .mobile-menu {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 600;
         display: block;
     }
     .nav-links {
         display: none;
         position: absolute;
-        top: 60px;
+        top: 78px;
         left: 0;
         right: 0;
         background-color: #2c3e50;
@@ -592,7 +592,7 @@ nav {
         left: 0;
         width: 80%;
         max-width: 300px;
-        height: calc(100vh - 60px);
+        height: calc(100vh - 78px);
         z-index: 99;
         border-radius: 0;
         box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);

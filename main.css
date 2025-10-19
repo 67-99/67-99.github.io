@@ -10,6 +10,13 @@ body {
     color: #333;
     line-height: 1.6;
 }
+/* 移动端菜单样式 */
+.mobile-menu {
+    display: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 5px;
+}
 /* 导航栏样式 */
 nav {
     background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
@@ -26,6 +33,7 @@ nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
 }
 .logo {
     font-size: 1.8rem;
@@ -34,10 +42,31 @@ nav {
 .nav-links {
     display: flex;
     list-style: none;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.nav-links.active {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    top: 78px;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    padding: 1rem 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: none;
+    z-index: 101;
 }
 .nav-links li {
     margin-left: 2rem;
     position: relative;
+}
+.nav-links.active li {
+    margin: 0;
+    text-align: left;
+    padding-left: 2rem;
 }
 .nav-links a {
     color: white;
@@ -46,9 +75,20 @@ nav {
     transition: opacity 0.3s;
     padding: 0.5rem 0;
     display: block;
+    font-size: 1rem;
+}
+.nav-links.active a {
+    padding: 0.75rem 2rem;
+    display: block;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: left;
+    font-size: 1rem;
 }
 .nav-links a:hover {
     opacity: 0.8;
+}
+.nav-links.active a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 /* 下拉菜单样式 */
 .dropdown-menu {
@@ -225,12 +265,15 @@ nav {
     .profile {
         position: static;
     }
+    .nav-links.active {
+        top: 78px;
+    }
     .nav-links {
         display: none;
     }
     .mobile-menu {
         display: block;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         cursor: pointer;
     }
 }

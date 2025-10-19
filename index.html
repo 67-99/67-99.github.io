@@ -87,13 +87,50 @@
             </section>
         </main>
     </div>
-    <script>
-        // 调整移动端导航菜单显示
-        window.addEventListener('resize', function() {
+        <script>
+        // 移动端菜单切换功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenu = document.querySelector('.mobile-menu');
+            const navLinks = document.querySelector('.nav-links');
+            
+            // 点击菜单按钮切换导航显示
+            mobileMenu.addEventListener('click', function(e) {
+                e.stopPropagation(); // 防止事件冒泡
+                navLinks.classList.toggle('active');
+            });
+            
+            // 点击导航链接后关闭移动菜单（在移动端）
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth <= 900) {
+                        navLinks.classList.remove('active');
+                    }
+                });
+            });
+            
+            // 点击页面其他区域关闭移动菜单
+            document.addEventListener('click', function(event) {
+                if (window.innerWidth <= 900 && 
+                    !event.target.closest('.nav-container')) {
+                    navLinks.classList.remove('active');
+                }
+            });
+            
+            // 窗口大小调整时的处理
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 900) {
+                    navLinks.classList.remove('active');
+                    navLinks.style.display = 'flex';
+                } else {
+                    navLinks.style.display = 'none';
+                }
+            });
+            
+            // 初始加载时检查窗口大小
             if (window.innerWidth > 900) {
-                document.querySelector('.nav-links').style.display = 'flex';
+                navLinks.style.display = 'flex';
             } else {
-                document.querySelector('.nav-links').style.display = 'none';
+                navLinks.style.display = 'none';
             }
         });
     </script>
