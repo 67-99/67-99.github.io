@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目主页</title>
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">67-99</div>
+            <ul class="nav-links">
+                <li><a href="../index.html">首页</a></li>
+                <li class="dropdown">
+                    <a href="index.html">项目</a>
+                </li>
+            </ul>
+            <div class="mobile-menu">☰</div>
+        </div>
+    </nav>
+    
+    <!-- 主内容区域 -->
+    <div class="container">
+        <!-- 右侧作品展示区域 -->
+        <main class="works">
+            <!-- 在线项目分类 -->
+            <section class="category">
+                <h2>在线项目</h2>
+                <div class="work-grid">
+                    <div class="work-item">
+                        <img src="https://67-99.github.io/icon/classroom-check.png" alt="教室查询" class="work-img">
+                        <div class="work-content">
+                            <h3>教室查询小程序</h3>
+                            <p>
+                                一个可以根据课表文件显示教室占用情况的程序。<br>
+                                <i>注：文件格式参考中南课表</i>
+                            </p>
+                            <a href="classroom-check/index.html" class="work-link">查看项目</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 离线项目分类 -->
+            <section class="category">
+                <h2>离线项目</h2>
+                <div class="work-grid">
+                    <div class="work-item">
+                        <img src="https://67-99.github.io/icon/innoseed.png" alt="InnOSeed黑客松B题" class="work-img">
+                        <div class="work-content">
+                            <h3>InnOSeed黑客松B题</h3>
+                            <p>一个由InnOSeed组织，旨在24内完成demo的项目。</p>
+                            <a href="innoseed-B/index.html" class="work-link">查看项目</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script>
+        // 调整移动端导航菜单显示
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 900) {
+                document.querySelector('.nav-links').style.display = 'flex';
+            } else {
+                document.querySelector('.nav-links').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
