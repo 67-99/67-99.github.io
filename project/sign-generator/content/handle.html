@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>带柄方向 - GeoGebra 重写</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        .geometry-container {
+            position: relative;
+            width: 900px;
+            height: 700px;
+            border: 1px solid #ccc;
+            background: white;
+            overflow: hidden;
+        }
+        .point { 
+            position: absolute; 
+            width: 8px; 
+            height: 8px; 
+            background: blue; 
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        .line { 
+            position: absolute; 
+            background: black; 
+            transform-origin: 0 0; 
+            height: 3px;
+            z-index: 5;
+        }
+        .rectangle { 
+            position: absolute; 
+            border: 3px solid #993300; 
+            background: rgba(153,51,0,0.1); 
+            z-index: 3;
+        }
+        .circle { 
+            position: absolute; 
+            border: 3px solid black; 
+            border-radius: 50%;
+            background: transparent;
+            z-index: 4;
+        }
+        .axis {
+            position: absolute;
+            background: #666;
+            z-index: 1;
+        }
+        .x-axis {
+            height: 2px;
+        }
+        .y-axis {
+            width: 2px;
+        }
+        .controls {
+            width: 900px;
+            margin: 10px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        .slider-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            margin: 0 40px;
+        }
+        .slider-label {
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 16px;
+            min-width: 30px;
+        }
+        .slider-value {
+            margin-left: 10px;
+            font-size: 14px;
+            color: #666;
+            min-width: 50px;
+        }
+        input[type="range"] {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <!-- 第一排：d1 和 d2 -->
+        <div class="slider-row">
+            <div class="slider-group">
+                <div class="slider-label">d₁</div>
+                <input type="range" id="d1" min="0" max="5" step="0.1" value="1.5">
+                <div class="slider-value" id="d1-value">1.5</div>
+            </div>
+            <div class="slider-group">
+                <div class="slider-label">d₂</div>
+                <input type="range" id="d2" min="0" max="1" step="0.05" value="0.3">
+                <div class="slider-value" id="d2-value">0.3</div>
+            </div>
+        </div>
+        
+        <!-- 第二排：w 和 h -->
+        <div class="slider-row">
+            <div class="slider-group">
+                <div class="slider-label">w</div>
+                <input type="range" id="w" min="0" max="5" step="0.1" value="4">
+                <div class="slider-value" id="w-value">4</div>
+            </div>
+            <div class="slider-group">
+                <div class="slider-label">h</div>
+                <input type="range" id="h" min="0" max="5" step="0.1" value="1">
+                <div class="slider-value" id="h-value">1</div>
+            </div>
+        </div>
+        
+        <!-- 第三排：θ -->
+        <div class="slider-row">
+            <div class="slider-group">
+                <div class="slider-label">θ</div>
+                <input type="range" id="theta" min="-180" max="180" step="1" value="120">
+                <div class="slider-value" id="theta-value">120°</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="geometry-container" id="geometry"></div>
+    <script src="geometry.js"></script>
+</body>
+</html>
