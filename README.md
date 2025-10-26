@@ -1,76 +1,15 @@
-# Project页面
+## 基本介绍
+这是一个以个人网页为主的仓库。基本所有的网页都是由`html`、`css`、`js`编写，<!-- 且基本都是由AI生成的， -->而其他部分以`python`为主，大部分为个人编写的。为避免不必要的麻烦，所有课程相关的代码均不会出现于此仓库中。
 
-在project表下，有一组<code>script.js</code>,<code>style.css</code>可以帮助分页面读取并链接显示<code>./contents</code>里面的内容。分页面的组织架构如下：
+## 网页架构
+网页架构如下：
 ```
-分页面/
-├── content/
-│   ├── source/
-│   │   └── 所有你需要的页面素材
-│   ├── content.json
-│   └── 页面文件
+├── icon/
+├── project/
 └── index.html
 ```
-其中<code>content</code>中放置所有页面正文依赖文件，<code>content/content.json</code>包含页面的所有链接信息，<code>content/source</code>中推荐存储所有正文依赖资源。
 
-> 注：若要使用project默认框架，则<code>index.html</code>建议包含[以下架构](project/template.html.md)。
-
-## content.json配置
-
-正文支持配置markdown、图片、视频与下载源。<code>content.json</code>中格式为：
-```
-[
-    {
-        "id": str, 
-        "title": "文字标题", 
-        "type":"类型关键字", 
-        "src":"文件地址", 
-        ...
-    },
-    ...
-]
-```
-其中，类型关键字为<code>markdown</code>, <code>image</code>, <code>image-gallery</code>, <code>video</code>, <code>downloads</code>, <code>html</code>之一，文件加载地址为<code>content/文件地址</code>。
-
-<code>image</code>关键字需要提供图片地址，格式为：
-```
-{
-    "id":"image", "title":"...", "type":"image",
-    "src":"path", "alt":"图片名称", "caption":"标题描述",
-    "showInNav": false
-}
-```
-<code>image-gallery</code>关键字需要提供多个图片地址，格式为：
-```
-{
-    "id":"gallery", "title":"...", "type":"image-gallery",
-    "images":[
-        {"src":"path", "alt":"图片名称", "caption":"标题描述"},
-        ...
-    ]
-}
-```
-<code>video</code>关键字需要提供视频地址，格式为：
-```
-{
-    "id":"video","title":"...","type":"video",
-    "src":"视频地址","poster":"视频封面地址","caption":"标题描述"
-}
-```
-<code>downloads</code>关键字需要提供文件地址，格式为：
-```
-{
-    "id":"download", "title":"...", "type":"downloads",
-    "files":[
-        {"name": "文件描述", "src":"path", "size":"大小"},
-        ...
-    ]
-}
-```
-<code>html</code>关键字需要提供嵌套网站网址，格式为：
-```
-    {
-        "id": "url", "title": ...","type": "html",
-        "src": "path", "height": "iFrame高", "sandbox": "",
-        "description": "网页描述", "caption": "网页注释"
-    }
-```
+### 详细架构：
+`icon`中存储所有主要图表，包括主图表、项目图标等。<br>
+`project`中包含所有项目，包括在线项目与离线项目。项目标准可以在[项目README](./project/README.md)中找到。<br>
+`index.html`即为网页主页。
