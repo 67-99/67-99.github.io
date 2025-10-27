@@ -1,2 +1,11 @@
 [
+    {"id":"direction-handle","title":"平交路口指向设计","type":"html","src":"handle.html"},
+    {"id":"download","title":"资源下载","type":"downloads",
+    "files":[
+        {"name":"文字生成器","src":"resource/textGenerator.py"},
+        {"name":"路牌模板","src":"resource/signTemplate.py"},
+        {"name":"国标文件","src":"https://openstd.samr.gov.cn/bzgk/gb/std_list?p.p1=0&p.p90=circulation_date&p.p91=desc&p.p2=5768.2"},
+        {"name":"字体文件","src":"resource/字体.zip"},
+        {"name":"指向设计 (Geogebra)","src":"resource/带柄方向.ggb"}]
+    }
 ]
