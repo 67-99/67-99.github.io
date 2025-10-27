@@ -172,16 +172,29 @@ function createVideo(section) {
 async function createDownloads(section) {
     let html = `<h2>${section.title}</h2><div class="downloads-list">`;
     for (const file of section.files) {
-        const size = await getFileSize(`content/${file.src}`);
-        html += `
-            <div class="download-item">
-                <div class="file-info">
-                    <h3>${file.name}</h3>
-                    <span class="file-size">${size > 0 ? formatSize(size) : '大小未知'}</span>
+        const isExternal = file.src.startsWith('http://') || file.src.startsWith('https://');
+        if (isExternal) {
+            html += `
+                <div class="download-item">
+                    <div class="file-info">
+                        <h3>${file.name}</h3>
+                        <span class="file-name">${file.file || "网页文件"}</span>
+                    </div>
+                    <a href="${file.src}" class="access-button" target="_blank" rel="noopener">访问</a>
                 </div>
-                <a href="content/${file.src}" class="download-button" download>下载</a>
-            </div>
-        `;
+            `;
+        } else {
+            const size = await getFileSize(`content/${file.src}`);
+            html += `
+                <div class="download-item">
+                    <div class="file-info">
+                        <h3>${file.name}</h3>
+                        <span class="file-size">${size > 0 ? formatSize(size) : '大小未知'}</span>
+                    </div>
+                    <a href="content/${file.src}" class="download-button" download>下载</a>
+                </div>
+            `;
+        }
     }
     return html + '</div>';
 }

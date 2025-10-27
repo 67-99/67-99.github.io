@@ -426,6 +426,10 @@ nav {
     color: #666;
     font-size: 0.9rem;
 }
+.download-item .file-name {
+    color: #666;
+    font-size: 0.9rem;
+}
 .download-button {
     background: #007bff;
     color: white;
@@ -433,9 +437,26 @@ nav {
     border-radius: 4px;
     text-decoration: none;
     transition: background 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
 }
 .download-button:hover {
     background: #0056b3;
+}
+.access-button {
+    background: #28a745;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: background 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.access-button:hover {
+    background: #218838;
 }
 
 /* mermaid图表样式 */

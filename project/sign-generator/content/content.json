@@ -4,7 +4,7 @@
     "files":[
         {"name":"文字生成器","src":"resource/textGenerator.py"},
         {"name":"路牌模板","src":"resource/signTemplate.py"},
-        {"name":"国标文件","src":"https://openstd.samr.gov.cn/bzgk/gb/std_list?p.p1=0&p.p90=circulation_date&p.p91=desc&p.p2=5768.2"},
+        {"name":"国标文件","src":"https://openstd.samr.gov.cn/bzgk/gb/std_list?p.p1=0&p.p90=circulation_date&p.p91=desc&p.p2=5768.2","file":"GB+5768.2-2022.pdf"},
         {"name":"字体文件","src":"resource/字体.zip"},
         {"name":"指向设计 (Geogebra)","src":"resource/带柄方向.ggb"}]
     }
