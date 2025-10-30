@@ -213,6 +213,7 @@ class SignGeneratorGUI(QMainWindow):
             self.stacked_widget.setCurrentIndex(1)
     def changeInfo(self):
         """ Set the info boxes """
+        print("啵")
         if self.sign_info.widget():
             self.sign_info.widget().deleteLater()
         # Add new layout
@@ -385,6 +386,7 @@ class SignGeneratorGUI(QMainWindow):
             generator.finish.connect(self.signUpdateFinished)
             generator.start()
         if change is not None:
+            dictChange = []
             for key, widget in self.info_widgets.items():
                 key = key.split("#", 1)[0]
                 if key not in change and key in self.sign.info:
@@ -400,10 +402,23 @@ class SignGeneratorGUI(QMainWindow):
                         widget.setChecked(bool(value))
                     elif isinstance(widget, QComboBox):
                         widget.setCurrentText(value)
-                    elif not isinstance(widget, dict):
+                    elif isinstance(widget, dict):
+                        for k, w in widget.items():
+                            if k not in value:
+                                continue
+                            v = value[k]
+                            # TODO: change "change" list naming
+                    else:
                         widget.setValue(self.sign.info[key])
-            if "num" in change:
-                self.changeInfo()
+            for item in change:
+                if item in {"num", "layers"}:
+                    if self.generator is None:
+                        self.changeInfo()
+                    break
+                elif len(item) > 5 and item[:5] == "layer" and item[5:].isdigit():
+                    if self.generator is None:
+                        self.changeInfo()
+                    break
         self.signRefresh()
     def signRefresh(self, img: Image.Image|None = None):
         """ Refresh QLable image """
