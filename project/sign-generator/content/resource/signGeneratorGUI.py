@@ -25,6 +25,40 @@ def getFilePath(path: str):
     """ Return the path from the code file """
     return os.path.join(os.path.dirname(__file__), path)
 
+class TrackableImageLabel(QLabel):
+    """ Display image and mouse position """
+    mouseMoved = pyqtSignal(int, int)  # send pos
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMouseTracking(True)
+        self.imgShape = None
+    def setImage(self, img: Image.Image, scale: int = 1):
+        """ Set image with origin args """
+        self.imgShape = (img.width // scale, img.height // scale)
+        qPix = QPixmap.fromImage(QImage(img.tobytes("raw", "RGBA"), img.width, img.height, QImage.Format_RGBA8888))
+        self.setPixmap(qPix.scaled(self.width(), self.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+    def mouseMoveEvent(self, event):
+        """ Emit mouse position """
+        if self.imgShape and (pixmap := self.pixmap()) and not pixmap.isNull():
+            # 计算图片在QLabel中的实际显示区域
+            pixmap_size = pixmap.size()
+            x_offset = (self.width() - pixmap_size.width()) // 2
+            y_offset = (self.height() - pixmap_size.height()) // 2
+            # 检查鼠标是否在图片区域内
+            mouse_pos = event.pos()
+            if (x_offset <= mouse_pos.x() <= x_offset + pixmap_size.width() and
+                y_offset <= mouse_pos.y() <= y_offset + pixmap_size.height()):
+                scale_x = self.imgShape[0] / pixmap_size.width()
+                scale_y = self.imgShape[1] / pixmap_size.height()
+                img_x = int((mouse_pos.x() - x_offset) * scale_x)
+                img_y = int((mouse_pos.y() - y_offset) * scale_y)
+                img_x = max(0, min(img_x, self.imgShape[0] - 1))
+                img_y = max(0, min(img_y, self.imgShape[1] - 1))
+                self.mouseMoved.emit(img_x, img_y)
+                return
+        self.mouseMoved.emit(-1, -1)
+        super().mouseMoveEvent(event)
+
 class TextDialog(QDialog):
     """ Show the text on a single dialog """
     def __init__(self, parent = None, flags = Qt.WindowFlags(), title: str = "帮助", headText: str|None = None, text: str|None = None, isHTML = False):
@@ -89,9 +123,12 @@ class SignGeneratorGUI(QMainWindow):
         self.sign_splitter = QSplitter()
         self.sign_info = QScrollArea()
         self.sign_splitter.addWidget(self.sign_info)
-        self.image_label = QLabel()
+        self.image_label = TrackableImageLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
-        '''self.loader = None'''
+        self.image_label.mouseMoved.connect(self.updatePosDisplay)
+        self.statusBar = self.statusBar()
+        self.coord_label = QLabel("坐标: (-, -)")
+        self.statusBar.addPermanentWidget(self.coord_label)
         self.sign_splitter.addWidget(self.image_label)
         self.stacked_widget.addWidget(self.sign_splitter)
         self.sign_splitter.setSizes([350, 600])
@@ -421,7 +458,7 @@ class SignGeneratorGUI(QMainWindow):
                     break
         self.signRefresh()
     def signRefresh(self, img: Image.Image|None = None):
-        """ Refresh QLable image """
+        """ Refresh QLabel image """
         if img is None:
             if self.sign and self.sign.img:
                 img = self.sign.img
@@ -442,8 +479,13 @@ class SignGeneratorGUI(QMainWindow):
                 text_width = draw.textlength(text, font=self.font)
                 text_position = ((width - text_width) // 2, (height - text_height) // 2)
                 draw.text(text_position, text, fill="white", font=self.font)
-            qPix = QPixmap.fromImage(QImage(img.tobytes("raw", "RGBA"), img.width, img.height, QImage.Format_RGBA8888))
-            self.image_label.setPixmap(qPix.scaled(self.image_label.width(), self.image_label.height(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            self.image_label.setImage(img, self.sign.scale)
+    def updatePosDisplay(self, x, y):
+        """ Refresh pos bar display """
+        if x >= 0 and y >= 0:
+            self.coord_label.setText(f"坐标: ({x}, {y})")
+        else:
+            self.coord_label.setText("坐标: (-, -)")
 
 r'''class ImageLoader(QThread):
     """ Add loading screen to image """
