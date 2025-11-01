@@ -250,7 +250,6 @@ class SignGeneratorGUI(QMainWindow):
             self.stacked_widget.setCurrentIndex(1)
     def changeInfo(self):
         """ Set the info boxes """
-        print("啵")
         if self.sign_info.widget():
             self.sign_info.widget().deleteLater()
         # Add new layout
@@ -349,7 +348,7 @@ class SignGeneratorGUI(QMainWindow):
                         widgets_[k] = widget_
                     widget.setLayout(groupLayout)
                     form_layout.addRow(QLabel(key + ":"), widget)
-                    self.info_widgets[key + "#D"] = widgets_
+                    self.info_widgets[key] = widgets_
                 else:
                     if hasattr(self.sign, f"{key}ComboList"):  # 使用下拉框
                         widget = QComboBox()
@@ -385,7 +384,7 @@ class SignGeneratorGUI(QMainWindow):
                     self.info_widgets[key] = widget
         scroll_layout.addLayout(form_layout)
         # Add buttons (if any)
-        button_layout = QHBoxLayout()
+        #button_layout = QHBoxLayout()
         # Set to sign_info
         self.sign_info.setWidget(scroll_content)
         self.sign_info.setWidgetResizable(True)
@@ -410,20 +409,29 @@ class SignGeneratorGUI(QMainWindow):
         if newInfo is not None:
             if "line" in self.info and self.info["line"] != newInfo["line"]:
                 self.info["line"] = newInfo["line"]
+                self.info = newInfo
+                if self.noEn != noEn:
+                    self.noEn = noEn
                 self.changeInfo()
+                return self.signRefresh()
             self.info = newInfo
         if self.noEn != noEn:
             self.noEn = noEn
             self.changeInfo()
-        if self.generator is None:
-            self.isGenerate = False
-        else:
+            return self.signRefresh()
+        if self.generator is not None:
             generator = self.generator
             self.generator = None
             generator.finish.connect(self.signUpdateFinished)
             generator.start()
+            return self.signRefresh()
+        self.isGenerate = False
         if change is not None:
-            dictChange = []
+            for item in change:
+                if item in {"num", "layers"} or "#ALL" in item:
+                    if self.generator is None:
+                        self.changeInfo()
+                    return self.signRefresh()
             for key, widget in self.info_widgets.items():
                 key = key.split("#", 1)[0]
                 if key not in change and key in self.sign.info:
@@ -441,21 +449,24 @@ class SignGeneratorGUI(QMainWindow):
                         widget.setCurrentText(value)
                     elif isinstance(widget, dict):
                         for k, w in widget.items():
-                            if k not in value:
+                            if f"{key}#{k}" in change or k not in value:
                                 continue
                             v = value[k]
-                            # TODO: change "change" list naming
+                            if isinstance(w, QLineEdit):
+                                if isinstance(v, list|dict):
+                                    v = str(v).replace("'", '"')
+                                else:
+                                    v = str(v)
+                                if w.text() != v:
+                                    w.setText(v)
+                            elif isinstance(w, QCheckBox):
+                                w.setChecked(bool(v))
+                            elif isinstance(w, QComboBox):
+                                w.setCurrentText(v)
+                            else:
+                                w.setValue(v)
                     else:
-                        widget.setValue(self.sign.info[key])
-            for item in change:
-                if item in {"num", "layers"}:
-                    if self.generator is None:
-                        self.changeInfo()
-                    break
-                elif len(item) > 5 and item[:5] == "layer" and item[5:].isdigit():
-                    if self.generator is None:
-                        self.changeInfo()
-                    break
+                        widget.setValue(value)
         self.signRefresh()
     def signRefresh(self, img: Image.Image|None = None):
         """ Refresh QLabel image """
@@ -566,10 +577,9 @@ class Generator(QThread):
         info_widgets = self.parent_.info_widgets
         change: list[str] = []
         for key, widget in info_widgets.items():
-            if key.split("#", 1)[0] in sign.info:
+            if key in sign.info:
                 value = None
-                if "#D" in key:
-                    key = key.split("#", 1)[0]
+                if isinstance(widget, dict):
                     value: dict[str,] = {}
                     for k, v in widget.items():
                         if isinstance(v, QCheckBox):
@@ -600,11 +610,17 @@ class Generator(QThread):
                             pass
                     if isinstance(value, dict):
                         if any([v != info[key][k] for k, v in value.items() if k in info[key]]):
+                            change_ = []
                             for k, v in value.items():
-                                if k in info and v != info[k]:
+                                if k in info[key] and v != info[key][k]:
                                     info[k] = v
-                            change.append(key)
+                                    if k == "type":
+                                        change.append(f"{key}#ALL")
+                                        change_.insert(0, "break")
+                                    change_.append(f"{key}#{k}")
                             sign.autoSet(key, value)
+                            if len(change_) > 0 and change_[0] != "break":
+                                change += change_
                     elif info[key] != value:
                         info[key] = value
                         change.append(key)
