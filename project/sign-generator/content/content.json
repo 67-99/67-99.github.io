@@ -1,4 +1,5 @@
 [
+    {"id": "purpose","title": "设计初衷","type": "markdown", "src": "purpose.md"},
     {"id":"direction-handle","title":"平交路口指向设计","type":"html","src":"handle.html"},
     {"id":"download","title":"资源下载","type":"downloads",
     "files":[
