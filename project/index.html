@@ -23,51 +23,96 @@
     
     <!-- 主内容区域 -->
     <div class="container">
-        <!-- 右侧作品展示区域 -->
-        <main class="works">
-            <!-- 在线项目分类 -->
-            <section class="category">
-                <h2>在线项目</h2>
-                <div class="work-grid">
-                    <div class="work-item">
-                        <img src="https://67-99.github.io/icon/classroom-check.png" alt="教室查询" class="work-img">
-                        <div class="work-content">
-                            <h3>教室查询小程序</h3>
-                            <p>
-                                一个可以根据课表文件显示教室占用情况的程序。<br>
-                                <i>注：文件格式参考中南课表</i>
-                            </p>
-                            <a href="classroom-check/index.html" class="work-link">查看项目</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- 离线项目分类 -->
-            <section class="category">
-                <h2>离线项目</h2>
-                <div class="work-grid">
-                    <div class="work-item">
-                        <img src="https://67-99.github.io/icon/innoseed.png" alt="InnOSeed黑客松B题" class="work-img">
-                        <div class="work-content">
-                            <h3>InnOSeed黑客松B题</h3>
-                            <p>一个由InnOSeed组织，旨在24内完成demo的项目。</p>
-                            <a href="innoseed-B/index.html" class="work-link">查看项目</a>
-                        </div>
-                    </div>
-                </div>
-            </section>
+        <!-- 作品展示区域 -->
+        <main class="works" id="works-container">
+            <!-- 内容将通过JavaScript动态生成 -->
+            <div class="loading">正在加载项目内容...</div>
         </main>
     </div>
     
     <script>
-        // 调整移动端导航菜单显示
-        window.addEventListener('resize', function() {
-            if (window.innerWidth > 900) {
-                document.querySelector('.nav-links').style.display = 'flex';
-            } else {
-                document.querySelector('.nav-links').style.display = 'none';
+        // 动态生成内容
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('./content.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应不正常');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    displayProjects(data);
+                })
+                .catch(error => {
+                    console.error('加载项目内容失败:', error);
+                    document.getElementById('works-container').innerHTML = 
+                        '<div class="error">加载项目内容失败，请稍后重试。</div>';
+                });
+            
+            function displayProjects(data) {
+                const worksContainer = document.getElementById('works-container');
+                worksContainer.innerHTML = '';
+                
+                // 遍历每个分类
+                Object.keys(data).forEach(categoryKey => {
+                    const category = data[categoryKey];
+                    const categorySection = document.createElement('section');
+                    categorySection.className = 'category';
+                    
+                    const categoryTitle = document.createElement('h2');
+                    categoryTitle.textContent = category.name;
+                    categorySection.appendChild(categoryTitle);
+                    
+                    const workGrid = document.createElement('div');
+                    workGrid.className = 'work-grid';
+                    
+                    // 遍历每个项目
+                    category.projects.forEach(project => {
+                        const workItem = document.createElement('div');
+                        workItem.className = 'work-item';
+                        
+                        const workImg = document.createElement('img');
+                        // 根据name字段生成图片URL
+                        workImg.src = `https://67-99.github.io/icon/${project.name}.png`;
+                        workImg.alt = project.title;
+                        workImg.className = 'work-img';
+                        workItem.appendChild(workImg);
+                        
+                        const workContent = document.createElement('div');
+                        workContent.className = 'work-content';
+                        
+                        const workTitle = document.createElement('h3');
+                        workTitle.textContent = project.title;
+                        workContent.appendChild(workTitle);
+                        
+                        const workDescription = document.createElement('p');
+                        workDescription.innerHTML = project.description;
+                        workContent.appendChild(workDescription);
+                        
+                        const workLink = document.createElement('a');
+                        // 根据name字段生成链接
+                        workLink.href = `${project.name}/index.html`;
+                        workLink.className = 'work-link';
+                        workLink.textContent = '查看项目';
+                        workContent.appendChild(workLink);
+                        
+                        workItem.appendChild(workContent);
+                        workGrid.appendChild(workItem);
+                    });
+                    
+                    categorySection.appendChild(workGrid);
+                    worksContainer.appendChild(categorySection);
+                });
             }
+            
+            // 调整移动端导航菜单显示
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 900) {
+                    document.querySelector('.nav-links').style.display = 'flex';
+                } else {
+                    document.querySelector('.nav-links').style.display = 'none';
+                }
+            });
         });
     </script>
 </body>

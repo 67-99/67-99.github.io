@@ -84,6 +84,16 @@ nav {
     background-color: #f5f5f5;
     opacity: 1;
 }
+/* 加载和错误状态样式 */
+.loading, .error {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.1rem;
+    color: #7f8c8d;
+}
+.error {
+    color: #e74c3c;
+}
 /* 主内容区域 */
 .container {
     max-width: 1200px;
