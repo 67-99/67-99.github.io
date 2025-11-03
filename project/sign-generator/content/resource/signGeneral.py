@@ -11,10 +11,13 @@ class SignGeneral(Sign):
         self.bgcolor = Color.GREEN
         self.bglinecolor = (255)
         self.typeTrans = {
-            "text": {"text": "", "height": text_height}, 
+            "text": {"text": "", "height": text_height, "textType": "A", "gap": 0.1}, 
+            "textC": {"text": "", "height": text_height, "textType": "A", "gap": 0.1}, 
+            "roundRect": {"width": text_height, "height": text_height, "rad": text_height * 0.1, "color": "G"}, 
             "arrowS": {"arrowS": "↑", "width": text_height, "height": text_height}
             }
         self.typeComboList = self.typeTrans.keys()
+        self.textTypeComboList = ["A", "B", "C"]
         self.arrowSComboList = ["←", "↖", "↑", "↗", "→", "↘", "↓", "↙", "↶", "↰", "↱"]
     def update(self):
         self.img = Image.new("RGBA", (round(self.info["BGwidth"] * self.scale), round(self.info["BGheight"] * self.scale)), (255, 255, 255, 0))
@@ -27,7 +30,14 @@ class SignGeneral(Sign):
             pos = (layerInfo.get("x", 0), layerInfo.get("y", 0))
             try:
                 if layerInfo["type"] == "text":
-                    self.putAutoText(layerInfo["text"], pos, layerInfo.get("height", self.text_height), "A")
+                    self.putAutoText(layerInfo["text"], pos, layerInfo.get("height", self.text_height), layerInfo.get("textType", "A"), layerInfo.get("gap", 0.1))
+                elif layerInfo["type"] == "textC":
+                    self.putAutoCentralText(layerInfo["text"], pos, layerInfo.get("height", self.text_height), layerInfo.get("textType", "A"), layerInfo.get("gap", 0.1))
+                elif layerInfo["type"] == "roundRect":
+                    x2 = pos[0] + layerInfo["width"]
+                    y2 = pos[1] + layerInfo["height"]
+                    colorList = Color.getDefaultColor(layerInfo.get("color", "G"))
+                    self.drawRoundRect((*pos, x2, y2), layerInfo.get("rad", self.text_height * 0.1), colorList[0] if len(colorList) >= 1 else Color.GREEN)
                 elif layerInfo["type"] == "arrowS":
                     self.drawAutoStraightArrow(layerInfo["arrowS"], pos, layerInfo.get("width", self.text_height), layerInfo.get("height", None))
             except:
@@ -44,7 +54,7 @@ class SignGeneral(Sign):
             self.info[key] = newDict
         else:
             for k, v in value.items():
-                if self.info[key][k] != v:
+                if k in self.info[key] and self.info[key][k] != v:
                     break
             else:
                 return

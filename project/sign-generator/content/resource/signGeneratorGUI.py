@@ -336,9 +336,9 @@ class SignGeneratorGUI(QMainWindow):
                         elif isinstance(v, float):
                             # 浮点数 - 使用双精度微调框
                             widget_ = QDoubleSpinBox()
-                            widget_.setRange(0, 1)
+                            widget_.setRange(0, 100)
                             widget_.setValue(v)
-                            widget_.setSingleStep(0.2)
+                            widget_.setSingleStep(0.1)
                             widget_.valueChanged.connect(self.signUpdate)
                         else:
                             # 默认 - 使用文本输入框
@@ -372,9 +372,9 @@ class SignGeneratorGUI(QMainWindow):
                     elif isinstance(value, float):
                         # 浮点数 - 使用双精度微调框
                         widget = QDoubleSpinBox()
-                        widget.setRange(0, 1)
+                        widget.setRange(0, 100)
                         widget.setValue(value)
-                        widget.setSingleStep(0.2)
+                        widget.setSingleStep(0.1)
                         widget.valueChanged.connect(self.signUpdate)
                     else:
                         # 默认 - 使用文本输入框
