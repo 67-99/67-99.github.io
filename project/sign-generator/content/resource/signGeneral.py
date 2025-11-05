@@ -13,6 +13,7 @@ class SignGeneral(Sign):
         self.typeTrans = {
             "text": {"text": "", "height": text_height, "textType": "A", "gap": 0.1}, 
             "textC": {"text": "", "height": text_height, "textType": "A", "gap": 0.1}, 
+            "arc": {"endX": 0, "endY": 0, "lineWidth": text_height * 0.4},
             "roundRect": {"width": text_height, "height": text_height, "rad": text_height * 0.1, "color": "G"}, 
             "arrowS": {"arrowS": "↑", "width": text_height, "height": text_height}
             }
@@ -33,6 +34,8 @@ class SignGeneral(Sign):
                     self.putAutoText(layerInfo["text"], pos, layerInfo.get("height", self.text_height), layerInfo.get("textType", "A"), layerInfo.get("gap", 0.1))
                 elif layerInfo["type"] == "textC":
                     self.putAutoCentralText(layerInfo["text"], pos, layerInfo.get("height", self.text_height), layerInfo.get("textType", "A"), layerInfo.get("gap", 0.1))
+                elif layerInfo["type"] == "arc":
+                    self.drawArc(pos, (layerInfo.get("endX", 0), layerInfo.get("endY", 0)), layerInfo.get("lineWidth", self.text_height * 0.4))
                 elif layerInfo["type"] == "roundRect":
                     x2 = pos[0] + layerInfo["width"]
                     y2 = pos[1] + layerInfo["height"]

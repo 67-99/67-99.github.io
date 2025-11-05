@@ -1,5 +1,5 @@
 from textGenerator import placeText, fontLen
-from math import sin, cos, tan, atan, pi as PI
+from math import sin, cos, tan, asin, atan, pi as PI
 from PIL import Image, ImageDraw
 
 def isAlpha(string: str):
@@ -139,6 +139,30 @@ class Sign:
         draw.ellipse([x1 - 2*rad, y1 - 2*rad, x1, y1], fill=fill)
         draw.rectangle([x0 if direction == 0 else x0 + rad, y0, x1 if direction == 2 else x1 - rad, y1], fill=fill)
         draw.rectangle([x0, y0 if direction == 1 else y0 + rad, x1, y1 if direction == 3 else y1 - rad], fill=fill)
+    def drawArc(self, start: tuple[float, float], end: tuple[float, float], lineWidth: int, fill: tuple = (255)):
+        """ Draw arc with horizontal end """
+        x1, y1 = start
+        x2, y2 = end
+        x1 *= self.scale
+        y1 *= self.scale
+        x2 *= self.scale
+        y2 *= self.scale
+        lineWidth *= self.scale
+        fill = Color.getRGBAColor(fill)
+        r = ((x1 - x2) ** 2 + (y1 - y2) ** 2) / (y1 - y2) / 2
+        y0 = y2 + r
+        r = abs(r)
+        x3 = x2 + lineWidth * 1.732 / 2 if x1 < x2 else x2 - lineWidth * 1.732 / 2
+        draw = ImageDraw.Draw(self.img)
+        if y1 > y2:
+            ang0 = 270 - asin((x2 - x1) / r) / PI * 180
+            ang1 = 270
+            draw.polygon([round(x2), round(y2), round(x2), round(y2 + lineWidth), round(x3), round(y2 + lineWidth / 2)], fill=fill)
+        else:
+            ang0 = 90 + asin((x2 - x1) / r) / PI * 180
+            ang1 = 90
+            draw.polygon([round(x2), round(y2), round(x2), round(y2 - lineWidth), round(x3), round(y2 - lineWidth / 2)], fill=fill)
+        draw.arc((round(x2 - r), round(y0 - r), round(x2 + r), round(y0 + r)), min(ang0, ang1), max(ang0, ang1), fill=fill, width=round(lineWidth))
     def drawLeftArrow(self, xy: tuple[float, float, float, float], fill: tuple = (255)):
         """ Draw left arrow on image """
         x0, y0, x1, y1 = xy
