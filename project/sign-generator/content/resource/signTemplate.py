@@ -228,6 +228,17 @@ class Sign:
         draw = ImageDraw.Draw(self.img)
         draw.polygon([x, y0, x1 - 3/2 * h, y0, x1, y, x1 - 3/2 * h, y1, x, y1, x + 3/2 * h, y], fill=fill)
         draw.rectangle([x0, y - h / 2, x1 - h / 2, y + h / 2], fill=fill)
+    def drawDownRightArrow(self, pos: tuple[float, float], height, arrowSize: float = 1/4, fill: tuple = (255)):
+        """ Draw down-right arrow on image (arrowSize ∈ (0, 0.6)) """
+        x, y = pos
+        x *= self.scale
+        y *= self.scale
+        height *= self.scale
+        fill = Color.getRGBAColor(fill)
+        w0 = 2/3 * arrowSize
+        draw = ImageDraw.Draw(self.img)
+        draw.polygon([x + height, y + height, x + height / 2, y + height, x + (1/2 - arrowSize) * height, y + (1 - arrowSize) * height, x + (1 - arrowSize - w0) * height, y + (1 - arrowSize) * height, x, y + w0 * height, 
+                      x + w0 * height, y, x + (1 - arrowSize) * height, y + (1 - arrowSize - w0) * height, x + (1 - arrowSize) * height, y + (1/2 - arrowSize) * height, x + height, y + height / 2], fill=fill)
     def drawDownArrow(self, xy: tuple[float, float, float, float], arrowSize: float = 1.0, fill: tuple = (255)):
         """ Draw large down arrow on image """
         x0, y0, x1, y1 = xy
@@ -244,6 +255,17 @@ class Sign:
         draw.polygon([x0, y, x0, y1 - 3/2 * w, x, y1, x1, y1 - 3/2 * w, x1, y, x, y + 3/2 * w], fill=fill)
         w *= arrowSize
         draw.rectangle([x - w / 2, y0, x + w / 2, y1 - w], fill=fill)
+    def drawDownLeftArrow(self, pos: tuple[float, float], height, arrowSize: float = 1/4, fill: tuple = (255)):
+        """ Draw down-left arrow on image (arrowSize ∈ (0, 0.6)) """
+        x, y = pos
+        x *= self.scale
+        y *= self.scale
+        height *= self.scale
+        fill = Color.getRGBAColor(fill)
+        w0 = 2/3 * arrowSize
+        draw = ImageDraw.Draw(self.img)
+        draw.polygon([x, y + height, x + height / 2, y + height, x + (1/2 + arrowSize) * height, y + (1 - arrowSize) * height, x + (arrowSize + w0) * height, y + (1 - arrowSize) * height, x + height, y + w0 * height, 
+                      x + (1 - w0) * height, y, x + arrowSize * height, y + (1 - arrowSize - w0) * height, x + arrowSize * height, y + (1/2 - arrowSize) * height, x, y + height / 2], fill=fill)
     def drawUTurnArrow(self, xy: tuple[float, float, float, float], fill: tuple = (255)):
         """ Draw an U-turn arrow on image """
         x0, y0, x1, y1 = xy
@@ -301,8 +323,12 @@ class Sign:
             self.drawUpRightArrow(pos, width, 1/4 if arrowSize is None else arrowSize, fill)
         elif arrowType == "→":
             self.drawRightArrow((x, y, x + width, y + height), fill)
+        elif arrowType == "↘":
+            self.drawDownRightArrow(pos, width, 1/4 if arrowSize is None else arrowSize, fill)
         elif arrowType == "↓":
             self.drawDownArrow((x, y, x + width, y + height), 1 if arrowSize is None else arrowSize, fill)
+        elif arrowType == "↙":
+            self.drawDownLeftArrow(pos, width, 1/4 if arrowSize is None else arrowSize, fill)
         elif arrowType == "↶":
             self.drawUTurnArrow((x, y, x + width, y + height), fill)
         elif arrowType == "↰":
