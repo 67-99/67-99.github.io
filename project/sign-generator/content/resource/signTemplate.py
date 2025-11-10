@@ -335,6 +335,86 @@ class Sign:
             self.drawLeftTurnArrow((x, y, x + width, y + height), fill)
         elif arrowType == "↱":
             self.drawRightTurnArrow((x, y, x + width, y + height), fill)
+    def drawLeftCurve(self, xy: tuple[float, float, float, float], lineWidth: int|None = None, fill: tuple = (255)):
+        """ Draw rounded left arrow """
+        x1, y1, x2, y2 = xy
+        x1 *= self.scale
+        y1 *= self.scale
+        x2 *= self.scale
+        y2 *= self.scale
+        if not lineWidth:
+            lineWidth = min(x2 - x1, y2 - y1) / 50
+        lineWidth *= self.scale
+        fill = Color.getRGBAColor(fill)
+        draw = ImageDraw.Draw(self.img)
+        if x2 - x1 < y2 - y1:
+            r = abs(((x1 - x2) ** 2 + (y1 - y2) ** 2) / (x1 - x2) / 2)
+            x0, y0 = x2 - r, y2
+            ang0 = -asin((y2 - y1) / r)
+            ang1 = 0
+        else:
+            r = abs(((x1 - x2) ** 2 + (y1 - y2) ** 2) / (y1 - y2) / 2)
+            x0, y0 = x1, y1 + r
+            ang0 = -PI / 2
+            ang1 = asin((x2 - x1) / r) - PI / 2
+        ang0 += lineWidth / r
+        vecX = (cos(ang0), sin(ang0))
+        vecY = (-sin(ang0), cos(ang0))
+        def transPos(base: tuple[float, float], x: float = 0, y: float = 0):
+            if not base:
+                base = (0, 0)
+            return (base[0] + x * vecX[0] + y * vecY[0], base[1] + x * vecX[1] + y * vecY[1])
+        p1 = transPos((x1, y1), -0.52 * lineWidth)
+        p2 = transPos(p1, 1.5 * lineWidth, 1.5 * lineWidth)
+        p6 = transPos(p1, -1.5 * lineWidth, 1.5 * lineWidth)
+        p4 = transPos(p1, 0, 2 * lineWidth)
+        p3 = transPos(p2, 0, 2 * lineWidth)
+        p5 = transPos(p6, 0, 2 * lineWidth)
+        draw.polygon([p1[0], p1[1], p2[0], p2[1], p3[0], p3[1], p4[0], p4[1], p5[0], p5[1], p6[0], p6[1]], fill=fill)
+        ang0 += lineWidth / r
+        ang0 *= 180 / PI
+        ang1 *= 180 / PI
+        draw.arc((round(x0 - r), round(y0 - r), round(x0 + r), round(y0 + r)), min(ang0, ang1), max(ang0, ang1), fill=fill, width=round(lineWidth))
+    def drawRightCurve(self, xy: tuple[float, float, float, float], lineWidth: int|None = None, fill: tuple = (255)):
+        """ Draw rounded right arrow """
+        x1, y1, x2, y2 = xy
+        x1 *= self.scale
+        y1 *= self.scale
+        x2 *= self.scale
+        y2 *= self.scale
+        if not lineWidth:
+            lineWidth = min(x2 - x1, y2 - y1) / 50
+        lineWidth *= self.scale
+        fill = Color.getRGBAColor(fill)
+        draw = ImageDraw.Draw(self.img)
+        if x2 - x1 < y2 - y1:
+            r = abs(((x1 - x2) ** 2 + (y1 - y2) ** 2) / (x2 - x1) / 2)
+            x0, y0 = x1 + r, y2
+            ang0 = PI
+            ang1 = PI + asin((y2 - y1) / r)
+        else:
+            r = abs(((x1 - x2) ** 2 + (y1 - y2) ** 2) / (y2 - y1) / 2)
+            x0, y0 = x2, y1 + r
+            ang0 = -PI / 2 - asin((x2 - x1) / r)
+            ang1 = -PI / 2
+        ang1 -= lineWidth / r
+        vecX = (-cos(ang1), -sin(ang1))
+        vecY = (sin(ang1), -cos(ang1))
+        def transPos(base: tuple[float, float], x: float = 0, y: float = 0):
+            if not base:
+                base = (0, 0)
+            return (base[0] + x * vecX[0] + y * vecY[0], base[1] + x * vecX[1] + y * vecY[1])
+        p1 = transPos((x2, y1), 0.52 * lineWidth)
+        p2 = transPos(p1, 1.5 * lineWidth, 1.5 * lineWidth)
+        p6 = transPos(p1, -1.5 * lineWidth, 1.5 * lineWidth)
+        p4 = transPos(p1, 0, 2 * lineWidth)
+        p3 = transPos(p2, 0, 2 * lineWidth)
+        p5 = transPos(p6, 0, 2 * lineWidth)
+        draw.polygon([p1[0], p1[1], p2[0], p2[1], p3[0], p3[1], p4[0], p4[1], p5[0], p5[1], p6[0], p6[1]], fill=fill)
+        ang1 -= lineWidth / r
+        ang0 *= 180 / PI
+        ang1 *= 180 / PI
+        draw.arc((round(x0 - r), round(y0 - r), round(x0 + r), round(y0 + r)), min(ang0, ang1), max(ang0, ang1), fill=fill, width=round(lineWidth))
     def drawAutoCurveArrow(self, arrowType: str, pos: tuple[float, float], width: float, height: float = None, arrowSize: float|None = None, fill: tuple = (255)):
         """ Put curve arrow on image """
         x, y = pos
@@ -355,9 +435,9 @@ class Sign:
         elif arrowType == "↶":
             self.drawUTurnArrow((x, y, x + width, y + height), fill)
         elif arrowType == "↰":
-            self.drawLeftTurnArrow((x, y, x + width, y + height), fill)
+            self.drawLeftCurve((x, y, x + width, y + height), arrowSize, fill)
         elif arrowType == "↱":
-            self.drawRightTurnArrow((x, y, x + width, y + height), fill)
+            self.drawRightCurve((x, y, x + width, y + height), arrowSize, fill)
     def getTextLen(self, text: str, font_type: str, font_height: float, gap: float = 0.1):
         """ The total length of each echaracter, font_type should be <code>"A"</code>, <code>"B"</code>, or <code>"C"</code>. """
         if "#Tt" in text:
