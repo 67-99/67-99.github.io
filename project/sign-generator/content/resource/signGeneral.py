@@ -13,13 +13,15 @@ class SignGeneral(Sign):
         self.typeTrans = {
             "text": {"text": "", "height": text_height, "textType": "A", "gap": 0.1}, 
             "textC": {"text": "", "height": text_height, "textType": "A", "gap": 0.1}, 
-            "arc": {"endX": 0, "endY": 0, "lineWidth": text_height * 0.4},
+            "arc": {"endX": 0, "endY": 0, "lineWidth": text_height * 0.4, "color": "X"},
             "roundRect": {"width": text_height, "height": text_height, "rad": text_height * 0.1, "color": "G"}, 
-            "arrowS": {"arrowS": "↑", "width": text_height, "height": text_height}
-            }
+            "arrowS": {"arrowS": "↑", "width": text_height, "height": text_height, "color": "X"}, 
+            "arrowC": {"arrowC": "↫", "width": text_height, "height": text_height, "color": "X"}
+        }
         self.typeComboList = self.typeTrans.keys()
         self.textTypeComboList = ["A", "B", "C"]
         self.arrowSComboList = ["←", "↖", "↑", "↗", "→", "↘", "↓", "↙", "↶", "↰", "↱"]
+        self.arrowCComboList = ["↫", "↰", "↱"]
     def update(self):
         self.img = Image.new("RGBA", (round(self.info["BGwidth"] * self.scale), round(self.info["BGheight"] * self.scale)), (255, 255, 255, 0))
         self.drawTriRoundRect(None, self.text_height * 0.1, self.bgcolor, self.bglinecolor)
@@ -34,15 +36,20 @@ class SignGeneral(Sign):
                     self.putAutoText(layerInfo["text"], pos, layerInfo.get("height", self.text_height), layerInfo.get("textType", "A"), layerInfo.get("gap", 0.1))
                 elif layerInfo["type"] == "textC":
                     self.putAutoCentralText(layerInfo["text"], pos, layerInfo.get("height", self.text_height), layerInfo.get("textType", "A"), layerInfo.get("gap", 0.1))
-                elif layerInfo["type"] == "arc":
-                    self.drawArc(pos, (layerInfo.get("endX", 0), layerInfo.get("endY", 0)), layerInfo.get("lineWidth", self.text_height * 0.4))
-                elif layerInfo["type"] == "roundRect":
-                    x2 = pos[0] + layerInfo["width"]
-                    y2 = pos[1] + layerInfo["height"]
-                    colorList = Color.getDefaultColor(layerInfo.get("color", "G"))
-                    self.drawRoundRect((*pos, x2, y2), layerInfo.get("rad", self.text_height * 0.1), colorList[0] if len(colorList) >= 1 else Color.GREEN)
-                elif layerInfo["type"] == "arrowS":
-                    self.drawAutoStraightArrow(layerInfo["arrowS"], pos, layerInfo.get("width", self.text_height), layerInfo.get("height", None))
+                else:
+                    colorList = Color.getDefaultColor(layerInfo.get("color", ""))
+                    if len(colorList) == 0:
+                        colorList = [(0)]
+                    if layerInfo["type"] == "arc":
+                        self.drawHArc(pos, (layerInfo.get("endX", 0), layerInfo.get("endY", 0)), layerInfo.get("lineWidth", self.text_height * 0.4), colorList[0])
+                    elif layerInfo["type"] == "roundRect":
+                        x2 = pos[0] + layerInfo["width"]
+                        y2 = pos[1] + layerInfo["height"]
+                        self.drawRoundRect((*pos, x2, y2), layerInfo.get("rad", self.text_height * 0.1), colorList[0])
+                    elif layerInfo["type"] == "arrowS":
+                        self.drawAutoStraightArrow(layerInfo["arrowS"], pos, layerInfo.get("width", self.text_height), layerInfo.get("height", None), fill=colorList[0])
+                    elif layerInfo["type"] == "arrowC":
+                        self.drawAutoCurveArrow(layerInfo["arrowC"], pos, layerInfo.get("width", self.text_height), layerInfo.get("height", None), fill=colorList[0])
             except:
                 print("Error:", f"Cannot draw {key} ({layerInfo["type"]})")
     def setLayer(self, key: str, value: dict[str,], refresh = True):
