@@ -6,7 +6,7 @@ class SignGeneral(Sign):
     def __init__(self, scale, text_height: int = 50):
         super().__init__(scale)
         self.text_height = text_height
-        self.info = {"background": "GW", "BGwidth": 640, "BGheight": 480, "layers": 0}
+        self.info = {"BGcolor": "GW", "BGwidth": 640, "BGheight": 480, "layers": 0}
         self.num = 0
         self.bgcolor = Color.GREEN
         self.bglinecolor = (255)
@@ -25,11 +25,14 @@ class SignGeneral(Sign):
     def update(self):
         self.img = Image.new("RGBA", (round(self.info["BGwidth"] * self.scale), round(self.info["BGheight"] * self.scale)), (255, 255, 255, 0))
         self.drawTriRoundRect(None, self.text_height * 0.1, self.bgcolor, self.bglinecolor)
+        layerList: list[dict[str,]] = []
         for i in range(self.num):
             key = f"layer{i + 1}"
             if key not in self.info:
                 continue
-            layerInfo: dict[str,] = self.info[key]
+            layerList.append(self.info[key])
+        layerList.sort(key=lambda x: x.get("priority", 0))
+        for layerInfo in layerList:
             pos = (layerInfo.get("x", 0), layerInfo.get("y", 0))
             try:
                 if layerInfo["type"] == "text":
@@ -59,7 +62,7 @@ class SignGeneral(Sign):
         if layerType not in self.typeTrans:
             layerType = "text"
         if oldDict.get("type", "") != layerType:
-            newDict = {"x": value.get("x", 0), "y": value.get("y", 0), "type": layerType}
+            newDict = {"priority": 0, "x": value.get("x", 0), "y": value.get("y", 0), "type": layerType}
             newDict.update(self.typeTrans[layerType])
             self.info[key] = newDict
         else:
@@ -91,7 +94,7 @@ class SignGeneral(Sign):
                     self.update()
     def autoSet(self, key: str, value, refresh = True):
         """ Set data based on infomation """
-        if key == "background":
+        if key == "BGcolor":
             bgcolor = Color.getDefaultColor(value)
             self.bgcolor = bgcolor[0] if len(bgcolor) > 0 else Color.GREEN
             self.bglinecolor = bgcolor[1] if len(bgcolor) > 1 else (255)
