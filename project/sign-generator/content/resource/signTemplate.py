@@ -99,9 +99,12 @@ class Sign:
         y0 *= self.scale
         x1 *= self.scale
         y1 *= self.scale
-        rad *= self.scale
         fill = Color.getRGBAColor(fill)
         draw = ImageDraw.Draw(self.img)
+        if rad == 0:
+            draw.rectangle([x0, y0, x1, y1], fill=fill)
+            return
+        rad *= self.scale
         draw.ellipse([x0, y0, x0 + 2*rad, y0 + 2*rad], fill=fill)
         draw.ellipse([x1 - 2*rad, y0, x1, y0 + 2*rad], fill=fill)
         draw.ellipse([x0, y1 - 2*rad, x0 + 2*rad, y1], fill=fill)
@@ -274,7 +277,7 @@ class Sign:
     def drawUTurnArrow(self, xy: tuple[float, float, float, float], fill: tuple = (255)):
         """ Draw an U-turn arrow on image """
         x0, y0, x1, y1 = xy
-        if y1 - y0 > x1 - x0:
+        if y1 - y0 >= x1 - x0:
             lineWidth = (x1 - x0) / 5
             self.drawDownArrow([x0, y0 + 2 * lineWidth, x1 - 2 * lineWidth, y1], 5/3, fill)
             x0 *= self.scale

@@ -13,10 +13,10 @@ class SignGeneral(Sign):
         self.typeTrans = {
             "text": {"text": "", "height": text_height, "textType": "A", "gap": 0.1}, 
             "textC": {"text": "", "height": text_height, "textType": "A", "gap": 0.1}, 
-            "arc": {"endX": 0, "endY": 0, "lineWidth": text_height * 0.4, "color": "X"},
+            "arc": {"endX": 0, "endY": 0, "lineWidth": text_height * 0.4, "color": "W"},
             "roundRect": {"width": text_height, "height": text_height, "rad": text_height * 0.1, "color": "G"}, 
-            "arrowS": {"arrowS": "↑", "width": text_height, "height": text_height, "color": "X"}, 
-            "arrowC": {"arrowC": "↫", "width": text_height, "height": text_height, "color": "X"}
+            "arrowS": {"arrowS": "↑", "width": text_height, "height": text_height, "color": "W"}, 
+            "arrowC": {"arrowC": "↫", "width": text_height, "height": text_height, "color": "W"}
         }
         self.typeComboList = self.typeTrans.keys()
         self.textTypeComboList = ["A", "B", "C"]
@@ -39,7 +39,7 @@ class SignGeneral(Sign):
                 else:
                     colorList = Color.getDefaultColor(layerInfo.get("color", ""))
                     if len(colorList) == 0:
-                        colorList = [(0)]
+                        colorList = [(255)]
                     if layerInfo["type"] == "arc":
                         self.drawHArc(pos, (layerInfo.get("endX", 0), layerInfo.get("endY", 0)), layerInfo.get("lineWidth", self.text_height * 0.4), colorList[0])
                     elif layerInfo["type"] == "roundRect":
