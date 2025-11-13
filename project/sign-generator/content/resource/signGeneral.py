@@ -3,11 +3,13 @@ from PIL import Image
 
 class SignGeneral(Sign):
     """ A general sign with position setting """
-    def __init__(self, scale, text_height: int = 50):
+    def __init__(self, scale, text_height: int = 50, /, info: dict[str,]|None = None):
         super().__init__(scale)
         self.text_height = text_height
         self.info = {"BGcolor": "GW", "BGwidth": 640, "BGheight": 480, "layers": 0}
-        self.num = 0
+        if info:
+            self.info.update(info)
+        self.num = self.info["layers"]
         self.bgcolor = Color.GREEN
         self.bglinecolor = (255)
         self.typeTrans = {

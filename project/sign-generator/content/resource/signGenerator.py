@@ -93,12 +93,14 @@ def chToEn(ch: str):
 
 class RoundaboutSign(Sign):
     """ A preview sign for roundabout """
-    def __init__(self, scale: int, text_height: int = 30, english_scale: float|None = None):
+    def __init__(self, scale: int, text_height: int = 30, english_scale: float|None = None, /, info: dict[str,]|None = None):
         super().__init__(scale)
-        self.num = 0
         self.text_height = text_height
         self.english_scale = english_scale
         self.info = {"english scale": 0.0 if english_scale is None else english_scale, "direction": "", "crossing name": "", "num": 0}
+        if info:
+            self.info.update(info)
+        self.num = self.info["num"]
         self.directionComboList = ("", "北", "东", "南", "西")
         self.headingRange = (-8, 8)
         self.update()
@@ -178,12 +180,14 @@ class RoundaboutSign(Sign):
 
 class StackedCrossingSign(Sign):
     """ A stacked preview sign of the crossing """
-    def __init__(self, scale: int, text_height: int = 30, english_scale: float|None = None):
+    def __init__(self, scale: int, text_height: int = 30, english_scale: float|None = None, /, info: dict[str,]|None = None):
         super().__init__(scale)
-        self.num = 0
         self.text_height = text_height
         self.english_scale = english_scale
         self.info = {"english scale": 0.0 if english_scale is None else english_scale, "direction": "", "num": 0}
+        if info:
+            self.info.update(info)
+        self.num = self.info["num"]
         self.arrowComboList = ("↶", "←", "↖", "↑", "↗", "→")
         self.update()
     def update(self):
@@ -262,11 +266,13 @@ class StackedCrossingSign(Sign):
 
 class LineSign(Sign):
     """ A sign to show the directions of the lines """
-    def __init__(self, scale: int, height: int = 150):
+    def __init__(self, scale: int, height: int = 150, /, info: dict[str,]|None = None):
         super().__init__(scale)
         self.height = height
-        self.num = 0
         self.info = {"num": 0}
+        if info:
+            self.info.update(info)
+        self.num = self.info["num"]
         self.arrowComboList = ("↶", "↰", "↑", "↱")
         self.update()
     def update(self):
@@ -334,12 +340,14 @@ class LineSign(Sign):
 
 class LinePlaceSign(Sign):
     """ A sign to show the directions and destinations """
-    def __init__(self, scale: int, height: int = 180, english_scale: float|None = None):
+    def __init__(self, scale: int, height: int = 180, english_scale: float|None = None, /, info: dict[str,]|None = None):
         super().__init__(scale)
         self.height = max(150, height)
         self.english_scale = english_scale
-        self.num = 0
         self.info = {"english scale": 0.0 if english_scale is None else english_scale, "num": 0}
+        if info:
+            self.info.update(info)
+        self.num = self.info["num"]
         self.arrowComboList = ("↶", "↰", "↑", "↱", "text", "textEn")
         self.update()
     def update(self):
@@ -452,12 +460,14 @@ class LinePlaceSign(Sign):
 
 class HighwayNoSign(Sign):
     """ A Hignway number sign """
-    def __init__(self, scale: int, text_height: int = 30, hasName: bool = False, headColor: tuple = Color.YELLOW):
+    def __init__(self, scale: int, text_height: int = 30, hasName: bool = False, headColor: tuple = Color.YELLOW, /, info: dict[str,]|None = None):
         super().__init__(scale)
         self.text_height = text_height
         self.hasName = hasName
         self.headColor = Color.getRGBAColor(headColor)
         self.info = {"type": "高速", "No": "", "name": ""}
+        if info:
+            self.info.update(info)
         self.sharpStr = ""
         self.width = 25
         self.update()
@@ -526,13 +536,15 @@ class HighwayNoSign(Sign):
 
 class HighwayEnterSign(Sign):
     """ An entrace sign of some highways """
-    def __init__(self, scale: int, text_height: int = 60, noNo: bool = False, english_scale: float|None = None):
+    def __init__(self, scale: int, text_height: int = 60, noNo: bool = False, english_scale: float|None = None, /, info: dict[str,]|None = None):
         super().__init__(scale)
         self.text_height = text_height
         self.noNo = noNo
         self.hasLine = False
         self.english_scale = english_scale
         self.info: dict[str, float|str] = {"english scale": 0.0 if self.english_scale is None else self.english_scale, "line": False, "No": "", "name": "", "nameEn": "", "nameL": "", "nameLEn": "", "nameR": "", "nameREn": "", "distance": ""}
+        if info:
+            self.info.update(info)
         self.update()
     def update(self):
         width = max(6.4 * self.text_height, 
@@ -708,13 +720,15 @@ class HighwayEnterSign(Sign):
 
 class HignwayExitDirection(Sign):
     """ An exit sign to show the direction of the ramp """
-    def __init__(self, scale, text_height: int = 60, isLeft: bool = False, hasDirection: bool = False, english_scale: float|None = None):
+    def __init__(self, scale, text_height: int = 60, isLeft: bool = False, hasDirection: bool = False, english_scale: float|None = None, /, info: dict[str,]|None = None):
         super().__init__(scale)
         self.text_height = text_height
         self.english_scale = english_scale
         self.isLeft = isLeft
         self.hasDirection: bool = hasDirection
         self.info = {"english scale": 0.0 if english_scale is None else english_scale, "leftArrow": isLeft, "arrow": "↑", "direction": "", "distance": "", "text": "", "textEn": ""}
+        if info:
+            self.info.update(info)
         self.arrowComboList = ("←", "↖", "↑", "↗", "→", "↓", "↫", "↶", "↰", "↱")
         self.update()
     def update(self):
@@ -799,10 +813,12 @@ class HignwayExitDirection(Sign):
 
 class ExitSign(Sign):
     """ An exit sign"""
-    def __init__(self, scale: int, isLeft: bool = False):
+    def __init__(self, scale: int, isLeft: bool = False, /, info: dict[str,]|None = None):
         super().__init__(scale)
         self.isLeft = isLeft
         self.info: dict[str, str] = {"No": ""}
+        if info:
+            self.info.update(info)
         self.update()
     def noLen(self):
         """ Get the length of the number string """
@@ -849,7 +865,7 @@ class ExitSign(Sign):
 
 class AidSign(Sign):
     """ An aid sign """
-    def __init__(self, scale: int, text_height: int = 30, gap: float = 0.1, color1: tuple = (255), color2: tuple = (0)):
+    def __init__(self, scale: int, text_height: int = 30, gap: float = 0.1, color1: tuple = (255), color2: tuple = (0), /, info: dict[str,]|None = None):
         """ Color1 is the main color, color2 is the text color. """
         super().__init__(scale)
         self.text_height = text_height
@@ -857,6 +873,8 @@ class AidSign(Sign):
         self.color1 = Color.getRGBAColor(color1)
         self.color2 = Color.getRGBAColor(color2)
         self.info = {"text": ""}
+        if info:
+            self.info.update(info)
         self.update()
     def update(self):
         width = max([0] + [fontLen([line.split("#", 1)[0]], "A", self.text_height, self.scale) if "#TT" in line 
@@ -883,8 +901,8 @@ class AidSign(Sign):
 
 class RoadNoSign(AidSign):
     """ A sign of road number"""
-    def __init__(self, scale: int, text_height: int = 30):
-        super().__init__(scale, text_height, 0.1, (255), (0))
+    def __init__(self, scale: int, text_height: int = 30, /, info: dict[str,]|None = None):
+        super().__init__(scale, text_height, 0.1, (255), (0), info=info)
     def update(self):
         if "#C" in self.info["text"]:
             colorStr = self.info["text"][self.info["text"].find("#C") + 1:].split("#", 1)[0][1:]

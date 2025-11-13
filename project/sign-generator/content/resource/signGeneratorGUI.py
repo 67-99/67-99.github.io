@@ -18,12 +18,12 @@ try:
 except:
     SIGN_GENERAL = False
 from copy import deepcopy
-from json import loads
+from json import dump, load, loads
 from PIL import Image, ImageDraw, ImageFont
 
-def getFilePath(path: str):
-    """ Return the path from the code file """
-    return os.path.join(os.path.dirname(__file__), path)
+def getFilePath(*paths: str):
+    """ Get the path from the code file """
+    return os.path.join(os.path.dirname(__file__), *paths)
 
 class TrackableImageLabel(QLabel):
     """ Display image and mouse position """
@@ -131,13 +131,19 @@ class SignGeneratorGUI(QMainWindow):
         self.statusBar.addPermanentWidget(self.coord_label)
         self.sign_splitter.addWidget(self.image_label)
         self.stacked_widget.addWidget(self.sign_splitter)
-        self.sign_splitter.setSizes([350, 600])
+        self.sign_splitter.setSizes([420, 580])
         # Add menu
         menuBar = self.menuBar()
         fileMenu = menuBar.addMenu("文件")
-        saveAction = QAction("保存", self)
-        saveAction.triggered.connect(self.save)
-        fileMenu.addAction(saveAction)
+        openArgsAction = QAction("加载参数文件", self)
+        openArgsAction.triggered.connect(self.openArgs)
+        fileMenu.addAction(openArgsAction)
+        saveArgsAction = QAction("保存参数", self)
+        saveArgsAction.triggered.connect(self.saveArgs)
+        fileMenu.addAction(saveArgsAction)
+        saveImgAction = QAction("保存图片", self)
+        saveImgAction.triggered.connect(self.saveImg)
+        fileMenu.addAction(saveImgAction)
         helpMenu = menuBar.addMenu("帮助")
         self.helpSharpDialog = TextDialog(headText="井号(#)参考表")
         self.helpSharpDialog.setText("#B : 带框文本\n#BC: 带框颜色（颜色见下）\n#C_: 设定颜色（默认颜色）\n  B:蓝色、G:绿色、R:红色\n  Y:黄色、O:橙色、b:棕色\n  W:白色、其他: 黑色\n#D_: 辅助方向\n#H_: 图像头名称\n#NH: 高速编号\n#NHH: 高速编号强制等高\n#NW: 道路编号\n#TT: 取消间隔\n#Tt: 设置同宽")
@@ -167,14 +173,6 @@ class SignGeneratorGUI(QMainWindow):
         self.setWindowIcon(QIcon(getFilePath("icon/icon.png")))
         self.load_selection()
         self.stacked_widget.setCurrentIndex(0)
-    def save(self):
-        """ Save the current sign"""
-        if self.sign:
-            fileName, _ = QFileDialog.getSaveFileName(self, "保存文件", getFilePath(""), "PNG文件(*.png);;所有文件 (*)")
-            if fileName:
-                self.sign.save(fileName)
-        else:
-            print("No sign!")
     def load_selection(self):
         """ Load selection nodes """
         self.tree.clear()
@@ -204,49 +202,86 @@ class SignGeneratorGUI(QMainWindow):
         """ Set sign pannel when clicked """
         if item.childCount() == 0:
             if self.sign_type != item.text(0):
-                self.sign_type = item.text(0)
-                if False:
-                    pass
-                elif self.sign_type == "环岛式":
-                    self.sign = signGenerator.RoundaboutSign(self.scale_factor)
-                elif self.sign_type == "堆叠式":
-                    self.sign = signGenerator.StackedCrossingSign(self.scale_factor)
-                elif self.sign_type == "分向行驶":
-                    self.sign = signGenerator.LineSign(self.scale_factor)
-                elif self.sign_type == "车道预告":
-                    self.sign  = signGenerator.LinePlaceSign(self.scale_factor)
-                elif self.sign_type == "入口预告":
-                    self.sign = signGenerator.HighwayEnterSign(self.scale_factor)
-                elif self.sign_type == "出口方向":
-                    self.sign = signGenerator.HignwayExitDirection(self.scale_factor)
-                elif self.sign_type == "出口编号":
-                    self.sign = signGenerator.ExitSign(self.scale_factor)
-                elif self.sign_type == "高速编号":
-                    self.sign = signGenerator.HighwayNoSign(self.scale_factor)
-                elif self.sign_type == "道路编号":
-                    self.sign = signGenerator.RoadNoSign(self.scale_factor)
-                elif self.sign_type == "辅助标牌":
-                    self.sign = signGenerator.AidSign(self.scale_factor)
-                elif self.sign_type == "通用标牌":
-                    self.sign = signGeneral.SignGeneral(self.scale_factor)
-                else:
-                    return self.stacked_widget.setCurrentIndex(0)
-                self.noEn = ("english scale" in self.sign.info and self.sign.info["english scale"] == 0)
-                self.changeInfo()
-                self.changeInfo()
-                if self.isGenerate:
-                    if self.generator is not None:
-                        self.generator.deleteLater()
-                    self.generator = Updator(self)
-                else:
-                    self.isGenerate = True
-                    self.signRefresh()
-                    '''self.loader = ImageLoader(self)
-                    self.loader.refreshFunc.connect(self.signRefresh)
-                    self.loader.start()'''
-                    generator = Updator(self)
-                    generator.finish.connect(self.signUpdateFinished)
-                    generator.start()
+                self.setSign(item.text(0))
+            else:
+                self.stacked_widget.setCurrentIndex(1)
+    def openArgs(self):
+        """ Save the current sign arguments """
+        filePath, _ = QFileDialog.getOpenFileName(self, "加载文件", getFilePath(), "json文件(*.json);;所有文件 (*)")
+        if filePath != "":
+            try:
+                with open(filePath, "r", encoding="utf-8") as file:
+                    argDict = load(file)
+                    self.info = argDict["info"]
+                    self.setSign(argDict["type"], info=argDict["info"])
+            except Exception:
+                print("File reading error!")
+    def saveArgs(self):
+        """ Save the current sign arguments """
+        if self.sign:
+            filePath, _ = QFileDialog.getSaveFileName(self, "保存文件", getFilePath("sign.json"), "json文件(*.json);;所有文件 (*)")
+            if filePath:
+                if not "." in filePath:
+                    filePath += ".json"
+                argDict = {"version": "0", "type": self.sign_type, "info": self.sign.info}
+                with open(filePath, "w", encoding="utf-8") as file:
+                    dump(argDict, file)
+        else:
+            print("No sign!")
+    def saveImg(self):
+        """ Save the current sign """
+        if self.sign:
+            filePath, _ = QFileDialog.getSaveFileName(self, "保存图片", getFilePath("sign.png"), "PNG文件(*.png);;所有文件 (*)")
+            if filePath:
+                if not "." in filePath:
+                    filePath += ".png"
+                self.sign.save(filePath)
+        else:
+            print("No sign!")
+    def setSign(self, signType: str, /, info: dict|None = None):
+        """ Set sign with info """
+        self.sign_type = signType
+        if False:
+            pass
+        elif self.sign_type == "环岛式":
+            self.sign = signGenerator.RoundaboutSign(self.scale_factor, info=info)
+        elif self.sign_type == "堆叠式":
+            self.sign = signGenerator.StackedCrossingSign(self.scale_factor, info=info)
+        elif self.sign_type == "分向行驶":
+            self.sign = signGenerator.LineSign(self.scale_factor, info=info)
+        elif self.sign_type == "车道预告":
+            self.sign  = signGenerator.LinePlaceSign(self.scale_factor, info=info)
+        elif self.sign_type == "入口预告":
+            self.sign = signGenerator.HighwayEnterSign(self.scale_factor, info=info)
+        elif self.sign_type == "出口方向":
+            self.sign = signGenerator.HignwayExitDirection(self.scale_factor, info=info)
+        elif self.sign_type == "出口编号":
+            self.sign = signGenerator.ExitSign(self.scale_factor, info=info)
+        elif self.sign_type == "高速编号":
+            self.sign = signGenerator.HighwayNoSign(self.scale_factor, info=info)
+        elif self.sign_type == "道路编号":
+            self.sign = signGenerator.RoadNoSign(self.scale_factor, info=info)
+        elif self.sign_type == "辅助标牌":
+            self.sign = signGenerator.AidSign(self.scale_factor, info=info)
+        elif self.sign_type == "通用标牌":
+            self.sign = signGeneral.SignGeneral(self.scale_factor, info=info)
+        else:
+            return self.stacked_widget.setCurrentIndex(0)
+        self.noEn = ("english scale" in self.sign.info and self.sign.info["english scale"] == 0)
+        self.changeInfo()
+        if self.isGenerate:
+            if self.generator is not None:
+                self.generator.deleteLater()
+            self.generator = Updator(self)
+        else:
+            self.isGenerate = True
+            self.signRefresh()
+            '''self.loader = ImageLoader(self)
+            self.loader.refreshFunc.connect(self.signRefresh)
+            self.loader.start()'''
+            generator = Updator(self)
+            generator.finish.connect(self.signUpdateFinished)
+            generator.start()
             self.stacked_widget.setCurrentIndex(1)
     def changeInfo(self):
         """ Set the info boxes """
