@@ -285,6 +285,7 @@ class SignGeneratorGUI(QMainWindow):
             self.stacked_widget.setCurrentIndex(1)
     def changeInfo(self):
         """ Set the info boxes """
+        vPos = self.sign_info.verticalScrollBar().value()
         if self.sign_info.widget():
             self.sign_info.widget().deleteLater()
         # Add new layout
@@ -423,6 +424,9 @@ class SignGeneratorGUI(QMainWindow):
         # Set to sign_info
         self.sign_info.setWidget(scroll_content)
         self.sign_info.setWidgetResizable(True)
+        if vPos > 0:
+            bar = self.sign_info.verticalScrollBar()
+            bar.setValue(min(vPos, bar.maximum()))
     def signUpdate(self):
         """ Update changing data to sign """
         if self.isGenerate:
