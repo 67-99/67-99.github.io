@@ -592,10 +592,6 @@ nav {
     .image-gallery {
         grid-template-columns: 1fr;
     }
-    .download-item {
-        flex-direction: column;
-        align-items: flex-start;
-    }
     .web-component-frame {
         min-height: 300px;
     }
