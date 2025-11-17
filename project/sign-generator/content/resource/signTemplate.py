@@ -142,7 +142,19 @@ class Sign:
         draw.ellipse([x1 - 2*rad, y1 - 2*rad, x1, y1], fill=fill)
         draw.rectangle([x0 if direction == 0 else x0 + rad, y0, x1 if direction == 2 else x1 - rad, y1], fill=fill)
         draw.rectangle([x0, y0 if direction == 1 else y0 + rad, x1, y1 if direction == 3 else y1 - rad], fill=fill)
-    def drawHArc(self, start: tuple[float, float], end: tuple[float, float], lineWidth: int, fill: tuple = (255)):
+    def drawStraightBar(self, pos: tuple[float, float], angle: float, text_height: int, lineLen: float = 1.5, lineWidth: float = 0.4, color: tuple = (255)):
+        """ Draw a straight bar with angle <br> Angle should be in radians """
+        x, y = pos
+        lineWidth /= 2
+        color = Color.getRGBAColor(color)
+        draw = ImageDraw.Draw(self.img)
+        posList = [-lineWidth * text_height * cos(-angle), lineWidth * text_height * sin(-angle)]
+        posList += [lineWidth * text_height * cos(-angle), -lineWidth * text_height * sin(-angle)]
+        posList += [posList[2] + (lineLen - lineWidth + 0.1) * text_height * sin(angle), posList[3] - (lineLen - lineWidth + 0.1) * text_height * cos(angle)]
+        posList += [(lineLen + 0.1) * text_height * sin(angle), -(lineLen + 0.1) * text_height * cos(angle)]
+        posList += [posList[0] + (lineLen - lineWidth + 0.1) * text_height * sin(angle), posList[1] - (lineLen - lineWidth + 0.1) * text_height * cos(angle)]
+        draw.polygon([((x if i % 2 == 0 else y) + pos) * self.scale for i, pos in enumerate(posList)], fill=color)
+    def drawHArcBar(self, start: tuple[float, float], end: tuple[float, float], text_height: int, lineWidth: float = 0.4, fill: tuple = (255)):
         """ Draw arc with horizontal end """
         x1, y1 = start
         x2, y2 = end
@@ -150,7 +162,7 @@ class Sign:
         y1 *= self.scale
         x2 *= self.scale
         y2 *= self.scale
-        lineWidth *= self.scale
+        lineWidth *= text_height * self.scale
         fill = Color.getRGBAColor(fill)
         draw = ImageDraw.Draw(self.img)
         x3 = x2 + lineWidth * 1.732 / 2 if x1 < x2 else x2 - lineWidth * 1.732 / 2
@@ -822,7 +834,7 @@ class Sign:
                 centerX += lineGap * text_height + boxW / 2
                 centerY += boxW / tan(angle) / 2
         return (min(0, centerX - boxW / 2), -max(0, centerY + boxH / 2), max(0, centerX + boxW / 2), -min(0, centerY - boxH / 2))
-    def putDirectionBar(self, textDict: dict[str,], pos: tuple[float, float], text_height: int, lineLen: float = 1.5, lineWidth: float = 0.4, lineGap: float = 0.3, enGap: float = 0.2, color: tuple = (255), bgColor: tuple = Color.BLUE):
+    def putDirection(self, textDict: dict[str,], pos: tuple[float, float], text_height: int, lineLen: float = 1.5, lineWidth: float = 0.4, lineGap: float = 0.3, enGap: float = 0.2, color: tuple = (255), bgColor: tuple = Color.BLUE):
         """ Put the direction infomation and bar """
         if any([label not in textDict for label in {"heading", "text"}]):
             return
@@ -842,18 +854,10 @@ class Sign:
                 boxW = nextLen
             boxH += sum([Sign.getAutoHeight(line, 2/3 * text_height) for line in nextList]) + (len(nextList)) * enGap * text_height
         angle = textDict["heading"] * PI/12
-        x, y = pos
-        lineWidth /= 2
-        color = Color.getRGBAColor(color)
-        # draw bar
-        draw = ImageDraw.Draw(self.img)
-        posList = [-lineWidth * text_height * cos(-angle), lineWidth * text_height * sin(-angle)]
-        posList += [lineWidth * text_height * cos(-angle), -lineWidth * text_height * sin(-angle)]
-        posList += [posList[2] + (lineLen - lineWidth + 0.1) * text_height * sin(angle), posList[3] - (lineLen - lineWidth + 0.1) * text_height * cos(angle)]
-        posList += [(lineLen + 0.1) * text_height * sin(angle), -(lineLen + 0.1) * text_height * cos(angle)]
-        posList += [posList[0] + (lineLen - lineWidth + 0.1) * text_height * sin(angle), posList[1] - (lineLen - lineWidth + 0.1) * text_height * cos(angle)]
-        draw.polygon([((x if i % 2 == 0 else y) + pos) * self.scale for i, pos in enumerate(posList)], fill=color)
+        self.drawStraightBar(pos, angle, text_height, lineLen, lineWidth, color)
         # put text
+        x, y = pos
+        color = Color.getRGBAColor(color)
         x += lineLen * text_height * sin(angle)
         y -= lineLen * text_height * cos(angle)
         if PI/2 - abs(PI/2 - abs(angle)) < atan(boxW / boxH):

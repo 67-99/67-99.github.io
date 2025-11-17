@@ -131,7 +131,7 @@ class RoundaboutSign(Sign):
         y = 0.5 * self.text_height - bbox[1]
         for i in range(self.num):
             if f"direction{i + 1}" in self.info:
-                self.putDirectionBar(self.info[f"direction{i + 1}"], (x, y), self.text_height, 2.4) 
+                self.putDirection(self.info[f"direction{i + 1}"], (x, y), self.text_height, 2.4) 
         draw.circle([x * self.scale, y * self.scale], 0.8 * self.text_height * self.scale, Color.getRGBAColor(255))
         draw.circle([x * self.scale, y * self.scale], 0.4 * self.text_height * self.scale, Color.getRGBAColor(Color.BLUE))
         draw.polygon([pos * self.scale for pos in (x, y, x - 0.5 * self.text_height, y + 0.8 * self.text_height, x - self.text_height, y + 0.8 * self.text_height)], Color.getRGBAColor(Color.BLUE))

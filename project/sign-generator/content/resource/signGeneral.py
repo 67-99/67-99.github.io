@@ -46,7 +46,7 @@ class SignGeneral(Sign):
                     if len(colorList) == 0:
                         colorList = [(255)]
                     if layerInfo["type"] == "arc":
-                        self.drawHArc(pos, (layerInfo.get("endX", 0), layerInfo.get("endY", 0)), layerInfo.get("lineWidth", self.text_height * 0.4), colorList[0])
+                        self.drawHArcBar(pos, (layerInfo.get("endX", 0), layerInfo.get("endY", 0)), self.text_height, layerInfo.get("lineWidth", self.text_height * 0.4) / self.text_height, colorList[0])
                     elif layerInfo["type"] == "roundRect":
                         x2 = pos[0] + layerInfo["width"]
                         y2 = pos[1] + layerInfo["height"]
