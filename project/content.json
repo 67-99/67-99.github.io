@@ -6,17 +6,17 @@
                 "title": "教室查询小程序",
                 "description": "一个可以根据课表文件显示教室占用情况的程序。<br><i>注：文件格式参考中南课表</i>",
                 "name": "classroom-check"
-            },
-            {
-                "title": "路牌生成器",
-                "description": "一个可以生成国标路牌的模拟程序。<br><i>注：国标字体为拟合生成</i>",
-                "name": "sign-generator"
             }
         ]
     },
   "offline": {
         "name": "离线项目",
         "projects": [
+            {
+                "title": "路牌生成器",
+                "description": "一个可以生成国标路牌的模拟程序。<br><i>注：国标字体为拟合生成</i>",
+                "name": "sign-generator"
+            },
             {
                 "title": "InnOSeed黑客松B题",
                 "description": "一个由InnOSeed组织，旨在24内完成demo的项目。",
