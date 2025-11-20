@@ -479,7 +479,10 @@ class Sign:
             return 0
         if "#TT" in text:
             return fontLen([text], font_type, font_height, self.scale)
-        return fontLen([char for char in text if not isAlpha(char)], font_type, font_height, self.scale) + fontLen([char for char in text if isAlpha(char)], font_type, font_height * 2/3, self.scale) + (len(text) - 1) * font_height * gap
+        textLen = fontLen([char for char in text if not isAlpha(char)], font_type, font_height, self.scale)
+        textLen += fontLen([char for char in text if char in "gjpqy"], font_type, font_height * 0.9, self.scale)
+        textLen += fontLen([char for char in text if isAlpha(char) and char not in "gjpqy"], font_type, font_height * 2/3, self.scale)
+        return textLen + (len(text) - 1) * font_height * gap
     def putText(self, text: str, pos: tuple[float, float], font_type: str, height: int, gap: float = 0.1, color: tuple = (255)):
         """ Put text on sign, font_type should be <code>"A"</code>, <code>"B"</code>, or <code>"C"</code>. """
         x, y = pos
@@ -501,8 +504,10 @@ class Sign:
                     x += (fontLen(char, font_type, height, self.scale) + height * gap) * self.scale
             elif isAlpha(char):
                 desmo = False
-                placeText(self.img, (round(x), round(y + height * self.scale / 3)), char, font_type, height * 2/3 * self.scale, color)
-                x += (fontLen(char, font_type, height * 2/3, self.scale) + height * gap) * self.scale
+                y0 = y + height * self.scale / 3
+                h = 0.9 * height if char in "gjpqy" else 2/3 * height
+                placeText(self.img, (round(x), round(y0)), char, font_type, h * self.scale, color)
+                x += (fontLen(char, font_type, h * 2/3, self.scale) + height * gap) * self.scale
             else:
                 if char == ".":
                     desmo = True
@@ -701,16 +706,18 @@ class Sign:
     def putAutoText(self, text: str, pos: tuple[float, float], height: int, typeStr: str|None = None, gap: float = 0.1, color1: tuple|None = None, color2: tuple|None = None, aidFirst: bool = False, outTextColor = Color.GREEN):
         """ Put text on the image based on the sharp (#) infomation """
         if " " in text:
-            textList = [textStr for textStr in text.split(" ") if textStr != ""] 
+            textList = text.split(" ")
             yList = [Sign.getAutoHeight(textStr, height, enGap=gap) for textStr in textList]
             if hasattr(self, "english_scale") and self.english_scale is not None:
-                yMax = max([Sign.getAutoEnHeight(textStr, height, self.english_scale, gap) for textStr in textList])
+                yMax = max([Sign.getAutoEnHeight(textStr, height, self.english_scale, gap) for textStr in textList if textStr != ""])
             else:
                 yMax = max([0] + yList)
             x, y = pos
             for i, textStr in enumerate(textList):
-                self.putAutoText(textStr, (x, y + (yMax - yList[i]) / 2), height, typeStr, gap, color1, color2, aidFirst, outTextColor)
-                x += self.getAutoLen(textStr, height, typeStr, gap) + height * gap
+                if textStr != "":
+                    self.putAutoText(textStr, (x, y + (yMax - yList[i]) / 2), height, typeStr, gap, color1, color2, aidFirst, outTextColor)
+                    x += self.getAutoLen(textStr, height, typeStr, gap)
+                x += height * gap
         else:
             if "#" not in text:
                 return self.putText(text, pos, typeStr, height, gap, (255) if color1 is None else color1)
