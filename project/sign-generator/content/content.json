@@ -1,9 +1,9 @@
 [
-    {"id":"info","title":"制作器界面","type":"image","src":"resource/sign-compare.png", "alt":"制作器界面", "caption":"制作器界面", "showNav": false},
+    {"id":"info","title":"路牌对比","type":"image","src":"resource/sign-compare.png", "alt":"生成器路牌对比", "caption":"左：路牌生成器，右：国标文件", "showNav": false},
     {"id":"purpose","title":"设计初衷","type":"markdown","src":"purpose.md"},
     {"id":"design1","title":"程序设计","type":"markdown","src":"design1.md"},
-    {"id":"direction-handle","title":"平交路口指向设计","type":"html","src":"handle.html"},
-    {"id":"design2","title":"程序设计-接上","type":"markdown","src":"design2.md"},
+    {"id":"direction-handle","title":"平交路口指向设计","type":"html","src":"handle.html", "showNav": false},
+    {"id":"design2","title":"程序设计-接上","type":"markdown","src":"design2.md", "showNav": false},
     {"id":"download","title":"资源下载","type":"downloads",
     "files":[
         {"name":"文字生成器","src":"resource/textGenerator.py"},
