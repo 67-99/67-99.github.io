@@ -111,14 +111,15 @@ class RoundaboutSign(Sign):
             directionSE = [bbox[0] + 0.9 * self.text_height, bbox[1] + 0.9 * self.text_height]
             for i in range(len(bboxList)):
                 bboxWN = bboxList[i][:2]
-                if bboxWN[0] < directionSE[0]:
-                    shift = directionSE[0] - bboxWN[0]
-                    directionSE[0] -= shift
-                    bbox[0] -= shift
-                if bboxWN[1] < directionSE[1]:
-                    shift = directionSE[1] - bboxWN[1]
-                    directionSE[1] -= shift
-                    bbox[1] -= shift
+                if bboxWN[0] < directionSE[0] and bboxWN[1] < directionSE[1]:
+                    shiftX = directionSE[0] - bboxWN[0]
+                    shiftY = directionSE[1] - bboxWN[1]
+                    if shiftX <= shiftY:
+                        directionSE[0] -= shiftX
+                        bbox[0] -= shiftX
+                    else:
+                        directionSE[1] -= shiftY
+                        bbox[1] -= shiftY
         width = max(1.6 * self.text_height, bbox[2] - bbox[0]) + self.text_height
         height = max(0.4 * self.text_height, -bbox[1]) + max((1.6 if self.info["crossing name"] == "" else 2.2) * self.text_height, bbox[3]) + self.text_height
         self.img = Image.new("RGBA", (round(width * self.scale), round(height * self.scale)), (0, 0, 0, 0))
