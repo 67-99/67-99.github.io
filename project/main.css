@@ -87,7 +87,7 @@ nav {
 /* 添加平滑滚动 */
 html {
     scroll-behavior: smooth;
-    scroll-padding-top: 80px;
+    scroll-padding-top: 90px;
 }
 /* 加载和错误状态样式 */
 .loading, .error {
