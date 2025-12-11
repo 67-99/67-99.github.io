@@ -15,6 +15,10 @@
                 <li><a href="../index.html">首页</a></li>
                 <li class="dropdown">
                     <a href="index.html">项目</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#online">在线项目</a></li>
+                        <li><a href="#offline">离线项目</a></li>
+                    </ul>
                 </li>
             </ul>
             <div class="mobile-menu">☰</div>
@@ -58,6 +62,7 @@
                     const category = data[categoryKey];
                     const categorySection = document.createElement('section');
                     categorySection.className = 'category';
+                    categorySection.id = categoryKey;
                     
                     const categoryTitle = document.createElement('h2');
                     categoryTitle.textContent = category.name;
@@ -103,6 +108,17 @@
                     categorySection.appendChild(workGrid);
                     worksContainer.appendChild(categorySection);
                 });
+
+                // 添加hashchange监听器，处理页面内锚点跳转
+                if (window.location.hash) {
+                    const id = window.location.hash.substring(1);
+                    const element = document.getElementById(id);
+                    if (element) {
+                        setTimeout(() => {
+                            element.scrollIntoView({ behavior: 'smooth' });
+                        }, 100); // 延迟100ms确保内容已渲染
+                    }
+                }
             }
             
             // 调整移动端导航菜单显示
@@ -111,6 +127,15 @@
                     document.querySelector('.nav-links').style.display = 'flex';
                 } else {
                     document.querySelector('.nav-links').style.display = 'none';
+                }
+            });
+
+            // 监听hash变化（用户点击同一页面的锚点链接）
+            window.addEventListener('hashchange', function() {
+                const id = window.location.hash.substring(1);
+                const element = document.getElementById(id);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
                 }
             });
         });
