@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>悦荫の画廊</title>
+    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">67-99</div>
+            <ul class="nav-links">
+                <li><a href="../index.html">首页</a></li>
+                <li class="dropdown">
+                    <a href="67-99.github.io/project/index.html">项目</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="67-99.github.io/project/index.html#online">在线项目</a></li>
+                        <li><a href="67-99.github.io/project/index.html#offline">离线项目</a></li>
+                    </ul>
+                </li>
+                <li><a href="index.html">画廊</a></li>
+            </ul>
+            <div class="mobile-menu">☰</div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <h1>悦荫の画廊</h1>
+            <p>包含部分我画过的画，持续更新中~</p>
+        </header>
+
+        <section class="masonry-container" id="masonry-gallery">
+            <!-- 卡片项将在这里动态排列 -->
+        </section>
+        
+        <!-- 隐藏的卡片模板 -->
+        <div style="display: none;">
+            <div class="masonry-item" id="card-template-1">
+                <div class="image-container">
+                    <img src="temp.jpg" alt="手绘临摹" class="work-img">
+                </div>
+                <div class="work-content">
+                    <h3>手绘临摹</h3>
+                    <p>这个是从2019年以前开始，以临摹为学习途径的所有临摹图片。</p>
+                    <a href="temp.jpg" class="work-link">查看图片 <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="masonry-item" id="card-template-2">
+                <div class="image-container">
+                    <img src="emoji-old/摊手.png" alt="表情包旧示例" class="work-img">
+                </div>
+                <div class="work-content">
+                    <h3>表情包-旧</h3>
+                    <p>旧版本表情包，目前已弃用。</p>
+                    <a href="emoji-old/index.html" class="work-link">查看表情包 <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="masonry-item" id="card-template-3">
+                <div class="image-container">
+                    <img src="emoji1/疑惑2.png" alt="表情包1示例" class="work-img">
+                </div>
+                <div class="work-content">
+                    <h3>表情包1</h3>
+                    <p>正在制作的一套表情包</p>
+                    <a href="emoji1/index.html" class="work-link">查看表情包 <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="masonry-item" id="card-template-4">
+                <div class="image-container">
+                    <img src="else/头像1.png" alt="包装设计" class="work-img">
+                </div>
+                <div class="work-content">
+                    <h3>其他图片</h3>
+                    <p>已制作出的其他图片。</p>
+                    <a href="else/index.html" class="work-link">查看图片 <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        // 移动菜单切换功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.querySelector('.mobile-menu');
+            const navLinks = document.querySelector('.nav-links');
+            
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+                    
+                    if (navLinks.style.display === 'flex') {
+                        navLinks.style.flexDirection = 'column';
+                        navLinks.style.position = 'absolute';
+                        navLinks.style.top = '100%';
+                        navLinks.style.left = '0';
+                        navLinks.style.width = '100%';
+                        navLinks.style.backgroundColor = '#242424';
+                        navLinks.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                        navLinks.style.padding = '20px 0';
+                        
+                        // 调整下拉菜单位置
+                        const dropdowns = document.querySelectorAll('.dropdown');
+                        dropdowns.forEach(dropdown => {
+                            const menu = dropdown.querySelector('.dropdown-menu');
+                            if (menu) {
+                                menu.style.position = 'static';
+                                menu.style.boxShadow = 'none';
+                                menu.style.opacity = '1';
+                                menu.style.visibility = 'visible';
+                                menu.style.transform = 'none';
+                                menu.style.paddingLeft = '20px';
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // 窗口大小调整时重置导航
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    navLinks.style.display = '';
+                    navLinks.style.flexDirection = '';
+                    navLinks.style.position = '';
+                    navLinks.style.top = '';
+                    navLinks.style.left = '';
+                    navLinks.style.width = '';
+                    navLinks.style.backgroundColor = '';
+                    navLinks.style.boxShadow = '';
+                    navLinks.style.padding = '';
+                    
+                    // 重置下拉菜单位置
+                    const dropdowns = document.querySelectorAll('.dropdown');
+                    dropdowns.forEach(dropdown => {
+                        const menu = dropdown.querySelector('.dropdown-menu');
+                        if (menu) {
+                            menu.style.position = '';
+                            menu.style.boxShadow = '';
+                            menu.style.opacity = '';
+                            menu.style.visibility = '';
+                            menu.style.transform = '';
+                            menu.style.paddingLeft = '';
+                        }
+                    });
+                }
+            });
+            
+            // 动态排列瀑布流布局
+            function arrangeMasonry() {
+                const container = document.getElementById('masonry-gallery');
+                
+                // 清空容器
+                container.innerHTML = '';
+                
+                // 创建列
+                let columnCount = 3;
+                if (window.innerWidth <= 900) {
+                    columnCount = 2;
+                }
+                if (window.innerWidth <= 600) {
+                    columnCount = 1;
+                }
+                
+                // 创建列元素
+                const columns = [];
+                for (let i = 0; i < columnCount; i++) {
+                    const column = document.createElement('div');
+                    column.className = 'masonry-column';
+                    columns.push(column);
+                    container.appendChild(column);
+                }
+                
+                // 获取所有卡片模板
+                const templates = document.querySelectorAll('.masonry-item');
+                
+                // 将卡片模板复制到各列
+                templates.forEach((template, index) => {
+                    const columnIndex = index % columnCount;
+                    const column = columns[columnIndex];
+                    
+                    // 克隆卡片（包括其所有子元素和事件）
+                    const cardClone = template.cloneNode(true);
+                    column.appendChild(cardClone);
+                });
+            }
+            
+            // 初始排列和窗口大小变化时重新排列
+            arrangeMasonry();
+            window.addEventListener('resize', arrangeMasonry);
+            
+            // 图片加载完成后重新排列以确保高度正确
+            const images = document.querySelectorAll('.work-img');
+            let loadedImages = 0;
+            const totalImages = images.length;
+            
+            if (totalImages === 0) {
+                // 如果没有图片，也重新排列一次
+                setTimeout(arrangeMasonry, 100);
+            } else {
+                images.forEach(img => {
+                    if (img.complete) {
+                        loadedImages++;
+                        checkAllImagesLoaded();
+                    } else {
+                        img.addEventListener('load', () => {
+                            loadedImages++;
+                            checkAllImagesLoaded();
+                        });
+                        // 也处理图片加载失败的情况
+                        img.addEventListener('error', () => {
+                            loadedImages++;
+                            checkAllImagesLoaded();
+                        });
+                    }
+                });
+            }
+            
+            function checkAllImagesLoaded() {
+                if (loadedImages === totalImages) {
+                    // 所有图片加载完成后重新排列
+                    setTimeout(arrangeMasonry, 100);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
