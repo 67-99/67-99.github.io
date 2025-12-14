@@ -1,0 +1,167 @@
+/* 表情包画廊专用样式 */
+.emoji-gallery-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.emoji-header {
+    text-align: center;
+    margin: 40px 0 50px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.emoji-header h1 {
+    font-size: 2.8rem;
+    color: var(--accent-color);
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(255, 240, 0, 0.3);
+}
+
+.emoji-header p {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 25px;
+    margin-bottom: 60px;
+}
+
+.emoji-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.emoji-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(255, 240, 0, 0.2);
+    border-color: var(--accent-color);
+}
+
+.emoji-img-container {
+    width: 100%;
+    /* 关键修改：使用aspect-ratio实现1:1正方形 */
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-secondary);
+    /* 添加圆角只到图片容器顶部 */
+    border-radius: 12px 12px 0 0;
+}
+
+.emoji-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 使用cover确保图片填满容器并保持比例 */
+    transition: transform 0.5s ease;
+}
+
+.emoji-card:hover .emoji-img {
+    transform: scale(1.05);
+}
+
+.emoji-content {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.emoji-content h3 {
+    margin-bottom: 0.75rem;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    text-align: center;
+}
+
+.emoji-content p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    text-align: center;
+    line-height: 1.5;
+    flex-grow: 1;
+}
+
+.emoji-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
+    justify-content: center;
+}
+
+.emoji-tag {
+    background: rgba(255, 240, 0, 0.1);
+    color: var(--accent-color);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    border: 1px solid rgba(255, 240, 0, 0.3);
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    margin: 20px auto 40px;
+    justify-content: center;
+    max-width: 200px;
+}
+
+.back-link:hover {
+    background: var(--accent-color);
+    color: #333;
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+}
+
+.back-link i {
+    margin-right: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .emoji-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .emoji-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+@media (max-width: 600px) {
+    .emoji-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .emoji-header h1 {
+        font-size: 2.2rem;
+    }
+}

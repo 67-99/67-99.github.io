@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表情包1</title>
+    <link rel="stylesheet" href="../main.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">67-99</div>
+            <ul class="nav-links">
+                <li><a href="../index.html">首页</a></li>
+                <li class="dropdown">
+                    <a href="67-99.github.io/project/index.html">项目</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="67-99.github.io/project/index.html#online">在线项目</a></li>
+                        <li><a href="67-99.github.io/project/index.html#offline">离线项目</a></li>
+                    </ul>
+                </li>
+                <li><a href="index.html">画廊</a></li>
+            </ul>
+            <div class="mobile-menu">☰</div>
+        </div>
+    </nav>
+
+    <main class="emoji-gallery-container">
+        <header class="emoji-header">
+            <h1>表情包1</h1>
+            <p>第一套正在使用的表情包，持续更新中~</p>
+        </header>
+
+        <section class="emoji-grid" id="emoji-gallery">
+            <!-- 表情包卡片将通过JavaScript动态生成 -->
+        </section>
+        
+        <div class="back-container" style="text-align: center;">
+            <a href="index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i> 返回画廊
+            </a>
+        </div>
+    </main>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 移动菜单切换功能（与主页面一致）
+            const mobileMenuBtn = document.querySelector('.mobile-menu');
+            const navLinks = document.querySelector('.nav-links');
+            
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
+                    
+                    if (navLinks.style.display === 'flex') {
+                        navLinks.style.flexDirection = 'column';
+                        navLinks.style.position = 'absolute';
+                        navLinks.style.top = '100%';
+                        navLinks.style.left = '0';
+                        navLinks.style.width = '100%';
+                        navLinks.style.backgroundColor = '#242424';
+                        navLinks.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+                        navLinks.style.padding = '20px 0';
+                        
+                        // 调整下拉菜单位置
+                        const dropdowns = document.querySelectorAll('.dropdown');
+                        dropdowns.forEach(dropdown => {
+                            const menu = dropdown.querySelector('.dropdown-menu');
+                            if (menu) {
+                                menu.style.position = 'static';
+                                menu.style.boxShadow = 'none';
+                                menu.style.opacity = '1';
+                                menu.style.visibility = 'visible';
+                                menu.style.transform = 'none';
+                                menu.style.paddingLeft = '20px';
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // 窗口大小调整时重置导航
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    navLinks.style.display = '';
+                    navLinks.style.flexDirection = '';
+                    navLinks.style.position = '';
+                    navLinks.style.top = '';
+                    navLinks.style.left = '';
+                    navLinks.style.width = '';
+                    navLinks.style.backgroundColor = '';
+                    navLinks.style.boxShadow = '';
+                    navLinks.style.padding = '';
+                    
+                    // 重置下拉菜单位置
+                    const dropdowns = document.querySelectorAll('.dropdown');
+                    dropdowns.forEach(dropdown => {
+                        const menu = dropdown.querySelector('.dropdown-menu');
+                        if (menu) {
+                            menu.style.position = '';
+                            menu.style.boxShadow = '';
+                            menu.style.opacity = '';
+                            menu.style.visibility = '';
+                            menu.style.transform = '';
+                            menu.style.paddingLeft = '';
+                        }
+                    });
+                }
+            });
+            
+            // 表情包数据
+            const emojiData = [
+                { name: "OK", desc: "", img: "pic/OK.png" },  //, tags: ["OK", "没问题"]
+                { name: "NO", desc: "", img: "pic/调皮.png" },  //, tags: ["NO", "哒咩"]
+                { name: "赞", desc: "", img: "pic/点赞.png" },  //, tags: ["棒", "点赞"]
+                { name: "开心", desc: "", img: "pic/开心.png" },  //, tags: ["开心", "喜悦"]
+                { name: "疑惑", desc: "", img: "pic/疑惑2.png" },  //, tags: ["疑惑", "思考"]
+                { name: "惊讶", desc: "", img: "pic/惊讶.png" },  //, tags: ["惊讶", "吃惊"]
+                { name: "生气", desc: "", img: "pic/生气.png" },  //, tags: ["生气", "不满"]
+                { name: "哭", desc: "", img: "pic/哭泣.png" },  //, tags: ["伤心", "哭泣"]
+                { name: "贴贴", desc: "", img: "pic/爱心.png" },  //, tags: ["爱心", "喜欢"]
+                { name: "晚安", desc: "", img: "pic/困倦.png" },  //, tags: ["困倦", "睡觉"]
+                { name: "无语", desc: "", img: "pic/无语.png" },  //, tags: ["无语", "老人、地铁、手机"]
+                { name: "盯", desc: "", img: "pic/笑哭.png" },  //, tags: ["搞笑", "开心"]
+                { name: "尴尬", desc: "", img: "pic/害羞.png" },  //, tags: ["害羞", "脸红"]
+                { name: "大脑死机", desc: "", img: "pic/委屈.png" },  //, tags: ["委屈", "可怜"]
+                { name: "自豪", desc: "", img: "pic/得意.png" },  //, tags: ["得意", "骄傲"]
+                { name: "被打", desc: "", img: "pic/得意.png" },  //, tags: ["得意", "骄傲"]
+                { name: "趴", desc: "", img: "pic/趴.png" },  //, tags: ["得意", "骄傲"]
+                { name: "叹气", desc: "", img: "pic/叹气.png" },  //, tags: ["得意", "骄傲"]
+                { name: "灵魂出窍", desc: "", img: "pic/灵魂出窍.png" },  //, tags: ["得意", "骄傲"]
+                { name: "干不完了", desc: "", img: "pic/干不完了.png" },  //, tags: ["得意", "骄傲"]
+                { name: "加油", desc: "", img: "pic/加油.png" }   //, tags: ["加油", "打CALL"]
+            ];
+            
+            // 生成表情包卡片
+            const galleryContainer = document.getElementById('emoji-gallery');
+            
+            emojiData.forEach(emoji => {
+                const card = document.createElement('div');
+                card.className = 'emoji-card';
+                card.innerHTML = `
+                    <div class="emoji-img-container">
+                        <img src="${emoji.img}" alt="${emoji.name}" class="emoji-img" onerror="this.src='https://67-99.github.io/icon/blank.JPG'">
+                    </div>
+                    <div class="emoji-content">
+                        <h3>${emoji.name}</h3>
+                        ${emoji.desc? `<p>${emoji.desc}</p>`: ``}
+                        ${emoji.tags? `<div class="emoji-tags">
+                            ${emoji.tags.map(tag => `<span class="emoji-tag">${tag}</span>`).join('')}
+                        </div>`: ``}
+                    </div>
+                `;
+                galleryContainer.appendChild(card);
+            });
+            
+            // 图片加载错误处理
+            const images = document.querySelectorAll('.emoji-img');
+            images.forEach(img => {
+                img.addEventListener('error', function() {
+                    this.src = `https://67-99.github.io/icon/blank.JPG`;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
