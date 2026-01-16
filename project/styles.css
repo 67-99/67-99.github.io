@@ -469,20 +469,21 @@ nav {
 .missing-badge {
     background: #ffccbc;
     color: #d84315;
-    padding: 0.2rem 0.5rem;
+    padding: 0.12rem 0.5rem;
     border-radius: 12px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: bold;
 }
 .missing-link {
-    display: inline-block;
-    padding: 0.6rem 1.2rem;
     background: #e0e0e0;
     color: #757575;
-    border-radius: 6px;
-    cursor: not-allowed;
-    font-weight: 500;
-    border: 1px solid #bdbdbd;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: background 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
 }
 
 /* mermaid图表样式 */

@@ -182,14 +182,14 @@ async function createDownloads(section) {
                     <div class="file-info">
                         <h3>${file.name}</h3>
                         <span class="file-name">${file.file || "网页文件"}</span>
-                        ${!fileExists ? `<span class="missing-badge">可能不可用</span>` : ''}
+                        ${!fileExists ? `<span class="missing-badge">可能无效</span>` : ''}
                     </div>
                     <a href="${file.src}" class="access-button" target="_blank" rel="noopener">访问</a>
                 </div>
             `;
         } else {
             const fileExists = await checkResourceExists(`content/${file.src}`);
-            const size = await getFileSize(`content/${file.src}`);
+            const size = fileExists? await getFileSize(`content/${file.src}`): -1;
             html += `
                 <div class="download-item">
                     <div class="file-info">
@@ -198,7 +198,7 @@ async function createDownloads(section) {
                         ${!fileExists ? `<span class="missing-badge">不可用</span>` : ''}
                     </div>
                     ${fileExists ? `<a href="content/${file.src}" class="download-button" download>下载</a>`:
-                                    `<span class="missing-link" title="资源不存在或无法访问">不可用</span>`}
+                                    `<span class="missing-link" title="资源不存在或无法访问">失效</span>`}
                 </div>
             `;
         }

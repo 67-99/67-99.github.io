@@ -2,8 +2,6 @@
     {"id":"intro","title":"设计初衷","type":"markdown","src":"purpose.md"},
     {"id":"struct","title":"汇编结构","type":"markdown","src":"struct.md"},
     {"id":"download","title":"资源下载","type":"downloads","files":[
-        {"name":"本地缺失","src":"resource/no.circ"},
-        {"name":"外联缺失","src":"https://e621.xxx"},
         {"name":"汇编器电路（logisim）","src":"resource/Turing.circ"}]
     }
 ]
