@@ -1,3 +1,7 @@
 [
-    {"id":"intro","title":"设计初衷","type":"markdown","src":"purpose.md"}
+    {"id":"intro","title":"设计初衷","type":"markdown","src":"purpose.md"},
+    {"id":"struct","title":"汇编结构","type":"markdown","src":"struct.md"},
+    {"id":"download","title":"资源下载","type":"downloads","files":[
+        {"name":"汇编器电路（logisim）","src":"resource/Turing.circ"}]
+    }
 ]
