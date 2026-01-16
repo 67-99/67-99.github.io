@@ -176,7 +176,7 @@ async function createDownloads(section) {
     for (const file of section.files) {
         const isExternal = file.src.startsWith('http://') || file.src.startsWith('https://');
         if (isExternal) {
-            const fileExists = checkResourceExists(file.src);
+            const fileExists = await checkResourceExists(file.src);
             html += `
                 <div class="download-item">
                     <div class="file-info">
@@ -188,7 +188,7 @@ async function createDownloads(section) {
                 </div>
             `;
         } else {
-            const fileExists = checkResourceExists(`content/${file.src}`);
+            const fileExists = await checkResourceExists(`content/${file.src}`);
             const size = await getFileSize(`content/${file.src}`);
             html += `
                 <div class="download-item">
