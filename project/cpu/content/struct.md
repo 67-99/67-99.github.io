@@ -9,47 +9,52 @@
 |bit 7: 立即数1<br>bit 6: 立即数2|bits 5-3|bits 2-0|
 > **注意**：采用大端序，bit7为最高有效位
 
-<table>
+<table style="text-align: center;">
   <thead>
     <tr><th colspan="4" style="text-align: center;">
         <strong>OPcode 模式与动作编码表</strong></th>
     </tr>
-    <tr><th>模式编码</th><th>模式名称</th><th>动作编码</th><th>动作描述</th></tr>
+    <tr>
+      <th style="text-align: center;">模式编码</th>
+      <th style="text-align: center;">模式名称</th>
+      <th style="text-align: center;">动作编码</th>
+      <th style="text-align: center;">动作描述</th>
+    </tr>
   </thead>
   <tbody>
     <tr>
-      <td rowspan="8">0x00<br>0x10</td>
+      <td rowspan="8"><code>0x00</code><br><code>0x10</code></td>
       <td rowspan="8"><strong>Calc</strong><br>算术运算</td>
-    <td>0x0</td><td>+ (加法)</td></tr>
-    <tr><td>0x1</td><td>- (减法)</td></tr>
-    <tr><td>0x2</td><td>AND (与运算)</td></tr>
-    <tr><td>0x3</td><td>OR (或运算)</td></tr>
-    <tr><td>0x4</td><td>NOT (非运算)</td></tr>
-    <tr><td>0x5</td><td>XOR (异或运算)</td></tr>
-    <tr><td>0x6</td><td><< (左移)</td></tr>
-    <tr><td>0x7</td><td>>> (右移)</td></tr>
+    <td><code>0x0</code></td><td><code>+</code>(加法)</td></tr>
+    <tr><td><code>0x1</code></td><td><code>-</code>(减法)</td></tr>
+    <tr><td><code>0x2</code></td><td><code>AND</code>(与运算)</td></tr>
+    <tr><td><code>0x3</code></td><td><code>OR</code>(或运算)</td></tr>
+    <tr><td><code>0x4</code></td><td><code>NOT</code>(非运算)</td></tr>
+    <tr><td><code>0x5</code></td><td><code>XOR</code>(异或运算)</td></tr>
+    <tr><td><code>0x6</code></td><td><code>&lt;&lt;</code>(左移)</td></tr>
+    <tr><td><code>0x7</code></td><td><code>&gt;&gt;</code>(右移)</td></tr>
     <tr>
-      <td rowspan="6">0x08</td>
+      <td rowspan="6"><code>0x08</code></td>
       <td rowspan="6"><strong>RAM</strong><br>内存访问</td>
-    <td>0x0</td><td>读 Operand1 & Operand2</td></tr>
-    <tr><td>0x1</td><td>读 Operand1</td></tr>
-    <tr><td>0x2</td><td>读 Operand2、写</td></tr>
-    <tr><td>0x3</td><td>只写</td></tr>
-    <tr><td>0x4</td><td>读 (单tic)</td></tr>
-    <tr><td>0x7</td><td>写 (单tic)</td></tr>
+    <td><code>0x0</code></td><td>读<code>Operand1</code>&<code>Operand2</code></td></tr>
+    <tr><td><code>0x1</code></td><td>读<code>Operand1</code></td></tr>
+    <tr><td><code>0x2</code></td><td>读<code>Operand2</code>、写</td></tr>
+    <tr><td><code>0x3</code></td><td>只写</td></tr>
+    <tr><td><code>0x4</code></td><td>读 (单tic)</td></tr>
+    <tr><td><code>0x7</code></td><td>写 (单tic)</td></tr>
     <tr>
-      <td rowspan="6">0x20</td>
+      <td rowspan="6"><code>0x20</code></td>
       <td rowspan="6"><strong>If/JUMP</strong><br>条件跳转/比较</td>
-    <td>0x0</td><td>= (等于)</td></tr>
-    <tr><td>0x1</td><td>≠ (不等于)</td></tr>
-    <tr><td>0x2</td><td>&lt; (小于)</td></tr>
-    <tr><td>0x3</td><td>≤ (小于等于)</td></tr>
-    <tr><td>0x4</td><td>> (大于)</td></tr>
-    <tr><td>0x5</td><td>≥ (大于等于)</td></tr>
-    <tr><td>0x30</td><td><strong>call</strong><br>函数调用</td>
-      <td colspan="2" style="text-align: center;">PC（代码位置）压栈</td></tr>
-    <tr><td>0x38</td><td><strong>ret</strong><br>函数返回</td>
-      <td colspan="2" style="text-align: center;">PC（代码位置）弹栈</td></tr>
+    <td><code>0x0</code></td><td><code>=</code>(等于)</td></tr>
+    <tr><td><code>0x1</code></td><td><code>≠</code>(不等于)</td></tr>
+    <tr><td><code>0x2</code></td><td><code>&lt;</code>(小于)</td></tr>
+    <tr><td><code>0x3</code></td><td><code>≤</code>(小于等于)</td></tr>
+    <tr><td><code>0x4</code></td><td><code>&gt;</code>(大于)</td></tr>
+    <tr><td><code>0x5</code></td><td><code>≥</code>(大于等于)</td></tr>
+    <tr><td><code>0x30</code></td><td><strong>call</strong><br>函数调用</td>
+      <td colspan="2" style="text-align: center;"><code>PC</code>（代码位置）压栈</td></tr>
+    <tr><td><code>0x38</code></td><td><strong>ret</strong><br>函数返回</td>
+      <td colspan="2" style="text-align: center;"><code>PC</code>（代码位置）弹栈</td></tr>
   </tbody>
 </table>
 

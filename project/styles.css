@@ -288,6 +288,15 @@ nav {
     border-radius: 6px;
     overflow: hidden;
 }
+.markdown-content table thead tr {
+    background: linear-gradient(135deg, #006600 0%, #11998e 100%);
+}
+.markdown-content table thead th {
+    color: white;
+    font-weight: 600;
+    border-bottom: none;
+    text-align: center;
+}
 .markdown-content th, .markdown-content td {
     padding: 12px 15px;
     text-align: left;
