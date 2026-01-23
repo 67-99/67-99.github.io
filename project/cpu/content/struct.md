@@ -9,7 +9,7 @@
 |bit 7: 立即数1<br>bit 6: 立即数2|bits 5-3|bits 2-0|
 > **注意**：采用大端序，bit7为最高有效位
 
-<table style="text-align: center;">
+<table>
   <thead>
     <tr><th colspan="4" style="text-align: center;">
         <strong>OPcode 模式与动作编码表</strong></th>
@@ -21,7 +21,7 @@
       <th style="text-align: center;">动作描述</th>
     </tr>
   </thead>
-  <tbody>
+  <tbody style="text-align: center;">
     <tr>
       <td rowspan="8"><code>0x00</code><br><code>0x10</code></td>
       <td rowspan="8"><strong>Calc</strong><br>算术运算</td>
