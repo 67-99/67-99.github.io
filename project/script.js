@@ -64,6 +64,18 @@ renderer.code = function(code, language, isEscaped) {
 
     return `<pre><code>${isEscaped ? code : escapeHtml(code)}</code></pre>`;
 };
+renderer.image = function(href, title, text) {
+    let processedHref = href;
+    // 将其他 ./ 开头的路径转换为 content/ 开头
+    if(href.startsWith('./'))
+        processedHref = 'content/' + href.substring(2);
+    // 构建标准的img标签
+    let out = `<img src="${processedHref}" alt="${text}"`;
+    if(title)
+        out += ` title="${title}"`;
+    out += ' loading="lazy">';
+    return out;
+};
 
 marked.setOptions({ renderer });
 

@@ -64,9 +64,9 @@
 [logisim](https://cburch.com/logisim/)中的元件与图灵完备中提供的并不相同，如logisim中没有`dualReg`、`dualRAM`、`stack`。为了最大程度复刻但不添加过多新元器件，我决定微调`dualRAM`，并与`dualReg`、`stack`使用`regester`与`RAM`实现，具体实现方式如下：
 |名称|实现逻辑|结构|
 |:--:|:-----:|:--:|
-|dualReg|在基础寄存器上添加输出控制线缆|![<code>Out[i] = Ctrl[i] * Data(Q)</code>](content/resource/dualReg.png)|
-|stack|使用一个寄存器记录栈顶，使用一个`RAM`存储数据<br>栈无数据时输出`0xFF`|![<code>stack[top++] = in<br>out = stack[--top]</code>](content/resource/stack.png)|
-|dualRAM|对于非单tic读取，使用异步加载：在设置tic使用一个寄存器存储第一个读取的值（若有），另一个寄存器存储第二个读/写地址；在读取tic输出一个寄存器存储的值（若有），同时读/写第二个地址<br>对于单tic读取，`in1`为地址，`out3`、`in2`分别作为数据读、写|![<code>out1reg = RAM[in1], sto = in1 or in2</code><br>out1 and out2 = out1reg or RAM[sto](, out3 = RAM[in1])](./resource/dualRAM.png)|
+|dualReg|在基础寄存器上添加输出控制线缆|![Out[i] = Ctrl[i] * Data(Q)](./resource/dualReg.png)|
+|stack|使用一个寄存器记录栈顶，使用一个`RAM`存储数据<br>栈无数据时输出`0xFF`|![stack[top++] = in, out = stack[--top]](./resource/stack.png)|
+|dualRAM|对于非单tic读取，使用异步加载：在设置tic使用一个寄存器存储第一个读取的值（若有），另一个寄存器存储第二个读/写地址；在读取tic输出一个寄存器存储的值（若有），同时读/写第二个地址<br>对于单tic读取，`in1`为地址，`out3`、`in2`分别作为数据读、写|![out1reg = RAM[in1], sto = in1 or in2; out1 and out2 = out1reg or RAM[sto](, out3 = RAM[in1])](./resource/dualRAM.png)|
 
 有了上述的自定义原件，便可以复刻图灵完备中的“电脑”，其中主要架构与图灵完备中完全一致。
 
