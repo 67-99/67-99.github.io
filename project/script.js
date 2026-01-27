@@ -66,6 +66,11 @@ renderer.code = function(code, language, isEscaped) {
 };
 renderer.image = function(href, title, text) {
     let processedHref = href;
+    console.table({
+        '参数': ['href', 'title', 'text'],
+        '值': [href, title, text],
+        '类型': [typeof href, typeof title, typeof text]
+    });
     // 将其他 ./ 开头的路径转换为 content/ 开头
     if(href.startsWith('./'))
         processedHref = 'content/' + href.substring(2);
