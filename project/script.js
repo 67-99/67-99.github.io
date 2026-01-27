@@ -50,6 +50,11 @@ function escapeHtml(encodedStr) {
 // 自定义markdown渲染器
 const renderer = new marked.Renderer();
 renderer.code = function(code, language, isEscaped) {
+    console.table({
+        '参数': ['code', 'language', 'isEscaped'],
+        '值': [code, language, isEscaped],
+        '类型': [typeof code, typeof language, typeof isEscaped]
+    });
     if(typeof code !== 'string'){
         language = code.lang;
         code = code.text || String(code);
@@ -65,17 +70,42 @@ renderer.code = function(code, language, isEscaped) {
     return `<pre><code>${isEscaped ? code : escapeHtml(code)}</code></pre>`;
 };
 renderer.image = function(href, title, text) {
-    let processedHref = href;
-    console.table({
-        '参数': ['href', 'title', 'text'],
-        '值': [href, title, text],
-        '类型': [typeof href, typeof title, typeof text]
-    });
+    // 智能检测参数类型
+    let href, title, text;
+    
+    // 检查是否是 token 对象格式
+    if (args.length === 1 && 
+        typeof args[0] === 'object' && 
+        args[0].type === 'image') {
+        // marked.js 4.0+ 格式
+        const token = args[0];
+        href = token.href;
+        text = token.text;
+        title = token.title;
+    } 
+    // 检查是否是数组格式 [token, null, null]
+    else if (args.length === 3 && Array.isArray(args[0]) && args[0][0] && args[0][0].type === 'image') {
+        // 某些版本的格式
+        const token = args[0][0];
+        href = token.href;
+        text = token.text;
+        title = token.title;
+    }
+    else if (args.length >= 3) {
+        // marked.js 3.x 格式
+        [href, title, text] = args;
+    }
+    else {
+        // 默认处理
+        href = args[0] || '';
+        text = args[2] || '';
+        title = args[1] || '';
+    }
     // 将其他 ./ 开头的路径转换为 content/ 开头
     if(href.startsWith('./'))
-        processedHref = 'content/' + href.substring(2);
+        href = 'content/' + href.substring(2);
     // 构建标准的img标签
-    let out = `<img src="${processedHref}" alt="${text}"`;
+    let out = `<img src="${href}" alt="${text}"`;
     if(title)
         out += ` title="${title}"`;
     out += ' loading="lazy">';
