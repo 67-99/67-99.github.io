@@ -69,7 +69,7 @@ renderer.code = function(code, language, isEscaped) {
 
     return `<pre><code>${isEscaped ? code : escapeHtml(code)}</code></pre>`;
 };
-renderer.image = function(href, title, text) {
+renderer.image = function(...args) {
     // 智能检测参数类型
     let href, title, text;
     
