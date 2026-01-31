@@ -662,12 +662,24 @@ nav {
     .sidebar-overlay.active {
         display: block;
     }
+    .markdown-content table::after {
+        content: '→';
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #4caf50;
+        font-size: 20px;
+        opacity: 0.7;
+    }
     .markdown-content table {
         display: block;
         overflow-x: auto;
-        white-space: nowrap;
+        white-space: normal;
     }
     .markdown-content th, .markdown-content td {
         padding: 8px 12px;
+        white-space: normal;
+        word-break: break-word;
     }
 }
