@@ -673,13 +673,18 @@ nav {
         opacity: 0.7;
     }
     .markdown-content table {
-        display: block;
+        display: table;
+        width: 100%;
+        table-layout: auto;
         overflow-x: auto;
-        white-space: normal;
+        border-collapse: collapse;
+        margin: 1em 0;
     }
     .markdown-content th, .markdown-content td {
         padding: 8px 12px;
         white-space: normal;
-        word-break: break-word;
+        word-break: keep-all;
+        overflow-wrap: normal;
+        min-width: 80px;
     }
 }
