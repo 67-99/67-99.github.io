@@ -70,6 +70,6 @@
 
 有了上述的自定义原件，便可以复刻图灵完备中的“电脑”，其中主要架构与图灵完备中完全一致。
 
-由于[logisim](https://cburch.com/logisim/)中没有真正意义上的输入输出，所以目前是使用一个`ROM`模拟输入，一个`RAM`记录输出，一个`TTY`显示可打印字符（`ASICC≥32`）。
+由于[logisim](https://cburch.com/logisim/)中没有真正意义上的输入输出，所以目前是使用一个`ROM`模拟输入，一个`RAM`记录输出，一个`TTY`显示可打印字符（`ASCII≥32`）。
 
 ![电路对比](./resource/compare.png "电路对比")

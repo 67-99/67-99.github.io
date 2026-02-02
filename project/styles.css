@@ -677,6 +677,7 @@ nav {
         width: 100%;
         table-layout: auto;
         overflow-x: auto;
+        white-space: normal;
         border-collapse: collapse;
         margin: 1em 0;
     }
