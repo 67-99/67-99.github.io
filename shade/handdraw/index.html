@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>手绘时间线画廊</title>
+    <title>手绘画廊</title>
     <link rel="stylesheet" href="../main.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -54,10 +54,6 @@
                         <!-- 时间点标记会通过JS动态添加 -->
                         <div class="timeline-cursor" id="timeline-cursor">
                             <div class="cursor-handle"></div>
-                            <div class="cursor-info">
-                                <span class="cursor-date" id="cursor-date">2024.7.3</span>
-                                <i class="fas fa-chevron-left"></i>
-                            </div>
                         </div>
                     </div>
                     
@@ -69,41 +65,19 @@
                 
                 <div class="timeline-controls">
                     <button class="timeline-btn" id="timeline-prev">
-                        <i class="fas fa-chevron-up"></i> 上一个
+                        <i class="fas fa-chevron-up"></i>
                     </button>
                     <button class="timeline-btn" id="timeline-next">
-                        下一个 <i class="fas fa-chevron-down"></i>
+                        <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
             </div>
 
             <!-- 右侧图片墙 -->
             <div class="gallery-main">
-                <div class="gallery-controls">
-                    <div class="gallery-stats">
-                        <span id="image-count">0</span> 件作品
-                        <span class="date-range" id="current-date-range-display">2024.7.3~2024.9.7</span>
-                    </div>
-                    <div class="view-options">
-                        <button class="view-btn active" data-view="grid">
-                            <i class="fas fa-th"></i> 网格
-                        </button>
-                        <button class="view-btn" data-view="list">
-                            <i class="fas fa-list"></i> 列表
-                        </button>
-                    </div>
-                </div>
-                
                 <!-- 图片容器 -->
                 <div class="images-container" id="images-container">
                     <!-- 图片项会通过JS动态添加 -->
-                </div>
-                
-                <!-- 加载更多 -->
-                <div class="load-more-container" id="load-more-container">
-                    <button class="load-more-btn" id="load-more-btn">
-                        <i class="fas fa-spinner fa-spin"></i> 加载更多
-                    </button>
                 </div>
                 
                 <!-- 空状态 -->
@@ -130,11 +104,6 @@
                 <div class="pdf-info">
                     <span><i class="far fa-calendar-alt"></i> <span id="pdf-start-date"></span></span>
                     <span><i class="far fa-calendar-check"></i> <span id="pdf-end-date"></span></span>
-                </div>
-                <div class="pdf-actions">
-                    <a class="pdf-download-btn" id="pdf-download-btn" download>
-                        <i class="fas fa-download"></i> 下载PDF
-                    </a>
                 </div>
             </div>
         </div>

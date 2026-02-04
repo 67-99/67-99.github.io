@@ -1,28 +1,18 @@
 document.addEventListener('DOMContentLoaded', function() {
     // 全局变量
     let artworks = [];
-    let filteredArtworks = [];
     let timeMarkers = [];
     let currentTimeIndex = 0;
-    let currentView = 'grid';
-    let currentPage = 1;
-    const itemsPerPage = 12;
     
     // DOM元素
     const imagesContainer = document.getElementById('images-container');
-    const loadMoreBtn = document.getElementById('load-more-btn');
-    const loadMoreContainer = document.getElementById('load-more-container');
     const emptyState = document.getElementById('empty-state');
-    const imageCount = document.getElementById('image-count');
-    const currentDateRangeDisplay = document.getElementById('current-date-range-display');
     const currentDateRange = document.getElementById('current-date-range');
     const timelineCursor = document.getElementById('timeline-cursor');
     const timelineTrack = document.querySelector('.timeline-track');
     const yearLabelsContainer = document.querySelector('.year-labels');
-    const cursorDate = document.getElementById('cursor-date');
     const timelinePrevBtn = document.getElementById('timeline-prev');
     const timelineNextBtn = document.getElementById('timeline-next');
-    const viewButtons = document.querySelectorAll('.view-btn');
     const pdfModal = document.getElementById('pdf-modal');
     const pdfModalClose = document.getElementById('pdf-modal-close');
     const pdfViewer = document.getElementById('pdf-viewer');
@@ -34,10 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 加载数据
     async function loadArtworks() {
         try {
-            // 显示加载状态
-            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中...';
-            loadMoreBtn.disabled = true;
-            
             // 从JSON文件加载数据
             const response = await fetch('images.json');
             artworks = await response.json();
@@ -83,9 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // 初始化时间轴
             initTimeline();
             
-            // 显示所有作品
-            filteredArtworks = [...artworks];
-            updateImageCount();
+            // 渲染所有作品
             renderArtworks();
             
         } catch (error) {
@@ -94,12 +78,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <i class="fas fa-exclamation-triangle"></i>
                 <h3>加载失败</h3>
                 <p>无法加载作品数据，请检查网络连接或数据文件</p>
-                <button class="load-more-btn" onclick="location.reload()" style="margin-top: 20px;">重试</button>
+                <button class="pdf-view-btn" onclick="location.reload()" style="margin-top: 20px;">重试</button>
             `;
             emptyState.style.display = 'block';
-        } finally {
-            loadMoreBtn.innerHTML = '<i class="fas fa-plus"></i> 加载更多';
-            loadMoreBtn.disabled = false;
         }
     }
     
@@ -133,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
             createTimeMarker(artwork, index, minTime, timeRange);
         });
         
-        // 设置初始游标位置（最新作品）
+        // 设置初始游标位置（最新作品，在时间轴顶部）
         if (artworks.length > 0) {
             setCursorPosition(0);
         }
@@ -149,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 创建年份标签（只显示开始、结束和中间几个年份）
         const displayYears = [];
         
-        // 开始年份
+        // 开始年份（最上面，最新）
         displayYears.push({
             year: maxYear,
             position: 0,
@@ -166,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // 结束年份
+        // 结束年份（最下面，最早）
         displayYears.push({
             year: minYear,
             position: 1,
@@ -208,21 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const dot = document.createElement('div');
         dot.className = 'time-dot';
         
-        // 标签
-        const label = document.createElement('div');
-        label.className = 'time-label';
-        
-        // 格式化日期显示
-        let dateText = '';
-        if (artwork.start) {
-            const date = new Date(artwork.start);
-            dateText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
-        }
-        
-        label.textContent = dateText;
-        
         marker.appendChild(dot);
-        marker.appendChild(label);
         
         // 点击事件
         marker.addEventListener('click', (e) => {
@@ -351,16 +318,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const artworkTime = artwork.midDate.getTime();
         const position = 1 - (artworkTime - minTime) / timeRange;
         
-        // 更新游标位置
+        // 更新游标位置（确保游标在轴上，与最顶端的图片重叠）
         timelineCursor.style.top = `${position * 100}%`;
-        
-        // 更新日期显示
-        let dateText = '';
-        if (artwork.start) {
-            const date = new Date(artwork.start);
-            dateText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
-        }
-        cursorDate.textContent = dateText;
         
         // 更新日期范围显示
         let rangeText = '';
@@ -374,7 +333,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         currentDateRange.textContent = rangeText;
-        currentDateRangeDisplay.textContent = rangeText;
         
         // 更新时间点标记的活跃状态
         document.querySelectorAll('.time-marker').forEach(marker => {
@@ -397,44 +355,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // 更新作品数量显示
-    function updateImageCount() {
-        imageCount.textContent = filteredArtworks.length;
-    }
-    
     // 渲染作品
     function renderArtworks() {
         // 清空容器
         imagesContainer.innerHTML = '';
         
-        if (filteredArtworks.length === 0) {
+        if (artworks.length === 0) {
             emptyState.style.display = 'block';
-            loadMoreContainer.style.display = 'none';
             return;
         }
         
         emptyState.style.display = 'none';
         
-        // 计算当前页显示的作品
-        const startIndex = 0;
-        const endIndex = Math.min(currentPage * itemsPerPage, filteredArtworks.length);
-        const currentArtworks = filteredArtworks.slice(startIndex, endIndex);
-        
-        // 创建作品元素
-        currentArtworks.forEach((artwork, index) => {
-            const artworkElement = createArtworkElement(artwork, startIndex + index);
+        // 创建所有作品元素
+        artworks.forEach((artwork, index) => {
+            const artworkElement = createArtworkElement(artwork, index);
             imagesContainer.appendChild(artworkElement);
         });
-        
-        // 显示/隐藏加载更多按钮
-        if (endIndex < filteredArtworks.length) {
-            loadMoreContainer.style.display = 'block';
-        } else {
-            loadMoreContainer.style.display = 'none';
-        }
-        
-        // 更新视图类
-        imagesContainer.className = currentView === 'list' ? 'images-container list-view' : 'images-container';
     }
     
     // 创建作品元素
@@ -472,10 +409,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const info = document.createElement('div');
         info.className = 'image-info';
         
-        const title = document.createElement('h3');
-        title.className = 'image-title';
-        title.textContent = artwork.title;
+        // 标题（只有存在时才显示）
+        if (artwork.title && artwork.title.trim() !== '') {
+            const title = document.createElement('h3');
+            title.className = 'image-title';
+            title.textContent = artwork.title;
+            info.appendChild(title);
+        }
         
+        // 日期
         const dates = document.createElement('div');
         dates.className = 'image-dates';
         
@@ -487,48 +429,28 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (artwork.start) {
             const date = new Date(artwork.start);
             datesText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
-        } else {
-            datesText = '日期未知';
         }
         
-        dates.innerHTML = `<i class="far fa-calendar-alt"></i> ${datesText}`;
-        
-        // 操作按钮
-        const actions = document.createElement('div');
-        actions.className = 'image-actions';
-        
-        const viewBtn = document.createElement('a');
-        viewBtn.className = 'pdf-view-btn';
-        viewBtn.href = '#';
-        viewBtn.innerHTML = '<i class="fas fa-eye"></i> 查看';
-        
-        viewBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            openPDFModal(artwork);
-        });
-        
-        const downloadBtn = document.createElement('a');
-        downloadBtn.className = 'pdf-download-btn';
-        downloadBtn.href = artwork.src;
-        downloadBtn.download = artwork.title + (artwork.src.toLowerCase().endsWith('.pdf') ? '.pdf' : '');
-        downloadBtn.innerHTML = '<i class="fas fa-download"></i> 下载';
-        
-        actions.appendChild(viewBtn);
-        actions.appendChild(downloadBtn);
-        
-        info.appendChild(title);
-        info.appendChild(dates);
-        info.appendChild(actions);
+        if (datesText) {
+            dates.innerHTML = `<i class="far fa-calendar-alt"></i> ${datesText}`;
+            info.appendChild(dates);
+        }
         
         item.appendChild(preview);
         item.appendChild(info);
+        
+        // 点击打开预览
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            openPDFModal(artwork);
+        });
         
         return item;
     }
     
     // 打开PDF预览模态框
     function openPDFModal(artwork) {
-        pdfModalTitle.textContent = artwork.title;
+        pdfModalTitle.textContent = artwork.title || '作品';
         
         let startText = '';
         if (artwork.start) {
@@ -574,12 +496,6 @@ document.addEventListener('DOMContentLoaded', function() {
         pdfViewer.src = '';
     }
     
-    // 加载更多作品
-    function loadMoreArtworks() {
-        currentPage++;
-        renderArtworks();
-    }
-    
     // 上一个时间点
     function prevTimePoint() {
         if (currentTimeIndex > 0) {
@@ -596,30 +512,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // 切换视图
-    function switchView(viewType) {
-        currentView = viewType;
-        imagesContainer.className = viewType === 'list' ? 'images-container list-view' : 'images-container';
-        renderArtworks();
-    }
-    
     // 事件监听器
-    loadMoreBtn.addEventListener('click', loadMoreArtworks);
-    
     timelinePrevBtn.addEventListener('click', prevTimePoint);
     
     timelineNextBtn.addEventListener('click', nextTimePoint);
-    
-    viewButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // 更新活跃状态
-            viewButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            // 切换视图
-            switchView(this.dataset.view);
-        });
-    });
     
     // 模态框事件
     pdfModalClose.addEventListener('click', closePDFModal);
