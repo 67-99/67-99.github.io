@@ -41,25 +41,28 @@
             <div class="vertical-timeline">
                 <div class="timeline-header">
                     <h2><i class="fas fa-timeline"></i> 时间线</h2>
-                    <div class="current-time-display" id="current-time-display">
-                        <span id="current-date-range">2024.7.3~2024.9.7</span>
-                    </div>
                 </div>
                 
                 <div class="timeline-wrapper">
+                    <!-- 年份标签容器 -->
+                    <div class="year-labels">
+                        <!-- 年份标签会通过JS动态添加 -->
+                    </div>
+                    
                     <div class="timeline-track">
                         <!-- 时间线轨道 -->
                         <div class="timeline-line"></div>
                         
                         <!-- 时间点标记会通过JS动态添加 -->
                         <div class="timeline-cursor" id="timeline-cursor">
-                            <div class="cursor-handle"></div>
+                            <div class="cursor-handle">
+                                <div class="cursor-arrow">
+                                    <div class="arrow-line"></div>
+                                    <div class="arrow-head"></div>
+                                </div>
+                                <div class="cursor-date" id="cursor-date">2024.7.3</div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <!-- 年份标签容器 -->
-                    <div class="year-labels">
-                        <!-- 年份标签会通过JS动态添加 -->
                     </div>
                 </div>
                 

@@ -7,10 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // DOM元素
     const imagesContainer = document.getElementById('images-container');
     const emptyState = document.getElementById('empty-state');
-    const currentDateRange = document.getElementById('current-date-range');
     const timelineCursor = document.getElementById('timeline-cursor');
     const timelineTrack = document.querySelector('.timeline-track');
     const yearLabelsContainer = document.querySelector('.year-labels');
+    const cursorDate = document.getElementById('cursor-date');
     const timelinePrevBtn = document.getElementById('timeline-prev');
     const timelineNextBtn = document.getElementById('timeline-next');
     const pdfModal = document.getElementById('pdf-modal');
@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const pdfModalTitle = document.getElementById('pdf-modal-title');
     const pdfStartDate = document.getElementById('pdf-start-date');
     const pdfEndDate = document.getElementById('pdf-end-date');
-    const pdfDownloadBtn = document.getElementById('pdf-download-btn');
     
     // 加载数据
     async function loadArtworks() {
@@ -321,18 +320,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // 更新游标位置（确保游标在轴上，与最顶端的图片重叠）
         timelineCursor.style.top = `${position * 100}%`;
         
-        // 更新日期范围显示
-        let rangeText = '';
-        if (artwork.start && artwork.end) {
-            const startDate = new Date(artwork.start);
-            const endDate = new Date(artwork.end);
-            rangeText = `${startDate.getFullYear()}.${startDate.getMonth() + 1}.${startDate.getDate()}~${endDate.getFullYear()}.${endDate.getMonth() + 1}.${endDate.getDate()}`;
-        } else if (artwork.start) {
+        // 更新游标日期显示
+        let dateText = '';
+        if (artwork.start) {
             const date = new Date(artwork.start);
-            rangeText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+            dateText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
         }
-        
-        currentDateRange.textContent = rangeText;
+        cursorDate.textContent = dateText;
         
         // 更新时间点标记的活跃状态
         document.querySelectorAll('.time-marker').forEach(marker => {
@@ -479,10 +473,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // 如果是图片，直接显示
             pdfViewer.src = artwork.src;
         }
-        
-        // 设置下载链接
-        pdfDownloadBtn.href = artwork.src;
-        pdfDownloadBtn.download = artwork.title + (artwork.src.toLowerCase().endsWith('.pdf') ? '.pdf' : '');
         
         // 显示模态框
         pdfModal.style.display = 'flex';
