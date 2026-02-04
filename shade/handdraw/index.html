@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>手绘画廊</title>
-    <link rel="stylesheet" href="../main.css">
-    <link rel="stylesheet" href="style.css">
+    <title>手绘时间线画廊</title>
+    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="gallery.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -30,43 +30,50 @@
 
     <!-- 页面标题 -->
     <div class="page-header">
-        <h1>手绘画廊</h1>
-        <p>按时间线浏览我的艺术作品集</p>
+        <h1>手绘时间线</h1>
+        <p>按时间顺序浏览我的手绘作品</p>
     </div>
 
     <!-- 主容器 -->
     <div class="gallery-container container">
         <div class="gallery-layout">
-            <!-- 左侧时间轴 -->
-            <div class="timeline-container">
+            <!-- 左侧纵向时间轴 -->
+            <div class="vertical-timeline">
                 <div class="timeline-header">
-                    <h2><i class="fas fa-history"></i> 时间轴</h2>
-                    <div class="current-year-display">
-                        <span id="current-year">2023</span>
+                    <h2><i class="fas fa-timeline"></i> 时间线</h2>
+                    <div class="current-time-display" id="current-time-display">
+                        <span id="current-date-range">2024.7.3~2024.9.7</span>
                     </div>
                 </div>
+                
                 <div class="timeline-wrapper">
-                    <div class="timeline">
-                        <div class="timeline-start">
-                            <div class="timeline-marker start"></div>
-                            <div class="timeline-label" id="start-year">2019</div>
-                        </div>
-                        <div class="timeline-track">
-                            <div class="timeline-progress" id="timeline-progress"></div>
-                            <div class="timeline-cursor" id="timeline-cursor"></div>
-                            <!-- 年份标记会通过JS动态添加 -->
-                        </div>
-                        <div class="timeline-end">
-                            <div class="timeline-marker end"></div>
-                            <div class="timeline-label" id="end-year">2024</div>
+                    <div class="timeline-track">
+                        <!-- 时间线轨道 -->
+                        <div class="timeline-line"></div>
+                        
+                        <!-- 时间点标记会通过JS动态添加 -->
+                        <div class="timeline-cursor" id="timeline-cursor">
+                            <div class="cursor-handle"></div>
+                            <div class="cursor-info">
+                                <span class="cursor-date" id="cursor-date">2024.7.3</span>
+                                <i class="fas fa-chevron-left"></i>
+                            </div>
                         </div>
                     </div>
+                    
+                    <!-- 年份标签容器 -->
+                    <div class="year-labels">
+                        <!-- 年份标签会通过JS动态添加 -->
+                    </div>
                 </div>
-                <div class="year-selector">
-                    <!-- 年份按钮会通过JS动态添加 -->
-                </div>
-                <div class="timeline-info">
-                    <p>点击年份或拖动游标查看该时期的作品</p>
+                
+                <div class="timeline-controls">
+                    <button class="timeline-btn" id="timeline-prev">
+                        <i class="fas fa-chevron-up"></i> 上一个
+                    </button>
+                    <button class="timeline-btn" id="timeline-next">
+                        下一个 <i class="fas fa-chevron-down"></i>
+                    </button>
                 </div>
             </div>
 
@@ -75,16 +82,20 @@
                 <div class="gallery-controls">
                     <div class="gallery-stats">
                         <span id="image-count">0</span> 件作品
+                        <span class="date-range" id="current-date-range-display">2024.7.3~2024.9.7</span>
                     </div>
-                    <div class="gallery-filters">
-                        <button class="filter-btn active" data-filter="all">全部</button>
-                        <button class="filter-btn" data-filter="recent">近期</button>
-                        <button class="filter-btn" data-filter="favorite">精选</button>
+                    <div class="view-options">
+                        <button class="view-btn active" data-view="grid">
+                            <i class="fas fa-th"></i> 网格
+                        </button>
+                        <button class="view-btn" data-view="list">
+                            <i class="fas fa-list"></i> 列表
+                        </button>
                     </div>
                 </div>
                 
-                <!-- 瀑布流容器 -->
-                <div class="masonry-container" id="masonry-container">
+                <!-- 图片容器 -->
+                <div class="images-container" id="images-container">
                     <!-- 图片项会通过JS动态添加 -->
                 </div>
                 
@@ -99,28 +110,31 @@
                 <div class="empty-state" id="empty-state">
                     <i class="fas fa-palette"></i>
                     <h3>暂无作品</h3>
-                    <p>当前年份没有找到作品，请选择其他年份</p>
+                    <p>当前时间段没有找到作品</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 图片预览模态框 -->
-    <div class="modal-overlay" id="image-modal">
-        <div class="modal-content">
-            <button class="modal-close" id="modal-close">&times;</button>
-            <div class="modal-image-container">
-                <img id="modal-image" src="" alt="">
+    <!-- PDF预览模态框 -->
+    <div class="pdf-modal-overlay" id="pdf-modal">
+        <div class="pdf-modal-content">
+            <div class="pdf-modal-header">
+                <h3 id="pdf-modal-title"></h3>
+                <button class="pdf-modal-close" id="pdf-modal-close">&times;</button>
             </div>
-            <div class="modal-info">
-                <h3 id="modal-title"></h3>
-                <div class="modal-dates">
-                    <span><i class="far fa-calendar-alt"></i> <span id="modal-start"></span></span>
-                    <span><i class="far fa-calendar-check"></i> <span id="modal-end"></span></span>
+            <div class="pdf-modal-body">
+                <iframe id="pdf-viewer" frameborder="0"></iframe>
+            </div>
+            <div class="pdf-modal-footer">
+                <div class="pdf-info">
+                    <span><i class="far fa-calendar-alt"></i> <span id="pdf-start-date"></span></span>
+                    <span><i class="far fa-calendar-check"></i> <span id="pdf-end-date"></span></span>
                 </div>
-                <div class="modal-actions">
-                    <button class="modal-btn" id="modal-prev"><i class="fas fa-chevron-left"></i> 上一张</button>
-                    <button class="modal-btn" id="modal-next">下一张 <i class="fas fa-chevron-right"></i></button>
+                <div class="pdf-actions">
+                    <a class="pdf-download-btn" id="pdf-download-btn" download>
+                        <i class="fas fa-download"></i> 下载PDF
+                    </a>
                 </div>
             </div>
         </div>

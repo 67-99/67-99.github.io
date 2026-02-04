@@ -1,36 +1,35 @@
-// 画廊应用主逻辑
 document.addEventListener('DOMContentLoaded', function() {
     // 全局变量
     let artworks = [];
     let filteredArtworks = [];
-    let currentYear = null;
-    let currentFilter = 'all';
+    let timeMarkers = [];
+    let currentTimeIndex = 0;
+    let currentView = 'grid';
     let currentPage = 1;
     const itemsPerPage = 12;
-    let currentModalIndex = 0;
     
     // DOM元素
-    const masonryContainer = document.getElementById('masonry-container');
+    const imagesContainer = document.getElementById('images-container');
     const loadMoreBtn = document.getElementById('load-more-btn');
     const loadMoreContainer = document.getElementById('load-more-container');
     const emptyState = document.getElementById('empty-state');
     const imageCount = document.getElementById('image-count');
-    const currentYearDisplay = document.getElementById('current-year');
-    const startYearDisplay = document.getElementById('start-year');
-    const endYearDisplay = document.getElementById('end-year');
-    const timelineProgress = document.getElementById('timeline-progress');
+    const currentDateRangeDisplay = document.getElementById('current-date-range-display');
+    const currentDateRange = document.getElementById('current-date-range');
     const timelineCursor = document.getElementById('timeline-cursor');
     const timelineTrack = document.querySelector('.timeline-track');
-    const yearSelector = document.querySelector('.year-selector');
-    const filterButtons = document.querySelectorAll('.filter-btn');
-    const imageModal = document.getElementById('image-modal');
-    const modalClose = document.getElementById('modal-close');
-    const modalImage = document.getElementById('modal-image');
-    const modalTitle = document.getElementById('modal-title');
-    const modalStart = document.getElementById('modal-start');
-    const modalEnd = document.getElementById('modal-end');
-    const modalPrev = document.getElementById('modal-prev');
-    const modalNext = document.getElementById('modal-next');
+    const yearLabelsContainer = document.querySelector('.year-labels');
+    const cursorDate = document.getElementById('cursor-date');
+    const timelinePrevBtn = document.getElementById('timeline-prev');
+    const timelineNextBtn = document.getElementById('timeline-next');
+    const viewButtons = document.querySelectorAll('.view-btn');
+    const pdfModal = document.getElementById('pdf-modal');
+    const pdfModalClose = document.getElementById('pdf-modal-close');
+    const pdfViewer = document.getElementById('pdf-viewer');
+    const pdfModalTitle = document.getElementById('pdf-modal-title');
+    const pdfStartDate = document.getElementById('pdf-start-date');
+    const pdfEndDate = document.getElementById('pdf-end-date');
+    const pdfDownloadBtn = document.getElementById('pdf-download-btn');
     
     // 加载数据
     async function loadArtworks() {
@@ -39,34 +38,55 @@ document.addEventListener('DOMContentLoaded', function() {
             loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中...';
             loadMoreBtn.disabled = true;
             
-            // 模拟从JSON文件加载数据
-            // 实际使用时，请将下面的URL替换为您的images.json文件路径
+            // 从JSON文件加载数据
             const response = await fetch('images.json');
             artworks = await response.json();
             
-            // 解析日期并添加年份属性
+            // 处理日期并排序（最新的在前面）
             artworks.forEach(artwork => {
+                // 解析日期
                 if (artwork.start) {
-                    artwork.year = new Date(artwork.start).getFullYear();
-                } else if (artwork.end) {
-                    artwork.year = new Date(artwork.end).getFullYear();
+                    artwork.startDate = new Date(artwork.start);
+                    artwork.startYear = artwork.startDate.getFullYear();
+                    artwork.startMonth = artwork.startDate.getMonth() + 1;
+                }
+                
+                if (artwork.end) {
+                    artwork.endDate = new Date(artwork.end);
+                    artwork.endYear = artwork.endDate.getFullYear();
+                    artwork.endMonth = artwork.endDate.getMonth() + 1;
                 } else {
-                    artwork.year = new Date().getFullYear();
+                    // 如果没有结束日期，使用开始日期
+                    artwork.endDate = artwork.startDate;
+                    artwork.endYear = artwork.startYear;
+                    artwork.endMonth = artwork.startMonth;
+                }
+                
+                // 计算中间日期用于时间轴定位
+                if (artwork.startDate && artwork.endDate) {
+                    const timeDiff = artwork.endDate.getTime() - artwork.startDate.getTime();
+                    artwork.midDate = new Date(artwork.startDate.getTime() + timeDiff / 2);
+                } else if (artwork.startDate) {
+                    artwork.midDate = artwork.startDate;
+                } else {
+                    artwork.midDate = new Date();
                 }
             });
             
-            // 按年份排序
-            artworks.sort((a, b) => new Date(b.start || b.end) - new Date(a.start || a.end));
-            
-            // 初始化年份数据
-            initYearData();
-            
-            // 默认显示最新年份
-            const latestYear = getLatestYear();
-            selectYear(latestYear);
+            // 按开始日期排序（最新的在前面）
+            artworks.sort((a, b) => {
+                const dateA = a.midDate || new Date(a.start) || new Date();
+                const dateB = b.midDate || new Date(b.start) || new Date();
+                return dateB - dateA;
+            });
             
             // 初始化时间轴
             initTimeline();
+            
+            // 显示所有作品
+            filteredArtworks = [...artworks];
+            updateImageCount();
+            renderArtworks();
             
         } catch (error) {
             console.error('加载作品数据失败:', error);
@@ -74,125 +94,156 @@ document.addEventListener('DOMContentLoaded', function() {
                 <i class="fas fa-exclamation-triangle"></i>
                 <h3>加载失败</h3>
                 <p>无法加载作品数据，请检查网络连接或数据文件</p>
-                <button class="load-more-btn" onclick="loadArtworks()" style="margin-top: 20px;">重试</button>
+                <button class="load-more-btn" onclick="location.reload()" style="margin-top: 20px;">重试</button>
             `;
             emptyState.style.display = 'block';
         } finally {
-            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载更多';
+            loadMoreBtn.innerHTML = '<i class="fas fa-plus"></i> 加载更多';
             loadMoreBtn.disabled = false;
         }
     }
     
-    // 获取年份范围
-    function getYearRange() {
-        if (artworks.length === 0) return { min: new Date().getFullYear(), max: new Date().getFullYear() };
-        
-        const years = artworks.map(art => art.year);
-        return {
-            min: Math.min(...years),
-            max: Math.max(...years)
-        };
-    }
-    
-    // 获取最新年份
-    function getLatestYear() {
-        const yearRange = getYearRange();
-        return yearRange.max;
-    }
-    
-    // 初始化年份数据
-    function initYearData() {
-        const yearRange = getYearRange();
-        startYearDisplay.textContent = yearRange.min;
-        endYearDisplay.textContent = yearRange.max;
-    }
-    
     // 初始化时间轴
     function initTimeline() {
-        const yearRange = getYearRange();
-        const totalYears = yearRange.max - yearRange.min + 1;
+        if (artworks.length === 0) return;
         
-        // 清空年份标记
-        const existingMarkers = document.querySelectorAll('.year-marker');
+        // 清空时间轴
+        const existingMarkers = document.querySelectorAll('.time-marker');
         existingMarkers.forEach(marker => marker.remove());
         
-        // 创建年份标记
-        for (let year = yearRange.min; year <= yearRange.max; year++) {
-            const yearArtworks = artworks.filter(art => art.year === year);
-            if (yearArtworks.length > 0) {
-                createYearMarker(year, year === currentYear);
-            }
+        yearLabelsContainer.innerHTML = '';
+        timeMarkers = [];
+        
+        // 获取时间范围
+        const dates = artworks.map(art => art.midDate.getTime());
+        const minTime = Math.min(...dates);
+        const maxTime = Math.max(...dates);
+        const timeRange = maxTime - minTime;
+        
+        // 获取年份范围
+        const years = artworks.map(art => art.startYear || art.midDate.getFullYear());
+        const minYear = Math.min(...years);
+        const maxYear = Math.max(...years);
+        
+        // 创建年份标签
+        createYearLabels(minYear, maxYear);
+        
+        // 创建时间点标记
+        artworks.forEach((artwork, index) => {
+            createTimeMarker(artwork, index, minTime, timeRange);
+        });
+        
+        // 设置初始游标位置（最新作品）
+        if (artworks.length > 0) {
+            setCursorPosition(0);
         }
         
-        // 创建年份按钮
-        createYearButtons();
-        
-        // 更新时间轴进度
-        updateTimelineProgress();
-        
-        // 添加时间轴拖动功能
-        initTimelineDrag();
+        // 添加游标拖动功能
+        initCursorDrag(minTime, timeRange);
     }
     
-    // 创建年份标记
-    function createYearMarker(year, isActive = false) {
-        const yearRange = getYearRange();
-        const totalYears = yearRange.max - yearRange.min + 1;
-        const yearIndex = year - yearRange.min;
-        const position = (yearIndex / (totalYears - 1)) * 100;
+    // 创建年份标签
+    function createYearLabels(minYear, maxYear) {
+        const yearRange = maxYear - minYear + 1;
         
+        // 创建年份标签（只显示开始、结束和中间几个年份）
+        const displayYears = [];
+        
+        // 开始年份
+        displayYears.push({
+            year: maxYear,
+            position: 0,
+            isFirst: true
+        });
+        
+        // 如果年份范围较大，添加中间年份
+        if (yearRange > 3) {
+            const middleYear = Math.floor((minYear + maxYear) / 2);
+            displayYears.push({
+                year: middleYear,
+                position: 0.5,
+                isMiddle: true
+            });
+        }
+        
+        // 结束年份
+        displayYears.push({
+            year: minYear,
+            position: 1,
+            isLast: true
+        });
+        
+        // 创建标签
+        displayYears.forEach(yearInfo => {
+            const yearLabel = document.createElement('div');
+            yearLabel.className = `year-label ${yearInfo.isFirst ? 'first' : ''} ${yearInfo.isLast ? 'last' : ''}`;
+            yearLabel.style.top = `${yearInfo.position * 100}%`;
+            
+            const yearText = document.createElement('span');
+            yearText.className = 'year-text';
+            yearText.textContent = yearInfo.year;
+            
+            const yearMarker = document.createElement('div');
+            yearMarker.className = 'year-marker';
+            
+            yearLabel.appendChild(yearText);
+            yearLabel.appendChild(yearMarker);
+            yearLabelsContainer.appendChild(yearLabel);
+        });
+    }
+    
+    // 创建时间点标记
+    function createTimeMarker(artwork, index, minTime, timeRange) {
+        // 计算时间点在时间轴上的位置（0到1之间）
+        const artworkTime = artwork.midDate.getTime();
+        const position = 1 - (artworkTime - minTime) / timeRange; // 1- 因为最新的在上面
+        
+        // 创建标记元素
         const marker = document.createElement('div');
-        marker.className = `year-marker ${isActive ? 'active' : ''}`;
-        marker.style.left = `${position}%`;
-        marker.dataset.year = year;
+        marker.className = 'time-marker has-work';
+        marker.style.top = `${position * 100}%`;
+        marker.dataset.index = index;
         
+        // 点
         const dot = document.createElement('div');
-        dot.className = 'year-dot';
+        dot.className = 'time-dot';
         
+        // 标签
         const label = document.createElement('div');
-        label.className = 'year-label';
-        label.textContent = year;
+        label.className = 'time-label';
+        
+        // 格式化日期显示
+        let dateText = '';
+        if (artwork.start) {
+            const date = new Date(artwork.start);
+            dateText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+        }
+        
+        label.textContent = dateText;
         
         marker.appendChild(dot);
         marker.appendChild(label);
         
-        marker.addEventListener('click', () => selectYear(year));
+        // 点击事件
+        marker.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setCursorPosition(index);
+            scrollToImage(index);
+        });
         
         timelineTrack.parentElement.appendChild(marker);
-    }
-    
-    // 创建年份按钮
-    function createYearButtons() {
-        yearSelector.innerHTML = '';
-        
-        const yearRange = getYearRange();
-        const years = [];
-        
-        for (let year = yearRange.max; year >= yearRange.min; year--) {
-            const yearArtworks = artworks.filter(art => art.year === year);
-            if (yearArtworks.length > 0) {
-                years.push(year);
-            }
-        }
-        
-        // 最多显示9个年份按钮
-        const displayYears = years.slice(0, 9);
-        
-        displayYears.forEach(year => {
-            const button = document.createElement('button');
-            button.className = `year-btn ${year === currentYear ? 'active' : ''}`;
-            button.textContent = year;
-            button.dataset.year = year;
-            
-            button.addEventListener('click', () => selectYear(year));
-            
-            yearSelector.appendChild(button);
+        timeMarkers.push({
+            element: marker,
+            index: index,
+            position: position
         });
     }
     
-    // 初始化时间轴拖动功能
-    function initTimelineDrag() {
+    // 初始化游标拖动
+    function initCursorDrag(minTime, timeRange) {
         let isDragging = false;
+        let startY = 0;
+        let startTop = 0;
         
         timelineCursor.addEventListener('mousedown', startDrag);
         timelineCursor.addEventListener('touchstart', startDrag);
@@ -200,6 +251,16 @@ document.addEventListener('DOMContentLoaded', function() {
         function startDrag(e) {
             e.preventDefault();
             isDragging = true;
+            
+            if (e.type === 'mousedown') {
+                startY = e.clientY;
+            } else {
+                startY = e.touches[0].clientY;
+            }
+            
+            const trackRect = timelineTrack.getBoundingClientRect();
+            startTop = parseInt(timelineCursor.style.top) || 0;
+            
             document.addEventListener('mousemove', drag);
             document.addEventListener('touchmove', drag);
             document.addEventListener('mouseup', stopDrag);
@@ -209,27 +270,30 @@ document.addEventListener('DOMContentLoaded', function() {
         function drag(e) {
             if (!isDragging) return;
             
-            let clientX;
-            if (e.type.includes('touch')) {
-                clientX = e.touches[0].clientX;
+            let clientY;
+            if (e.type === 'mousemove') {
+                clientY = e.clientY;
             } else {
-                clientX = e.clientX;
+                clientY = e.touches[0].clientY;
             }
             
             const trackRect = timelineTrack.getBoundingClientRect();
-            let position = (clientX - trackRect.left) / trackRect.width;
-            position = Math.max(0, Math.min(1, position));
+            const deltaY = clientY - startY;
+            const trackHeight = trackRect.height;
             
-            const yearRange = getYearRange();
-            const totalYears = yearRange.max - yearRange.min + 1;
-            const yearIndex = Math.round(position * (totalYears - 1));
-            const year = yearRange.min + yearIndex;
+            // 计算新位置
+            let newTop = startTop + (deltaY / trackHeight * 100);
+            newTop = Math.max(0, Math.min(100, newTop));
             
-            // 检查该年份是否有作品
-            const yearArtworks = artworks.filter(art => art.year === year);
-            if (yearArtworks.length > 0) {
-                selectYear(year);
-            }
+            // 更新游标位置
+            timelineCursor.style.top = `${newTop}%`;
+            
+            // 计算对应的时间
+            const position = newTop / 100;
+            const time = minTime + (1 - position) * timeRange; // 1- 因为最新的在上面
+            
+            // 找到最近的作品
+            findNearestArtwork(time);
         }
         
         function stopDrag() {
@@ -239,72 +303,109 @@ document.addEventListener('DOMContentLoaded', function() {
             document.removeEventListener('mouseup', stopDrag);
             document.removeEventListener('touchend', stopDrag);
         }
-    }
-    
-    // 更新时间轴进度
-    function updateTimelineProgress() {
-        if (!currentYear) return;
         
-        const yearRange = getYearRange();
-        const totalYears = yearRange.max - yearRange.min + 1;
-        const yearIndex = currentYear - yearRange.min;
-        const progress = (yearIndex / (totalYears - 1)) * 100;
-        
-        timelineProgress.style.width = `${progress}%`;
-        timelineCursor.style.left = `${progress}%`;
-    }
-    
-    // 选择年份
-    function selectYear(year) {
-        currentYear = year;
-        currentPage = 1;
-        
-        // 更新显示
-        currentYearDisplay.textContent = year;
-        
-        // 更新活跃状态
-        document.querySelectorAll('.year-marker').forEach(marker => {
-            marker.classList.toggle('active', parseInt(marker.dataset.year) === year);
+        // 点击时间轴轨道也可以移动游标
+        timelineTrack.addEventListener('click', (e) => {
+            const trackRect = timelineTrack.getBoundingClientRect();
+            const clickY = e.clientY - trackRect.top;
+            const position = clickY / trackRect.height;
+            
+            const time = minTime + (1 - position) * timeRange;
+            findNearestArtwork(time);
         });
-        
-        document.querySelectorAll('.year-btn').forEach(btn => {
-            btn.classList.toggle('active', parseInt(btn.dataset.year) === year);
-        });
-        
-        // 更新时间轴进度
-        updateTimelineProgress();
-        
-        // 过滤并显示作品
-        filterArtworks();
     }
     
-    // 过滤作品
-    function filterArtworks() {
-        // 根据年份过滤
-        let result = artworks.filter(art => art.year === currentYear);
+    // 找到最近的作品
+    function findNearestArtwork(targetTime) {
+        if (artworks.length === 0) return;
         
-        // 根据筛选器过滤
-        if (currentFilter === 'recent') {
-            // 显示最近一年的作品（已经是）
-        } else if (currentFilter === 'favorite') {
-            // 这里可以添加收藏逻辑，目前随机显示一些
-            result = result.filter((_, index) => index % 3 === 0);
+        // 找到时间最接近的作品
+        let nearestIndex = 0;
+        let minDiff = Math.abs(artworks[0].midDate.getTime() - targetTime);
+        
+        for (let i = 1; i < artworks.length; i++) {
+            const diff = Math.abs(artworks[i].midDate.getTime() - targetTime);
+            if (diff < minDiff) {
+                minDiff = diff;
+                nearestIndex = i;
+            }
         }
-        // 'all' 显示全部
         
-        filteredArtworks = result;
+        setCursorPosition(nearestIndex);
+        scrollToImage(nearestIndex);
+    }
+    
+    // 设置游标位置
+    function setCursorPosition(index) {
+        if (index < 0 || index >= artworks.length) return;
         
-        // 更新作品数量
+        currentTimeIndex = index;
+        const artwork = artworks[index];
+        
+        // 计算位置
+        const dates = artworks.map(art => art.midDate.getTime());
+        const minTime = Math.min(...dates);
+        const maxTime = Math.max(...dates);
+        const timeRange = maxTime - minTime;
+        
+        const artworkTime = artwork.midDate.getTime();
+        const position = 1 - (artworkTime - minTime) / timeRange;
+        
+        // 更新游标位置
+        timelineCursor.style.top = `${position * 100}%`;
+        
+        // 更新日期显示
+        let dateText = '';
+        if (artwork.start) {
+            const date = new Date(artwork.start);
+            dateText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+        }
+        cursorDate.textContent = dateText;
+        
+        // 更新日期范围显示
+        let rangeText = '';
+        if (artwork.start && artwork.end) {
+            const startDate = new Date(artwork.start);
+            const endDate = new Date(artwork.end);
+            rangeText = `${startDate.getFullYear()}.${startDate.getMonth() + 1}.${startDate.getDate()}~${endDate.getFullYear()}.${endDate.getMonth() + 1}.${endDate.getDate()}`;
+        } else if (artwork.start) {
+            const date = new Date(artwork.start);
+            rangeText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+        }
+        
+        currentDateRange.textContent = rangeText;
+        currentDateRangeDisplay.textContent = rangeText;
+        
+        // 更新时间点标记的活跃状态
+        document.querySelectorAll('.time-marker').forEach(marker => {
+            marker.classList.remove('active');
+        });
+        
+        if (timeMarkers[index]) {
+            timeMarkers[index].element.classList.add('active');
+        }
+    }
+    
+    // 滚动到指定图片
+    function scrollToImage(index) {
+        const imageElements = document.querySelectorAll('.image-item');
+        if (imageElements[index]) {
+            imageElements[index].scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+    }
+    
+    // 更新作品数量显示
+    function updateImageCount() {
         imageCount.textContent = filteredArtworks.length;
-        
-        // 渲染作品
-        renderArtworks();
     }
     
     // 渲染作品
     function renderArtworks() {
         // 清空容器
-        masonryContainer.innerHTML = '';
+        imagesContainer.innerHTML = '';
         
         if (filteredArtworks.length === 0) {
             emptyState.style.display = 'block';
@@ -319,22 +420,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const endIndex = Math.min(currentPage * itemsPerPage, filteredArtworks.length);
         const currentArtworks = filteredArtworks.slice(startIndex, endIndex);
         
-        // 创建瀑布流列
-        const columns = 3;
-        const columnElements = [];
-        
-        for (let i = 0; i < columns; i++) {
-            const column = document.createElement('div');
-            column.className = 'masonry-column';
-            masonryContainer.appendChild(column);
-            columnElements.push(column);
-        }
-        
-        // 分配作品到各列
+        // 创建作品元素
         currentArtworks.forEach((artwork, index) => {
-            const columnIndex = index % columns;
-            const artworkElement = createArtworkElement(artwork);
-            columnElements[columnIndex].appendChild(artworkElement);
+            const artworkElement = createArtworkElement(artwork, startIndex + index);
+            imagesContainer.appendChild(artworkElement);
         });
         
         // 显示/隐藏加载更多按钮
@@ -343,111 +432,146 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             loadMoreContainer.style.display = 'none';
         }
+        
+        // 更新视图类
+        imagesContainer.className = currentView === 'list' ? 'images-container list-view' : 'images-container';
     }
     
     // 创建作品元素
-    function createArtworkElement(artwork) {
+    function createArtworkElement(artwork, index) {
         const item = document.createElement('div');
-        item.className = 'masonry-item';
-        item.dataset.index = artworks.indexOf(artwork);
+        item.className = 'image-item';
+        item.dataset.index = index;
         
-        // 年份徽章
-        const yearBadge = document.createElement('div');
-        yearBadge.className = 'year-badge';
-        yearBadge.textContent = artwork.year;
+        // 预览区域
+        const preview = document.createElement('div');
+        preview.className = 'image-preview';
         
-        // 图片容器
-        const imageContainer = document.createElement('div');
-        imageContainer.className = 'image-container';
+        // 如果是PDF，显示PDF图标
+        if (artwork.src.toLowerCase().endsWith('.pdf')) {
+            const pdfIcon = document.createElement('i');
+            pdfIcon.className = 'fas fa-file-pdf pdf-icon';
+            preview.appendChild(pdfIcon);
+        } else {
+            // 如果是图片，显示图片
+            const img = document.createElement('img');
+            img.src = artwork.src;
+            img.alt = artwork.title;
+            img.loading = 'lazy';
+            img.onerror = function() {
+                // 如果图片加载失败，显示PDF图标
+                this.style.display = 'none';
+                const pdfIcon = document.createElement('i');
+                pdfIcon.className = 'fas fa-file-pdf pdf-icon';
+                preview.appendChild(pdfIcon);
+            };
+            preview.appendChild(img);
+        }
         
-        const img = document.createElement('img');
-        img.className = 'work-img';
-        img.src = artwork.src;
-        img.alt = artwork.title;
-        img.loading = 'lazy';
-        
-        // 如果图片加载失败，显示占位符
-        img.onerror = function() {
-            this.src = 'https://via.placeholder.com/400x300/333/FFF000?text=Artwork+Image';
-        };
-        
-        imageContainer.appendChild(img);
-        
-        // 内容区域
-        const content = document.createElement('div');
-        content.className = 'work-content';
+        // 信息区域
+        const info = document.createElement('div');
+        info.className = 'image-info';
         
         const title = document.createElement('h3');
+        title.className = 'image-title';
         title.textContent = artwork.title;
         
-        const dates = document.createElement('p');
-        dates.textContent = `${artwork.start || '未知'} - ${artwork.end || '至今'}`;
+        const dates = document.createElement('div');
+        dates.className = 'image-dates';
         
-        const link = document.createElement('a');
-        link.className = 'work-link';
-        link.href = '#';
-        link.innerHTML = '查看详情 <i class="fas fa-arrow-right"></i>';
+        let datesText = '';
+        if (artwork.start && artwork.end) {
+            const startDate = new Date(artwork.start);
+            const endDate = new Date(artwork.end);
+            datesText = `${startDate.getFullYear()}.${startDate.getMonth() + 1}.${startDate.getDate()} ~ ${endDate.getFullYear()}.${endDate.getMonth() + 1}.${endDate.getDate()}`;
+        } else if (artwork.start) {
+            const date = new Date(artwork.start);
+            datesText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+        } else {
+            datesText = '日期未知';
+        }
         
-        link.addEventListener('click', (e) => {
+        dates.innerHTML = `<i class="far fa-calendar-alt"></i> ${datesText}`;
+        
+        // 操作按钮
+        const actions = document.createElement('div');
+        actions.className = 'image-actions';
+        
+        const viewBtn = document.createElement('a');
+        viewBtn.className = 'pdf-view-btn';
+        viewBtn.href = '#';
+        viewBtn.innerHTML = '<i class="fas fa-eye"></i> 查看';
+        
+        viewBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            openImageModal(artworks.indexOf(artwork));
+            openPDFModal(artwork);
         });
         
-        content.appendChild(title);
-        content.appendChild(dates);
-        content.appendChild(link);
+        const downloadBtn = document.createElement('a');
+        downloadBtn.className = 'pdf-download-btn';
+        downloadBtn.href = artwork.src;
+        downloadBtn.download = artwork.title + (artwork.src.toLowerCase().endsWith('.pdf') ? '.pdf' : '');
+        downloadBtn.innerHTML = '<i class="fas fa-download"></i> 下载';
         
-        item.appendChild(yearBadge);
-        item.appendChild(imageContainer);
-        item.appendChild(content);
+        actions.appendChild(viewBtn);
+        actions.appendChild(downloadBtn);
+        
+        info.appendChild(title);
+        info.appendChild(dates);
+        info.appendChild(actions);
+        
+        item.appendChild(preview);
+        item.appendChild(info);
         
         return item;
     }
     
-    // 打开图片模态框
-    function openImageModal(index) {
-        if (index < 0 || index >= artworks.length) return;
+    // 打开PDF预览模态框
+    function openPDFModal(artwork) {
+        pdfModalTitle.textContent = artwork.title;
         
-        currentModalIndex = index;
-        const artwork = artworks[index];
+        let startText = '';
+        if (artwork.start) {
+            const date = new Date(artwork.start);
+            startText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+        } else {
+            startText = '未知';
+        }
         
-        modalImage.src = artwork.src;
-        modalTitle.textContent = artwork.title;
-        modalStart.textContent = artwork.start || '未知';
-        modalEnd.textContent = artwork.end || '至今';
+        let endText = '';
+        if (artwork.end) {
+            const date = new Date(artwork.end);
+            endText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+        } else {
+            endText = '至今';
+        }
         
-        imageModal.style.display = 'flex';
+        pdfStartDate.textContent = startText;
+        pdfEndDate.textContent = endText;
+        
+        // 设置PDF查看器
+        if (artwork.src.toLowerCase().endsWith('.pdf')) {
+            // 使用Google Docs Viewer预览PDF
+            pdfViewer.src = `https://docs.google.com/viewer?url=${encodeURIComponent(artwork.src)}&embedded=true`;
+        } else {
+            // 如果是图片，直接显示
+            pdfViewer.src = artwork.src;
+        }
+        
+        // 设置下载链接
+        pdfDownloadBtn.href = artwork.src;
+        pdfDownloadBtn.download = artwork.title + (artwork.src.toLowerCase().endsWith('.pdf') ? '.pdf' : '');
+        
+        // 显示模态框
+        pdfModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
     
-    // 关闭图片模态框
-    function closeImageModal() {
-        imageModal.style.display = 'none';
+    // 关闭PDF预览模态框
+    function closePDFModal() {
+        pdfModal.style.display = 'none';
         document.body.style.overflow = 'auto';
-    }
-    
-    // 显示上一张图片
-    function showPrevImage() {
-        let prevIndex = currentModalIndex - 1;
-        
-        // 如果已经是第一张，则显示最后一张
-        if (prevIndex < 0) {
-            prevIndex = artworks.length - 1;
-        }
-        
-        openImageModal(prevIndex);
-    }
-    
-    // 显示下一张图片
-    function showNextImage() {
-        let nextIndex = currentModalIndex + 1;
-        
-        // 如果已经是最后一张，则显示第一张
-        if (nextIndex >= artworks.length) {
-            nextIndex = 0;
-        }
-        
-        openImageModal(nextIndex);
+        pdfViewer.src = '';
     }
     
     // 加载更多作品
@@ -456,47 +580,68 @@ document.addEventListener('DOMContentLoaded', function() {
         renderArtworks();
     }
     
+    // 上一个时间点
+    function prevTimePoint() {
+        if (currentTimeIndex > 0) {
+            setCursorPosition(currentTimeIndex - 1);
+            scrollToImage(currentTimeIndex);
+        }
+    }
+    
+    // 下一个时间点
+    function nextTimePoint() {
+        if (currentTimeIndex < artworks.length - 1) {
+            setCursorPosition(currentTimeIndex + 1);
+            scrollToImage(currentTimeIndex);
+        }
+    }
+    
+    // 切换视图
+    function switchView(viewType) {
+        currentView = viewType;
+        imagesContainer.className = viewType === 'list' ? 'images-container list-view' : 'images-container';
+        renderArtworks();
+    }
+    
     // 事件监听器
     loadMoreBtn.addEventListener('click', loadMoreArtworks);
     
-    filterButtons.forEach(button => {
+    timelinePrevBtn.addEventListener('click', prevTimePoint);
+    
+    timelineNextBtn.addEventListener('click', nextTimePoint);
+    
+    viewButtons.forEach(button => {
         button.addEventListener('click', function() {
             // 更新活跃状态
-            filterButtons.forEach(btn => btn.classList.remove('active'));
+            viewButtons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
             
-            // 更新筛选器
-            currentFilter = this.dataset.filter;
-            currentPage = 1;
-            
-            // 重新过滤和渲染
-            filterArtworks();
+            // 切换视图
+            switchView(this.dataset.view);
         });
     });
     
     // 模态框事件
-    modalClose.addEventListener('click', closeImageModal);
-    
-    modalPrev.addEventListener('click', showPrevImage);
-    
-    modalNext.addEventListener('click', showNextImage);
+    pdfModalClose.addEventListener('click', closePDFModal);
     
     // 点击模态框背景关闭
-    imageModal.addEventListener('click', function(e) {
+    pdfModal.addEventListener('click', function(e) {
         if (e.target === this) {
-            closeImageModal();
+            closePDFModal();
         }
     });
     
     // 键盘导航
     document.addEventListener('keydown', function(e) {
-        if (imageModal.style.display === 'flex') {
+        if (pdfModal.style.display === 'flex') {
             if (e.key === 'Escape') {
-                closeImageModal();
-            } else if (e.key === 'ArrowLeft') {
-                showPrevImage();
-            } else if (e.key === 'ArrowRight') {
-                showNextImage();
+                closePDFModal();
+            }
+        } else {
+            if (e.key === 'ArrowUp') {
+                prevTimePoint();
+            } else if (e.key === 'ArrowDown') {
+                nextTimePoint();
             }
         }
     });
@@ -510,7 +655,6 @@ document.addEventListener('DOMContentLoaded', function() {
             navLinks.classList.toggle('active');
             
             if (navLinks.classList.contains('active')) {
-                // 显示移动菜单
                 navLinks.style.display = 'block';
                 navLinks.style.position = 'absolute';
                 navLinks.style.top = '100%';
@@ -521,7 +665,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 navLinks.style.padding = '20px';
                 navLinks.style.boxShadow = '0 10px 20px rgba(0,0,0,0.3)';
                 
-                // 调整下拉菜单
                 const dropdowns = navLinks.querySelectorAll('.dropdown-menu');
                 dropdowns.forEach(dropdown => {
                     dropdown.style.position = 'static';
@@ -533,7 +676,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     dropdown.style.paddingLeft = '20px';
                 });
             } else {
-                // 隐藏移动菜单
                 navLinks.style.display = 'none';
             }
         });
@@ -541,13 +683,4 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初始化
     loadArtworks();
-    
-    // 窗口大小改变时重新布局
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            renderArtworks();
-        }, 250);
-    });
 });

@@ -1,27 +1,26 @@
+/* 画廊页面专用样式 - 纵向时间轴版本 */
 /* 画廊布局 */
 .gallery-layout {
     display: grid;
     grid-template-columns: 300px 1fr;
     gap: 40px;
-    margin-bottom: 60px;
+    min-height: 80vh;
 }
-/* 时间轴样式 */
-.timeline-container {
+/* 纵向时间轴样式 */
+.vertical-timeline {
     background-color: var(--bg-card);
     border-radius: 12px;
     padding: 25px;
     border: 1px solid var(--border-color);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
     position: sticky;
     top: 100px;
-    height: fit-content;
-    max-height: calc(100vh - 150px);
-    overflow-y: auto;
+    height: calc(100vh - 150px);
+    overflow: hidden;
 }
 .timeline-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-bottom: 25px;
     padding-bottom: 15px;
     border-bottom: 1px solid var(--border-color);
@@ -32,151 +31,213 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-bottom: 15px;
 }
-.current-year-display {
-    background: var(--accent-color);
+.current-time-display {
+    background: linear-gradient(135deg, var(--accent-color) 0%, #FFD700 100%);
     color: #333;
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 12px;
+    border-radius: 8px;
     font-weight: 700;
-    font-size: 1.2rem;
+    text-align: center;
     box-shadow: 0 4px 8px rgba(255, 240, 0, 0.3);
 }
-.timeline-wrapper {
-    margin: 30px 0;
-    padding: 0 10px;
+#current-date-range {
+    font-size: 1rem;
+    display: block;
 }
-.timeline {
+/* 时间线轨道 */
+.timeline-wrapper {
+    flex: 1;
     display: flex;
-    align-items: center;
     position: relative;
-    height: 60px;
+    margin: 20px 0;
 }
 .timeline-track {
-    flex: 1;
-    height: 4px;
-    background-color: var(--border-color);
     position: relative;
+    width: 4px;
+    background-color: var(--border-color);
     border-radius: 2px;
-}
-.timeline-progress {
-    position: absolute;
+    margin: 0 40px;
     height: 100%;
-    background: linear-gradient(90deg, var(--accent-color) 0%, #FFD700 100%);
-    border-radius: 2px;
-    width: 0%;
-    transition: width 0.5s ease;
 }
+.timeline-line {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--accent-color) 0%, #FFD700 100%);
+    border-radius: 2px;
+    opacity: 0.3;
+}
+/* 时间点标记 */
+.time-marker {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    z-index: 2;
+    cursor: pointer;
+}
+.time-dot {
+    width: 16px;
+    height: 16px;
+    background-color: var(--bg-card);
+    border: 3px solid var(--text-muted);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
+}
+.time-marker.active .time-dot {
+    border-color: var(--accent-color);
+    background-color: var(--accent-color);
+    transform: scale(1.2);
+    box-shadow: 0 0 10px rgba(255, 240, 0, 0.6);
+}
+.time-marker.has-work .time-dot {
+    border-color: var(--accent-color);
+}
+.time-label {
+    position: absolute;
+    left: 30px;
+    white-space: nowrap;
+    background-color: rgba(36, 36, 36, 0.9);
+    padding: 4px 12px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+.time-marker:hover .time-label {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+.time-marker.active .time-label {
+    color: var(--accent-color);
+    font-weight: 700;
+    background-color: rgba(255, 240, 0, 0.1);
+}
+/* 游标 */
 .timeline-cursor {
     position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px;
-    height: 20px;
-    background-color: var(--accent-color);
-    border-radius: 50%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
     cursor: grab;
-    box-shadow: 0 0 0 4px rgba(255, 240, 0, 0.2), 0 0 10px rgba(255, 240, 0, 0.5);
-    z-index: 2;
-    transition: left 0.3s ease;
+    transition: top 0.3s ease;
 }
 .timeline-cursor:active {
     cursor: grabbing;
 }
-.timeline-start,
-.timeline-end {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 60px;
-}
-.timeline-marker {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    margin-bottom: 8px;
-}
-.timeline-marker.start {
+.cursor-handle {
+    width: 24px;
+    height: 24px;
     background-color: var(--accent-color);
-    box-shadow: 0 0 10px rgba(255, 240, 0, 0.5);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(255, 240, 0, 0.2), 0 0 15px rgba(255, 240, 0, 0.5);
+    position: relative;
 }
-.timeline-marker.end {
-    background-color: var(--text-muted);
-}
-.timeline-label {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    font-weight: 600;
-}
-.year-marker {
+.cursor-handle::before {
+    content: '';
     position: absolute;
     top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    z-index: 1;
-}
-.year-dot {
-    width: 12px;
-    height: 12px;
-    background-color: var(--text-muted);
+    width: 8px;
+    height: 8px;
+    background-color: #333;
     border-radius: 50%;
-    margin-bottom: 6px;
-    transition: all 0.3s ease;
 }
-.year-marker.active .year-dot {
-    background-color: var(--accent-color);
-    transform: scale(1.3);
-    box-shadow: 0 0 8px rgba(255, 240, 0, 0.6);
-}
-.year-label {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    font-weight: 500;
+.cursor-info {
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(36, 36, 36, 0.95);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
     white-space: nowrap;
-    transition: color 0.3s ease;
 }
-.year-marker.active .year-label {
+.cursor-date {
     color: var(--accent-color);
     font-weight: 700;
+    font-size: 0.9rem;
 }
-.year-selector {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+.cursor-info i {
+    color: var(--accent-color);
+    font-size: 0.8rem;
+}
+/* 年份标签 */
+.year-labels {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.year-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+}
+.year-text {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.year-marker {
+    width: 10px;
+    height: 2px;
+    background-color: var(--text-muted);
+}
+.year-label.first .year-marker {
+    width: 15px;
+    height: 4px;
+    background-color: var(--accent-color);
+}
+.year-label.last .year-marker {
+    width: 15px;
+    height: 4px;
+    background-color: var(--text-muted);
+}
+/* 时间线控制按钮 */
+.timeline-controls {
+    display: flex;
     gap: 10px;
     margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
 }
-.year-btn {
+.timeline-btn {
+    flex: 1;
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
-    padding: 10px;
+    padding: 12px;
     border-radius: 6px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
-.year-btn:hover {
+.timeline-btn:hover {
     border-color: var(--accent-color);
     color: var(--accent-color);
-    transform: translateY(-2px);
-}
-.year-btn.active {
-    background-color: rgba(255, 240, 0, 0.15);
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-.timeline-info {
-    margin-top: 25px;
-    padding-top: 15px;
-    border-top: 1px solid var(--border-color);
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    text-align: center;
+    background-color: rgba(255, 240, 0, 0.05);
 }
 /* 画廊主区域 */
 .gallery-main {
@@ -195,53 +256,155 @@
     font-size: 1.1rem;
     color: var(--text-primary);
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 .gallery-stats span {
     color: var(--accent-color);
     font-size: 1.3rem;
 }
-.gallery-filters {
-    display: flex;
-    gap: 10px;
+.date-range {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    background-color: var(--bg-secondary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
 }
-.filter-btn {
+.view-options {
+    display: flex;
+    gap: 8px;
+}
+.view-btn {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
     padding: 8px 16px;
-    border-radius: 20px;
+    border-radius: 6px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-.filter-btn:hover {
+.view-btn:hover {
     border-color: var(--accent-color);
     color: var(--accent-color);
 }
-.filter-btn.active {
+.view-btn.active {
     background-color: var(--accent-color);
     border-color: var(--accent-color);
     color: #333;
     font-weight: 600;
 }
-/* 瀑布流调整 */
-#masonry-container {
-    min-height: 500px;
+/* 图片容器 */
+.images-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
 }
-.masonry-item {
+.images-container.list-view {
+    grid-template-columns: 1fr;
+}
+/* 图片项 */
+.image-item {
+    background-color: var(--bg-card);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.image-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(255, 240, 0, 0.15);
+    border-color: var(--accent-color);
+}
+.image-preview {
+    height: 200px;
+    overflow: hidden;
     position: relative;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.year-badge {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background-color: rgba(0, 0, 0, 0.7);
+.pdf-icon {
+    font-size: 4rem;
     color: var(--accent-color);
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 0.8rem;
+    opacity: 0.8;
+}
+.image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+.image-info {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.image-title {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 10px;
     font-weight: 600;
-    z-index: 1;
+}
+.image-dates {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.image-dates i {
+    color: var(--accent-color);
+    font-size: 0.8rem;
+}
+.image-actions {
+    margin-top: auto;
+    display: flex;
+    gap: 10px;
+}
+.pdf-view-btn, .pdf-download-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.pdf-view-btn {
+    background-color: var(--accent-color);
+    color: #333;
+}
+.pdf-view-btn:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 240, 0, 0.4);
+}
+.pdf-download-btn {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+.pdf-download-btn:hover {
+    background-color: rgba(255, 240, 0, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
 }
 /* 加载更多 */
 .load-more-container {
@@ -291,35 +454,45 @@
 .empty-state p {
     color: var(--text-secondary);
 }
-/* 模态框 */
-.modal-overlay {
+/* PDF预览模态框 */
+.pdf-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.85);
+    background-color: rgba(0, 0, 0, 0.9);
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 1000;
     padding: 20px;
 }
-.modal-content {
+.pdf-modal-content {
     background-color: var(--bg-card);
     border-radius: 12px;
-    max-width: 900px;
+    max-width: 90%;
     width: 100%;
     max-height: 90vh;
     overflow: hidden;
-    position: relative;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
     border: 1px solid var(--border-color);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
-.modal-close {
-    position: absolute;
-    top: 15px;
-    right: 15px;
+.pdf-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.pdf-modal-header h3 {
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    margin: 0;
+}
+.pdf-modal-close {
     background: rgba(0, 0, 0, 0.5);
     color: white;
     border: none;
@@ -328,82 +501,81 @@
     border-radius: 50%;
     font-size: 1.5rem;
     cursor: pointer;
-    z-index: 10;
     display: flex;
     justify-content: center;
     align-items: center;
     transition: all 0.3s ease;
 }
-.modal-close:hover {
+.pdf-modal-close:hover {
     background: rgba(255, 240, 0, 0.2);
     color: var(--accent-color);
 }
-.modal-image-container {
-    height: 60vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.pdf-modal-body {
+    flex: 1;
     overflow: hidden;
-    background-color: #000;
 }
-.modal-image-container img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+#pdf-viewer {
+    width: 100%;
+    height: 100%;
+    min-height: 60vh;
+    border: none;
 }
-.modal-info {
-    padding: 25px;
-}
-.modal-info h3 {
-    color: var(--text-primary);
-    margin-bottom: 15px;
-    font-size: 1.5rem;
-}
-.modal-dates {
+.pdf-modal-footer {
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
     display: flex;
-    gap: 30px;
-    margin-bottom: 25px;
+    justify-content: space-between;
+    align-items: center;
+}
+.pdf-info {
+    display: flex;
+    gap: 20px;
     color: var(--text-secondary);
 }
-.modal-dates span {
+.pdf-info span {
     display: flex;
     align-items: center;
     gap: 8px;
 }
-.modal-dates i {
+.pdf-info i {
     color: var(--accent-color);
 }
-.modal-actions {
-    display: flex;
-    justify-content: space-between;
-}
-.modal-btn {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
+.pdf-download-btn {
+    background-color: var(--accent-color);
+    color: #333;
     padding: 10px 20px;
     border-radius: 6px;
     font-weight: 600;
-    cursor: pointer;
+    text-decoration: none;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     gap: 8px;
 }
-.modal-btn:hover {
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-    background-color: rgba(255, 240, 0, 0.05);
+.pdf-download-btn:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 240, 0, 0.4);
 }
 /* 响应式设计 */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
+    .gallery-layout {
+        grid-template-columns: 250px 1fr;
+        gap: 30px;
+    }
+}
+@media (max-width: 992px) {
     .gallery-layout {
         grid-template-columns: 1fr;
         gap: 30px;
     }
-    .timeline-container {
+    .vertical-timeline {
         position: static;
-        max-height: none;
+        height: auto;
+        min-height: 400px;
+    }
+    .timeline-wrapper {
+        height: 300px;
     }
 }
 @media (max-width: 768px) {
@@ -412,40 +584,44 @@
         align-items: flex-start;
         gap: 15px;
     }
-    .gallery-filters {
+    .gallery-stats {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .view-options {
         width: 100%;
         justify-content: space-between;
     }
-    .year-selector {
-        grid-template-columns: repeat(2, 1fr);
+    .view-btn {
+        flex: 1;
     }
-    .modal-content {
-        max-height: 80vh;
+    .images-container {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
     }
-    .modal-image-container {
-        height: 50vh;
-    }
-    .modal-dates {
+    .image-actions {
         flex-direction: column;
-        gap: 10px;
     }
 }
-@media (max-width: 600px) {
-    .timeline-container {
+@media (max-width: 576px) {
+    .vertical-timeline {
         padding: 20px;
     }
-    .modal-content {
-        padding: 0;
+    .timeline-track {
+        margin: 0 30px;
     }
-    .modal-info {
-        padding: 20px;
+    .cursor-info {
+        left: 35px;
+        padding: 6px 10px;
+        font-size: 0.8rem;
     }
-    .modal-actions {
-        flex-direction: column;
-        gap: 10px;
+    .images-container {
+        grid-template-columns: 1fr;
     }
-    .modal-btn {
-        width: 100%;
-        justify-content: center;
+    .pdf-modal-content {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
     }
 }
