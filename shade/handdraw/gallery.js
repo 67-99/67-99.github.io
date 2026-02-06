@@ -8,11 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const imagesContainer = document.getElementById('images-container');
     const emptyState = document.getElementById('empty-state');
     const timelineCursor = document.getElementById('timeline-cursor');
-    const timelineTrack = document.querySelector('.timeline-track');
-    const yearLabelsContainer = document.querySelector('.year-labels');
+    const timeMarkersContainer = document.querySelector('.time-markers-container');
     const cursorDate = document.getElementById('cursor-date');
-    const timelinePrevBtn = document.getElementById('timeline-prev');
-    const timelineNextBtn = document.getElementById('timeline-next');
     const pdfModal = document.getElementById('pdf-modal');
     const pdfModalClose = document.getElementById('pdf-modal-close');
     const pdfViewer = document.getElementById('pdf-viewer');
@@ -71,6 +68,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // 渲染所有作品
             renderArtworks();
             
+            // 添加滚动监听
+            addScrollListener();
+            
         } catch (error) {
             console.error('加载作品数据失败:', error);
             emptyState.innerHTML = `
@@ -87,11 +87,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function initTimeline() {
         if (artworks.length === 0) return;
         
-        // 清空时间轴
-        const existingMarkers = document.querySelectorAll('.time-marker');
-        existingMarkers.forEach(marker => marker.remove());
-        
-        yearLabelsContainer.innerHTML = '';
+        // 清空时间点标记
+        timeMarkersContainer.innerHTML = '';
         timeMarkers = [];
         
         // 获取时间范围
@@ -105,15 +102,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const minYear = Math.min(...years);
         const maxYear = Math.max(...years);
         
-        // 创建年份标签
-        createYearLabels(minYear, maxYear);
+        // 更新年份显示
+        updateYearDisplay(minYear, maxYear);
         
         // 创建时间点标记
         artworks.forEach((artwork, index) => {
             createTimeMarker(artwork, index, minTime, timeRange);
         });
         
-        // 设置初始游标位置（最新作品，在时间轴顶部）
+        // 设置初始游标位置（最新作品）
         if (artworks.length > 0) {
             setCursorPosition(0);
         }
@@ -122,54 +119,29 @@ document.addEventListener('DOMContentLoaded', function() {
         initCursorDrag(minTime, timeRange);
     }
     
-    // 创建年份标签
-    function createYearLabels(minYear, maxYear) {
-        const yearRange = maxYear - minYear + 1;
+    // 更新年份显示
+    function updateYearDisplay(minYear, maxYear) {
+        // 更新年份文本
+        const yearElements = document.querySelectorAll('.year-label');
         
-        // 创建年份标签（只显示开始、结束和中间几个年份）
-        const displayYears = [];
-        
-        // 开始年份（最上面，最新）
-        displayYears.push({
-            year: maxYear,
-            position: 0,
-            isFirst: true
-        });
-        
-        // 如果年份范围较大，添加中间年份
-        if (yearRange > 3) {
-            const middleYear = Math.floor((minYear + maxYear) / 2);
-            displayYears.push({
-                year: middleYear,
-                position: 0.5,
-                isMiddle: true
-            });
+        // 设置顶部年份
+        if (yearElements[0]) {
+            yearElements[0].textContent = maxYear;
         }
         
-        // 结束年份（最下面，最早）
-        displayYears.push({
-            year: minYear,
-            position: 1,
-            isLast: true
-        });
+        // 设置中间年份
+        let yearIndex = 1;
+        for (let year = maxYear - 1; year > minYear; year--) {
+            if (yearElements[yearIndex]) {
+                yearElements[yearIndex].textContent = year;
+                yearIndex++;
+            }
+        }
         
-        // 创建标签
-        displayYears.forEach(yearInfo => {
-            const yearLabel = document.createElement('div');
-            yearLabel.className = `year-label ${yearInfo.isFirst ? 'first' : ''} ${yearInfo.isLast ? 'last' : ''}`;
-            yearLabel.style.top = `${yearInfo.position * 100}%`;
-            
-            const yearText = document.createElement('span');
-            yearText.className = 'year-text';
-            yearText.textContent = yearInfo.year;
-            
-            const yearMarker = document.createElement('div');
-            yearMarker.className = 'year-marker';
-            
-            yearLabel.appendChild(yearText);
-            yearLabel.appendChild(yearMarker);
-            yearLabelsContainer.appendChild(yearLabel);
-        });
+        // 设置底部年份
+        if (yearElements[yearElements.length - 1]) {
+            yearElements[yearElements.length - 1].textContent = minYear;
+        }
     }
     
     // 创建时间点标记
@@ -178,15 +150,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const artworkTime = artwork.midDate.getTime();
         const position = 1 - (artworkTime - minTime) / timeRange; // 1- 因为最新的在上面
         
+        // 计算相对于时间轴容器的高度
+        const containerHeight = timeMarkersContainer.offsetHeight;
+        const topPosition = position * containerHeight;
+        
         // 创建标记元素
         const marker = document.createElement('div');
         marker.className = 'time-marker has-work';
-        marker.style.top = `${position * 100}%`;
+        marker.style.top = `${topPosition}px`;
         marker.dataset.index = index;
         
         // 点
         const dot = document.createElement('div');
         dot.className = 'time-dot';
+        
+        // 悬停显示日期
+        dot.title = artwork.start ? formatDate(new Date(artwork.start)) : '';
         
         marker.appendChild(dot);
         
@@ -197,12 +176,18 @@ document.addEventListener('DOMContentLoaded', function() {
             scrollToImage(index);
         });
         
-        timelineTrack.parentElement.appendChild(marker);
+        timeMarkersContainer.appendChild(marker);
         timeMarkers.push({
             element: marker,
             index: index,
-            position: position
+            position: position,
+            topPosition: topPosition
         });
+    }
+    
+    // 格式化日期
+    function formatDate(date) {
+        return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
     }
     
     // 初始化游标拖动
@@ -224,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 startY = e.touches[0].clientY;
             }
             
-            const trackRect = timelineTrack.getBoundingClientRect();
+            const containerRect = timeMarkersContainer.getBoundingClientRect();
             startTop = parseInt(timelineCursor.style.top) || 0;
             
             document.addEventListener('mousemove', drag);
@@ -243,19 +228,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 clientY = e.touches[0].clientY;
             }
             
-            const trackRect = timelineTrack.getBoundingClientRect();
+            const containerRect = timeMarkersContainer.getBoundingClientRect();
             const deltaY = clientY - startY;
-            const trackHeight = trackRect.height;
+            const containerHeight = containerRect.height;
             
             // 计算新位置
-            let newTop = startTop + (deltaY / trackHeight * 100);
-            newTop = Math.max(0, Math.min(100, newTop));
+            let newTop = startTop + (deltaY / containerHeight * 100);
+            newTop = Math.max(0, Math.min(containerHeight, newTop));
             
             // 更新游标位置
-            timelineCursor.style.top = `${newTop}%`;
+            timelineCursor.style.top = `${newTop}px`;
             
             // 计算对应的时间
-            const position = newTop / 100;
+            const position = newTop / containerHeight;
             const time = minTime + (1 - position) * timeRange; // 1- 因为最新的在上面
             
             // 找到最近的作品
@@ -270,12 +255,12 @@ document.addEventListener('DOMContentLoaded', function() {
             document.removeEventListener('touchend', stopDrag);
         }
         
-        // 点击时间轴轨道也可以移动游标
-        timelineTrack.addEventListener('click', (e) => {
-            const trackRect = timelineTrack.getBoundingClientRect();
-            const clickY = e.clientY - trackRect.top;
-            const position = clickY / trackRect.height;
+        // 点击时间轴也可以移动游标
+        timeMarkersContainer.addEventListener('click', (e) => {
+            const containerRect = timeMarkersContainer.getBoundingClientRect();
+            const clickY = e.clientY - containerRect.top;
             
+            const position = clickY / containerRect.height;
             const time = minTime + (1 - position) * timeRange;
             findNearestArtwork(time);
         });
@@ -317,14 +302,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const artworkTime = artwork.midDate.getTime();
         const position = 1 - (artworkTime - minTime) / timeRange;
         
-        // 更新游标位置（确保游标在轴上，与最顶端的图片重叠）
-        timelineCursor.style.top = `${position * 100}%`;
+        // 计算相对于时间轴容器的高度
+        const containerHeight = timeMarkersContainer.offsetHeight;
+        const topPosition = position * containerHeight;
+        
+        // 更新游标位置
+        timelineCursor.style.top = `${topPosition}px`;
         
         // 更新游标日期显示
         let dateText = '';
         if (artwork.start) {
-            const date = new Date(artwork.start);
-            dateText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+            dateText = formatDate(new Date(artwork.start));
         }
         cursorDate.textContent = dateText;
         
@@ -346,6 +334,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 behavior: 'smooth',
                 block: 'center'
             });
+        }
+    }
+    
+    // 添加滚动监听
+    function addScrollListener() {
+        let scrollTimeout;
+        
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                updateCursorBasedOnScroll();
+            }, 100);
+        });
+    }
+    
+    // 根据滚动位置更新游标
+    function updateCursorBasedOnScroll() {
+        if (artworks.length === 0) return;
+        
+        const imageElements = document.querySelectorAll('.image-item');
+        const viewportHeight = window.innerHeight;
+        const scrollTop = window.scrollY;
+        
+        let bestIndex = 0;
+        let minDistance = Infinity;
+        
+        // 找到最接近视口中部的图片
+        imageElements.forEach((element, index) => {
+            const rect = element.getBoundingClientRect();
+            const elementTop = rect.top + scrollTop;
+            const elementCenter = elementTop + rect.height / 2;
+            const viewportCenter = scrollTop + viewportHeight / 2;
+            const distance = Math.abs(elementCenter - viewportCenter);
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestIndex = index;
+            }
+        });
+        
+        // 更新游标位置
+        if (bestIndex !== currentTimeIndex) {
+            setCursorPosition(bestIndex);
         }
     }
     
@@ -430,13 +461,27 @@ document.addEventListener('DOMContentLoaded', function() {
             info.appendChild(dates);
         }
         
+        // PDF查看按钮
+        const viewButton = document.createElement('button');
+        viewButton.className = 'pdf-view-btn';
+        viewButton.innerHTML = '<i class="fas fa-eye"></i> 查看PDF';
+        viewButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openPDFModal(artwork);
+        });
+        
+        info.appendChild(viewButton);
+        
         item.appendChild(preview);
         item.appendChild(info);
         
         // 点击打开预览
         item.addEventListener('click', (e) => {
-            e.preventDefault();
-            openPDFModal(artwork);
+            if (!e.target.closest('.pdf-view-btn')) {
+                e.preventDefault();
+                openPDFModal(artwork);
+            }
         });
         
         return item;
@@ -486,27 +531,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pdfViewer.src = '';
     }
     
-    // 上一个时间点
-    function prevTimePoint() {
-        if (currentTimeIndex > 0) {
-            setCursorPosition(currentTimeIndex - 1);
-            scrollToImage(currentTimeIndex);
-        }
-    }
-    
-    // 下一个时间点
-    function nextTimePoint() {
-        if (currentTimeIndex < artworks.length - 1) {
-            setCursorPosition(currentTimeIndex + 1);
-            scrollToImage(currentTimeIndex);
-        }
-    }
-    
     // 事件监听器
-    timelinePrevBtn.addEventListener('click', prevTimePoint);
-    
-    timelineNextBtn.addEventListener('click', nextTimePoint);
-    
     // 模态框事件
     pdfModalClose.addEventListener('click', closePDFModal);
     
@@ -522,12 +547,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pdfModal.style.display === 'flex') {
             if (e.key === 'Escape') {
                 closePDFModal();
-            }
-        } else {
-            if (e.key === 'ArrowUp') {
-                prevTimePoint();
-            } else if (e.key === 'ArrowDown') {
-                nextTimePoint();
             }
         }
     });
@@ -566,6 +585,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // 窗口大小改变时重新计算位置
+    window.addEventListener('resize', () => {
+        // 重新计算时间点位置
+        if (artworks.length > 0) {
+            initTimeline();
+            // 恢复游标位置
+            setCursorPosition(currentTimeIndex);
+        }
+    });
     
     // 初始化
     loadArtworks();

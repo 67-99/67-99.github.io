@@ -30,54 +30,53 @@
 
     <!-- 页面标题 -->
     <div class="page-header">
-        <h1>手绘时间线</h1>
-        <p>按时间顺序浏览我的手绘作品</p>
+        <h1>纸绘临摹</h1>
     </div>
 
     <!-- 主容器 -->
     <div class="gallery-container container">
         <div class="gallery-layout">
-            <!-- 左侧纵向时间轴 -->
-            <div class="vertical-timeline">
-                <div class="timeline-header">
-                    <h2><i class="fas fa-timeline"></i> 时间线</h2>
-                </div>
-                
-                <div class="timeline-wrapper">
-                    <!-- 年份标签容器 -->
-                    <div class="year-labels">
-                        <!-- 年份标签会通过JS动态添加 -->
+            <!-- 左侧固定纵向时间轴 -->
+            <div class="vertical-timeline-fixed">
+                <div class="timeline-ascii">
+                    <div class="ascii-line top-line">
+                        <span class="year-label">2026</span>
+                        <div class="line-horizontal"></div>
                     </div>
-                    
-                    <div class="timeline-track">
-                        <!-- 时间线轨道 -->
-                        <div class="timeline-line"></div>
-                        
-                        <!-- 时间点标记会通过JS动态添加 -->
-                        <div class="timeline-cursor" id="timeline-cursor">
-                            <div class="cursor-handle">
-                                <div class="cursor-arrow">
-                                    <div class="arrow-line"></div>
-                                    <div class="arrow-head"></div>
-                                </div>
-                                <div class="cursor-date" id="cursor-date">2024.7.3</div>
-                            </div>
-                        </div>
+                    <div class="ascii-line">
+                        <span class="year-label">2025</span>
+                        <div class="line-horizontal"></div>
+                    </div>
+                    <div class="ascii-line">
+                        <span class="year-label">2024</span>
+                        <div class="line-horizontal"></div>
+                    </div>
+                    <div class="ascii-line bottom-line">
+                        <span class="year-label">2023</span>
+                        <div class="line-horizontal"></div>
                     </div>
                 </div>
                 
-                <div class="timeline-controls">
-                    <button class="timeline-btn" id="timeline-prev">
-                        <i class="fas fa-chevron-up"></i>
-                    </button>
-                    <button class="timeline-btn" id="timeline-next">
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
+                <!-- 时间轴竖线 -->
+                <div class="timeline-vertical-line"></div>
+                
+                <!-- 时间点标记会通过JS动态添加 -->
+                <div class="time-markers-container">
+                    <!-- 动态添加的时间点 -->
+                </div>
+                
+                <!-- 游标 -->
+                <div class="timeline-cursor-fixed" id="timeline-cursor">
+                    <div class="cursor-arrow">
+                        <div class="arrow-line"></div>
+                        <div class="arrow-head"></div>
+                    </div>
+                    <div class="cursor-date" id="cursor-date">2024.7.3</div>
                 </div>
             </div>
 
             <!-- 右侧图片墙 -->
-            <div class="gallery-main">
+            <div class="gallery-main-fixed">
                 <!-- 图片容器 -->
                 <div class="images-container" id="images-container">
                     <!-- 图片项会通过JS动态添加 -->

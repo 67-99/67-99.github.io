@@ -1,73 +1,104 @@
-/* 画廊页面专用样式 - 纵向时间轴版本（最终版） */
+/* 画廊页面专用样式 - 字符画时间轴版本 */
 /* 画廊布局 */
 .gallery-layout {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 40px;
+    display: flex;
     min-height: 80vh;
+    position: relative;
 }
-/* 纵向时间轴样式 */
-.vertical-timeline {
-    background-color: var(--bg-card);
-    border-radius: 12px;
-    padding: 25px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+/* 固定左侧时间轴样式 */
+.vertical-timeline-fixed {
+    width: 100px;
+    background-color: var(--bg-primary);
+    position: fixed;
+    left: 0;
+    top: 180px;
+    bottom: 20px;
     display: flex;
     flex-direction: column;
-    position: sticky;
-    top: 100px;
-    height: calc(100vh - 150px);
-    overflow: hidden;
+    align-items: center;
+    padding: 20px 0;
+    z-index: 50;
+    overflow: visible;
 }
-.timeline-header {
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--border-color);
+/* 字符画时间轴 */
+.timeline-ascii {
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 5;
 }
-.timeline-header h2 {
-    font-size: 1.4rem;
-    color: var(--text-primary);
+.ascii-line {
+    position: relative;
+    height: 100px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
+    margin: 10px 0;
 }
-/* 时间线轨道 */
-.timeline-wrapper {
-    flex: 1;
-    display: flex;
-    position: relative;
-    margin: 20px 0;
+.ascii-line.top-line {
+    height: 50px;
+    margin-top: 0;
+    align-items: flex-start;
+    padding-top: 10px;
 }
-.timeline-track {
-    position: relative;
-    width: 4px;
-    background-color: var(--border-color);
-    border-radius: 2px;
-    margin: 0 auto;
-    height: 100%;
-    flex: 1;
+.ascii-line.bottom-line {
+    height: 50px;
+    margin-bottom: 0;
+    align-items: flex-end;
+    padding-bottom: 10px;
 }
-.timeline-line {
+.year-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    width: 30px;
+    text-align: right;
+    margin-right: 10px;
+    font-family: 'Courier New', monospace;
+}
+.line-horizontal {
+    width: 15px;
+    height: 2px;
+    background-color: var(--text-secondary);
+    margin-right: 5px;
+}
+/* 时间轴竖线 */
+.timeline-vertical-line {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(to bottom, var(--accent-color) 0%, #FFD700 100%);
-    border-radius: 2px;
-    opacity: 0.3;
+    left: 60px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--border-color);
+    z-index: 1;
+}
+/* 时间点标记容器 */
+.time-markers-container {
+    position: absolute;
+    left: 60px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    z-index: 10;
+    pointer-events: none;
 }
 /* 时间点标记 */
 .time-marker {
     position: absolute;
-    left: calc(50% - 20px);
+    left: 50%;
     transform: translateX(-50%);
-    z-index: 2;
+    z-index: 10;
+    pointer-events: auto;
     cursor: pointer;
 }
 .time-dot {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
     background-color: var(--text-muted);
     border-radius: 50%;
     transition: all 0.3s ease;
@@ -76,39 +107,36 @@
 }
 .time-marker.has-work .time-dot {
     background-color: var(--accent-color);
+    box-shadow: 0 0 4px rgba(255, 240, 0, 0.6);
 }
 .time-marker.active .time-dot {
     background-color: var(--accent-color);
-    transform: scale(1.3);
-    box-shadow: 0 0 8px rgba(255, 240, 0, 0.6);
+    transform: scale(1.5);
+    box-shadow: 0 0 8px rgba(255, 240, 0, 0.8);
 }
 /* 游标 */
-.timeline-cursor {
+.timeline-cursor-fixed {
     position: absolute;
-    left: 50%;
+    left: 60px;
     transform: translateX(-50%);
-    z-index: 10;
+    z-index: 20;
     cursor: grab;
     transition: top 0.3s ease;
+    pointer-events: auto;
 }
-.timeline-cursor:active {
+.timeline-cursor-fixed:active {
     cursor: grabbing;
-}
-.cursor-handle {
-    position: relative;
-    display: flex;
-    align-items: center;
 }
 .cursor-arrow {
     position: relative;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
 }
 .arrow-line {
     position: absolute;
     top: 50%;
     left: 0;
-    width: 8px;
+    width: 12px;
     height: 2px;
     background-color: var(--accent-color);
     transform: translateY(-50%);
@@ -116,15 +144,19 @@
 .arrow-head {
     position: absolute;
     top: 50%;
-    left: 8px;
+    left: 12px;
     width: 0;
     height: 0;
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-left: 8px solid var(--accent-color);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 10px solid var(--accent-color);
     transform: translateY(-50%);
 }
 .cursor-date {
+    position: absolute;
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
     background-color: rgba(36, 36, 36, 0.95);
     color: var(--accent-color);
     padding: 8px 12px;
@@ -133,76 +165,14 @@
     font-weight: 700;
     font-size: 0.9rem;
     white-space: nowrap;
-    margin-left: 20px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 100px;
+    text-align: center;
 }
-/* 年份标签 */
-.year-labels {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    pointer-events: none;
-}
-.year-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 5px 0;
-}
-.year-text {
-    color: var(--text-muted);
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-.year-marker {
-    width: 10px;
-    height: 2px;
-    background-color: var(--text-muted);
-}
-.year-label.first .year-marker {
-    width: 15px;
-    height: 4px;
-    background-color: var(--accent-color);
-}
-.year-label.last .year-marker {
-    width: 15px;
-    height: 4px;
-    background-color: var(--text-muted);
-}
-/* 时间线控制按钮 */
-.timeline-controls {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border-color);
-}
-.timeline-btn {
+/* 右侧图片墙 */
+.gallery-main-fixed {
     flex: 1;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    padding: 12px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.timeline-btn:hover {
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-    background-color: rgba(255, 240, 0, 0.05);
-}
-/* 画廊主区域 */
-.gallery-main {
+    margin-left: 120px;
     display: flex;
     flex-direction: column;
 }
@@ -272,6 +242,29 @@
 .image-dates i {
     color: var(--accent-color);
     font-size: 0.8rem;
+}
+/* PDF查看按钮 */
+.pdf-view-btn {
+    background-color: var(--accent-color);
+    color: #333;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
+.pdf-view-btn:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 240, 0, 0.4);
 }
 /* 空状态 */
 .empty-state {
@@ -378,23 +371,82 @@
 }
 /* 响应式设计 */
 @media (max-width: 1200px) {
-    .gallery-layout {
-        grid-template-columns: 250px 1fr;
-        gap: 30px;
+    .gallery-main-fixed {
+        margin-left: 120px;
     }
 }
 @media (max-width: 992px) {
     .gallery-layout {
-        grid-template-columns: 1fr;
-        gap: 30px;
+        flex-direction: column;
     }
-    .vertical-timeline {
+    .vertical-timeline-fixed {
         position: static;
+        width: 100%;
         height: auto;
-        min-height: 400px;
+        min-height: 150px;
+        margin-bottom: 30px;
+        padding: 20px;
+        top: auto;
+        bottom: auto;
+        left: auto;
+        align-items: center;
     }
-    .timeline-wrapper {
-        height: 300px;
+    .timeline-ascii {
+        position: relative;
+        left: auto;
+        top: auto;
+        bottom: auto;
+        width: auto;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        height: 80px;
+    }
+    .ascii-line {
+        flex-direction: column;
+        height: auto;
+        width: 60px;
+        margin: 0;
+    }
+    .ascii-line.top-line,
+    .ascii-line.bottom-line {
+        height: auto;
+        padding: 0;
+    }
+    .year-label {
+        margin-right: 0;
+        margin-bottom: 5px;
+        width: auto;
+        text-align: center;
+    }
+    .line-horizontal {
+        display: none;
+    }
+    .timeline-vertical-line {
+        display: none;
+    }
+    .time-markers-container {
+        position: relative;
+        left: auto;
+        top: auto;
+        bottom: auto;
+        width: 100%;
+        height: 2px;
+        background-color: var(--border-color);
+        margin-top: 20px;
+    }
+    .time-marker {
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+    .timeline-cursor-fixed {
+        position: relative;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+    .gallery-main-fixed {
+        margin-left: 0;
     }
 }
 @media (max-width: 768px) {
@@ -405,15 +457,10 @@
     .cursor-date {
         padding: 6px 10px;
         font-size: 0.8rem;
+        min-width: 80px;
     }
 }
 @media (max-width: 576px) {
-    .vertical-timeline {
-        padding: 20px;
-    }
-    .timeline-track {
-        margin: 0 40px;
-    }
     .images-container {
         grid-template-columns: 1fr;
     }
