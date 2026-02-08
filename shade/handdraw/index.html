@@ -37,22 +37,14 @@
     <div class="gallery-container container">
         <div class="gallery-layout">
             <!-- 左侧固定纵向时间轴 -->
-            <div class="vertical-timeline-fixed">
+            <div class="vertical-timeline">
                 <div class="timeline-ascii">
-                    <div class="ascii-line top-line">
-                        <span class="year-label">2026</span>
+                    <div class="year-label">
+                        <span class="year-text">2026</span>
                         <div class="line-horizontal"></div>
                     </div>
-                    <div class="ascii-line">
-                        <span class="year-label">2025</span>
-                        <div class="line-horizontal"></div>
-                    </div>
-                    <div class="ascii-line">
-                        <span class="year-label">2024</span>
-                        <div class="line-horizontal"></div>
-                    </div>
-                    <div class="ascii-line bottom-line">
-                        <span class="year-label">2023</span>
+                    <div class="year-label">
+                        <span class="year-text">2021</span>
                         <div class="line-horizontal"></div>
                     </div>
                 </div>
@@ -66,7 +58,7 @@
                 </div>
                 
                 <!-- 游标 -->
-                <div class="timeline-cursor-fixed" id="timeline-cursor">
+                <div class="timeline-cursor" id="timeline-cursor">
                     <div class="cursor-arrow">
                         <div class="arrow-line"></div>
                         <div class="arrow-head"></div>
@@ -76,7 +68,7 @@
             </div>
 
             <!-- 右侧图片墙 -->
-            <div class="gallery-main-fixed">
+            <div class="gallery-main">
                 <!-- 图片容器 -->
                 <div class="images-container" id="images-container">
                     <!-- 图片项会通过JS动态添加 -->

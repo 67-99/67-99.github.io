@@ -1,12 +1,11 @@
-/* 画廊页面专用样式 - 字符画时间轴版本 */
 /* 画廊布局 */
 .gallery-layout {
     display: flex;
     min-height: 80vh;
     position: relative;
 }
-/* 固定左侧时间轴样式 */
-.vertical-timeline-fixed {
+/* 左侧时间轴 */
+.vertical-timeline {
     width: 100px;
     background-color: var(--bg-primary);
     position: fixed;
@@ -20,7 +19,6 @@
     z-index: 50;
     overflow: visible;
 }
-/* 字符画时间轴 */
 .timeline-ascii {
     position: absolute;
     left: 20px;
@@ -33,26 +31,14 @@
     pointer-events: none;
     z-index: 5;
 }
-.ascii-line {
+.year-label {
     position: relative;
     height: 100px;
     display: flex;
     align-items: center;
     margin: 10px 0;
 }
-.ascii-line.top-line {
-    height: 50px;
-    margin-top: 0;
-    align-items: flex-start;
-    padding-top: 10px;
-}
-.ascii-line.bottom-line {
-    height: 50px;
-    margin-bottom: 0;
-    align-items: flex-end;
-    padding-bottom: 10px;
-}
-.year-label {
+.year-text {
     color: var(--text-secondary);
     font-size: 0.9rem;
     font-weight: 600;
@@ -115,7 +101,7 @@
     box-shadow: 0 0 8px rgba(255, 240, 0, 0.8);
 }
 /* 游标 */
-.timeline-cursor-fixed {
+.timeline-cursor {
     position: absolute;
     left: 60px;
     transform: translateX(-50%);
@@ -124,7 +110,7 @@
     transition: top 0.3s ease;
     pointer-events: auto;
 }
-.timeline-cursor-fixed:active {
+.timeline-cursor:active {
     cursor: grabbing;
 }
 .cursor-arrow {
@@ -170,7 +156,7 @@
     text-align: center;
 }
 /* 右侧图片墙 */
-.gallery-main-fixed {
+.gallery-main {
     flex: 1;
     margin-left: 120px;
     display: flex;
@@ -371,7 +357,7 @@
 }
 /* 响应式设计 */
 @media (max-width: 1200px) {
-    .gallery-main-fixed {
+    .gallery-main {
         margin-left: 120px;
     }
 }
@@ -379,7 +365,7 @@
     .gallery-layout {
         flex-direction: column;
     }
-    .vertical-timeline-fixed {
+    .vertical-timeline {
         position: static;
         width: 100%;
         height: auto;
@@ -402,18 +388,13 @@
         align-items: center;
         height: 80px;
     }
-    .ascii-line {
+    .year-label {
         flex-direction: column;
         height: auto;
         width: 60px;
         margin: 0;
     }
-    .ascii-line.top-line,
-    .ascii-line.bottom-line {
-        height: auto;
-        padding: 0;
-    }
-    .year-label {
+    .year-text {
         margin-right: 0;
         margin-bottom: 5px;
         width: auto;
@@ -439,13 +420,13 @@
         top: 50%;
         transform: translate(-50%, -50%);
     }
-    .timeline-cursor-fixed {
+    .timeline-cursor {
         position: relative;
         left: 50%;
         top: 50%;
         transform: translate(-50%, -50%);
     }
-    .gallery-main-fixed {
+    .gallery-main {
         margin-left: 0;
     }
 }

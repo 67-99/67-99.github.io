@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // 全局变量
+    /** @type {Array<{startDate: Date, endDate: Date, midDate: Date} & Object.<string, string>>} */
     let artworks = [];
     let timeMarkers = [];
     let currentTimeIndex = 0;
@@ -17,51 +18,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const pdfStartDate = document.getElementById('pdf-start-date');
     const pdfEndDate = document.getElementById('pdf-end-date');
     
+    /**
+     * 格式化日期
+     * @param {Date} date 
+     * @returns {string}
+     */
+    function formatDate(date) {
+        return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
+    }
+
     // 加载数据
     async function loadArtworks() {
         try {
             // 从JSON文件加载数据
             const response = await fetch('images.json');
             artworks = await response.json();
-            
-            // 处理日期并排序（最新的在前面）
+            // 处理日期并排序
             artworks.forEach(artwork => {
-                // 解析日期
-                if (artwork.start) {
+                // 解析起始日期
+                if(artwork.start)
                     artwork.startDate = new Date(artwork.start);
-                    artwork.startYear = artwork.startDate.getFullYear();
-                    artwork.startMonth = artwork.startDate.getMonth() + 1;
-                }
-                
-                if (artwork.end) {
+                if(artwork.end)
                     artwork.endDate = new Date(artwork.end);
-                    artwork.endYear = artwork.endDate.getFullYear();
-                    artwork.endMonth = artwork.endDate.getMonth() + 1;
-                } else {
-                    // 如果没有结束日期，使用开始日期
+                else  // 如果没有结束日期，使用开始日期
                     artwork.endDate = artwork.startDate;
-                    artwork.endYear = artwork.startYear;
-                    artwork.endMonth = artwork.startMonth;
-                }
-                
                 // 计算中间日期用于时间轴定位
                 if (artwork.startDate && artwork.endDate) {
                     const timeDiff = artwork.endDate.getTime() - artwork.startDate.getTime();
                     artwork.midDate = new Date(artwork.startDate.getTime() + timeDiff / 2);
-                } else if (artwork.startDate) {
-                    artwork.midDate = artwork.startDate;
-                } else {
-                    artwork.midDate = new Date();
                 }
+                else if(artwork.startDate)
+                    artwork.midDate = artwork.startDate;
+                else
+                    artwork.midDate = new Date();
             });
-            
             // 按开始日期排序（最新的在前面）
             artworks.sort((a, b) => {
                 const dateA = a.midDate || new Date(a.start) || new Date();
                 const dateB = b.midDate || new Date(b.start) || new Date();
                 return dateB - dateA;
             });
-            
             // 初始化时间轴
             initTimeline();
             
@@ -70,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // 添加滚动监听
             addScrollListener();
-            
         } catch (error) {
             console.error('加载作品数据失败:', error);
             emptyState.innerHTML = `
@@ -86,78 +81,47 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化时间轴
     function initTimeline() {
         if (artworks.length === 0) return;
-        
         // 清空时间点标记
         timeMarkersContainer.innerHTML = '';
         timeMarkers = [];
-        
         // 获取时间范围
         const dates = artworks.map(art => art.midDate.getTime());
         const minTime = Math.min(...dates);
-        const maxTime = Math.max(...dates);
+        const maxTime = Date().getTime();
         const timeRange = maxTime - minTime;
-        
-        // 获取年份范围
-        const years = artworks.map(art => art.startYear || art.midDate.getFullYear());
+        const years = artworks.map(art => art.midDate.getFullYear());
         const minYear = Math.min(...years);
         const maxYear = Math.max(...years);
-        
         // 更新年份显示
-        updateYearDisplay(minYear, maxYear);
-        
+        const timeline = document.querySelector('.timeline-ascii');
+        let html = '';
+        for (let year = maxYear; year > minYear; year--) {
+            html += `
+                <div class="year-label">
+                    <span class="year-text">${year}</span>
+                    <div class="line-horizontal"></div>
+                </div>
+            `;
+        }
+        timeline.innerHTML = html;
         // 创建时间点标记
         artworks.forEach((artwork, index) => {
             createTimeMarker(artwork, index, minTime, timeRange);
         });
-        
-        // 设置初始游标位置（最新作品）
-        if (artworks.length > 0) {
+        if(artworks.length > 0)  // 设置初始游标位置（最新作品）
             setCursorPosition(0);
-        }
-        
         // 添加游标拖动功能
         initCursorDrag(minTime, timeRange);
-    }
-    
-    // 更新年份显示
-    function updateYearDisplay(minYear, maxYear) {
-        // 更新年份文本
-        const yearElements = document.querySelectorAll('.year-label');
-        
-        // 设置顶部年份
-        if (yearElements[0]) {
-            yearElements[0].textContent = maxYear;
-        }
-        
-        // 设置中间年份
-        let yearIndex = 1;
-        for (let year = maxYear - 1; year > minYear; year--) {
-            if (yearElements[yearIndex]) {
-                yearElements[yearIndex].textContent = year;
-                yearIndex++;
-            }
-        }
-        
-        // 设置底部年份
-        if (yearElements[yearElements.length - 1]) {
-            yearElements[yearElements.length - 1].textContent = minYear;
-        }
     }
     
     // 创建时间点标记
     function createTimeMarker(artwork, index, minTime, timeRange) {
         // 计算时间点在时间轴上的位置（0到1之间）
-        const artworkTime = artwork.midDate.getTime();
-        const position = 1 - (artworkTime - minTime) / timeRange; // 1- 因为最新的在上面
-        
-        // 计算相对于时间轴容器的高度
-        const containerHeight = timeMarkersContainer.offsetHeight;
-        const topPosition = position * containerHeight;
-        
+        const position = 1 - (artwork.midDate.getTime() - minTime) / timeRange; // 1- 因为最新的在上面
         // 创建标记元素
         const marker = document.createElement('div');
         marker.className = 'time-marker has-work';
-        marker.style.top = `${topPosition}px`;
+        marker.style.top = `${position * 100}%`;
         marker.dataset.index = index;
         
         // 点
@@ -166,7 +130,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 悬停显示日期
         dot.title = artwork.start ? formatDate(new Date(artwork.start)) : '';
-        
         marker.appendChild(dot);
         
         // 点击事件
@@ -183,11 +146,6 @@ document.addEventListener('DOMContentLoaded', function() {
             position: position,
             topPosition: topPosition
         });
-    }
-    
-    // 格式化日期
-    function formatDate(date) {
-        return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
     }
     
     // 初始化游标拖动
@@ -384,14 +342,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderArtworks() {
         // 清空容器
         imagesContainer.innerHTML = '';
-        
         if (artworks.length === 0) {
             emptyState.style.display = 'block';
             return;
         }
-        
         emptyState.style.display = 'none';
-        
         // 创建所有作品元素
         artworks.forEach((artwork, index) => {
             const artworkElement = createArtworkElement(artwork, index);
