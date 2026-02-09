@@ -10,8 +10,8 @@
     background-color: var(--bg-primary);
     position: fixed;
     left: 0;
-    top: 180px;
-    bottom: 20px;
+    top: 120px;
+    bottom: 60px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -25,18 +25,15 @@
     top: 0;
     bottom: 0;
     width: 60px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    transform: translateY(-15px);
     pointer-events: none;
     z-index: 5;
 }
 .year-label {
-    position: relative;
-    height: 100px;
+    position: absolute;
+    height: 30px;
     display: flex;
     align-items: center;
-    margin: 10px 0;
 }
 .year-text {
     color: var(--text-secondary);
@@ -56,7 +53,7 @@
 /* 时间轴竖线 */
 .timeline-vertical-line {
     position: absolute;
-    left: 60px;
+    left: 66px;
     top: 0;
     bottom: 0;
     width: 2px;
@@ -66,7 +63,7 @@
 /* 时间点标记容器 */
 .time-markers-container {
     position: absolute;
-    left: 60px;
+    left: 66px;
     top: 0;
     bottom: 0;
     width: 2px;
@@ -77,7 +74,7 @@
 .time-marker {
     position: absolute;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -4px);
     z-index: 10;
     pointer-events: auto;
     cursor: pointer;
@@ -103,8 +100,8 @@
 /* 游标 */
 .timeline-cursor {
     position: absolute;
-    left: 60px;
-    transform: translateX(-50%);
+    left: 50px;
+    transform: translate(-50%, -12px);
     z-index: 20;
     cursor: grab;
     transition: top 0.3s ease;
@@ -140,7 +137,7 @@
 }
 .cursor-date {
     position: absolute;
-    left: 30px;
+    left: 40px;
     top: 50%;
     transform: translateY(-50%);
     background-color: rgba(36, 36, 36, 0.95);
@@ -220,7 +217,6 @@
 .image-dates {
     color: var(--text-secondary);
     font-size: 0.9rem;
-    margin-bottom: 15px;
     display: flex;
     align-items: center;
     gap: 8px;
