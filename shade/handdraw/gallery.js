@@ -349,29 +349,15 @@ document.addEventListener('DOMContentLoaded', function() {
         preview.className = 'image-preview';
         // 如果是PDF，显示PDF
         if(artwork.src.toLowerCase().endsWith('.pdf')){
-            // 创建容器
+            // 创建PDF显示容器
             const pdfContainer = document.createElement('div');
-            pdfContainer.style.width = '100%';
-            pdfContainer.style.height = '100%';
-            pdfContainer.style.position = 'relative';
-            // 创建iframe显示PDF第一页
+            pdfContainer.className = 'pdf-preview';
             const pdfFrame = document.createElement('iframe');
-            pdfFrame.style.width = '100%';
-            pdfFrame.style.height = '100%';
-            pdfFrame.style.border = 'none';
-            pdfFrame.style.background = 'white';
-            // 只显示第一页，并隐藏工具栏等控件
-            pdfFrame.src = artwork.src + '#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH';
-            pdfFrame.title = 'PDF预览';
+            pdfFrame.className = 'pdf-preview-frame';
+            pdfFrame.src = artwork.src + '#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH';  // 只显示第一页，并隐藏工具栏等控件
             // 创建PDF图标作为fallback
             const pdfIcon = document.createElement('i');
-            pdfIcon.className = 'fas fa-file-pdf pdf-icon';
-            pdfIcon.style.position = 'absolute';
-            pdfIcon.style.top = '50%';
-            pdfIcon.style.left = '50%';
-            pdfIcon.style.transform = 'translate(-50%, -50%)';
-            pdfIcon.style.fontSize = '48px';
-            pdfIcon.style.color = '#e74c3c';
+            pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
             pdfIcon.style.display = 'none'; // 默认隐藏
             // 监听iframe加载错误
             pdfFrame.onerror = function() {
@@ -396,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         pdfFrame.style.display = 'none';
                         pdfIcon.style.display = 'block';
                     }
-                }, 500);
+                }, 1000);
             };
             pdfContainer.appendChild(pdfFrame);
             pdfContainer.appendChild(pdfIcon);
