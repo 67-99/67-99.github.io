@@ -344,17 +344,65 @@ document.addEventListener('DOMContentLoaded', function() {
         const item = document.createElement('div');
         item.className = 'image-item';
         item.dataset.index = index;
-        
         // 预览区域
         const preview = document.createElement('div');
         preview.className = 'image-preview';
-        
-        // 如果是PDF，显示PDF图标
-        if (artwork.src.toLowerCase().endsWith('.pdf')) {
+        // 如果是PDF，显示PDF
+        if(artwork.src.toLowerCase().endsWith('.pdf')){
+            // 创建容器
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.width = '100%';
+            pdfContainer.style.height = '100%';
+            pdfContainer.style.position = 'relative';
+            // 创建iframe显示PDF第一页
+            const pdfFrame = document.createElement('iframe');
+            pdfFrame.style.width = '100%';
+            pdfFrame.style.height = '100%';
+            pdfFrame.style.border = 'none';
+            pdfFrame.style.background = 'white';
+            // 只显示第一页，并隐藏工具栏等控件
+            pdfFrame.src = artwork.src + '#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH';
+            pdfFrame.title = 'PDF预览';
+            // 创建PDF图标作为fallback
             const pdfIcon = document.createElement('i');
             pdfIcon.className = 'fas fa-file-pdf pdf-icon';
-            preview.appendChild(pdfIcon);
-        } else {
+            pdfIcon.style.position = 'absolute';
+            pdfIcon.style.top = '50%';
+            pdfIcon.style.left = '50%';
+            pdfIcon.style.transform = 'translate(-50%, -50%)';
+            pdfIcon.style.fontSize = '48px';
+            pdfIcon.style.color = '#e74c3c';
+            pdfIcon.style.display = 'none'; // 默认隐藏
+            // 监听iframe加载错误
+            pdfFrame.onerror = function() {
+                pdfFrame.style.display = 'none';
+                pdfIcon.style.display = 'block';
+            };
+            // 监听iframe加载成功
+            pdfFrame.onload = function() {
+                // 检查iframe内容是否有效
+                setTimeout(() => {
+                    try {
+                        const iframeDoc = pdfFrame.contentDocument || pdfFrame.contentWindow.document;
+                        if (iframeDoc.body.innerHTML.includes('about:blank') || 
+                            iframeDoc.body.innerHTML.trim() === '' ||
+                            iframeDoc.body.innerHTML.includes('无法显示')) {
+                            // 如果内容为空或包含错误信息，显示图标
+                            pdfFrame.style.display = 'none';
+                            pdfIcon.style.display = 'block';
+                        }
+                    } catch (error) {
+                        // 跨域或其他错误，显示图标
+                        pdfFrame.style.display = 'none';
+                        pdfIcon.style.display = 'block';
+                    }
+                }, 500);
+            };
+            pdfContainer.appendChild(pdfFrame);
+            pdfContainer.appendChild(pdfIcon);
+            preview.appendChild(pdfContainer);
+        }
+        else{
             // 如果是图片，显示图片
             const img = document.createElement('img');
             img.src = artwork.src;
