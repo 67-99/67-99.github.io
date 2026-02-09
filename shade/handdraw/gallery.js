@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadArtworks() {
         try {
             // 从JSON文件加载数据
-            const response = await fetch('images.json');
+            const response = await fetch("https://67-99.github.io/shade/handdraw/" + 'images.json');
             artworks = await response.json();
             // 处理日期并排序
             artworks.forEach(artwork => {
@@ -339,6 +339,42 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    async function loadPDFWithPDFJS(pdfUrl, canvas, fallbackIcon, loader) {
+        try {
+            // 显示加载指示器
+            loader.style.display = 'flex';
+            fallbackIcon.style.display = 'none';
+            canvas.style.display = 'none';
+            // 加载PDF文档
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(1);
+            // 设置canvas尺寸为PDF页面原始尺寸
+            const viewport = page.getViewport({ scale: 1 });
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            // 渲染PDF页面
+            const context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport,
+                transform: [1, 0, 0, 1, 0, 0]
+            };
+            await page.render(renderContext).promise;
+            // 显示canvas，隐藏加载器和图标
+            canvas.style.display = 'block';
+            loader.style.display = 'none';
+            fallbackIcon.style.display = 'none';
+            pdf.destroy();  // 清理内存
+        }
+        catch (error){  // 加载失败，显示PDF图标
+            canvas.style.display = 'none';
+            loader.style.display = 'none';
+            fallbackIcon.style.display = 'block';
+        }
+    }
+
     // 创建作品元素
     function createArtworkElement(artwork, index) {
         const item = document.createElement('div');
@@ -352,41 +388,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // 创建PDF显示容器
             const pdfContainer = document.createElement('div');
             pdfContainer.className = 'pdf-preview';
-            const pdfFrame = document.createElement('iframe');
-            pdfFrame.className = 'pdf-preview-frame';
-            pdfFrame.src = artwork.src + '#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH';  // 只显示第一页，并隐藏工具栏等控件
-            // 创建PDF图标作为fallback
-            const pdfIcon = document.createElement('i');
+            const pdfCanvas = document.createElement('canvas');
+            pdfCanvas.className = 'pdf-canvas';
+            const pdfIcon = document.createElement('i');  // 创建PDF图标作为fallback
             pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
-            pdfIcon.style.display = 'none'; // 默认隐藏
-            // 监听iframe加载错误
-            pdfFrame.onerror = function() {
-                pdfFrame.style.display = 'none';
-                pdfIcon.style.display = 'block';
-            };
-            // 监听iframe加载成功
-            pdfFrame.onload = function() {
-                // 检查iframe内容是否有效
-                setTimeout(() => {
-                    try {
-                        const iframeDoc = pdfFrame.contentDocument || pdfFrame.contentWindow.document;
-                        if (iframeDoc.body.innerHTML.includes('about:blank') || 
-                            iframeDoc.body.innerHTML.trim() === '' ||
-                            iframeDoc.body.innerHTML.includes('无法显示')) {
-                            // 如果内容为空或包含错误信息，显示图标
-                            pdfFrame.style.display = 'none';
-                            pdfIcon.style.display = 'block';
-                        }
-                    } catch (error) {
-                        // 跨域或其他错误，显示图标
-                        pdfFrame.style.display = 'none';
-                        pdfIcon.style.display = 'block';
-                    }
-                }, 1000);
-            };
-            pdfContainer.appendChild(pdfFrame);
+            const loader = document.createElement('div');  // 创建加载指示器
+            loader.className = 'pdf-loader';
+            loader.innerHTML = '<span>加载中...</span>';
+            pdfContainer.appendChild(pdfCanvas);
             pdfContainer.appendChild(pdfIcon);
+            pdfContainer.appendChild(loader);
             preview.appendChild(pdfContainer);
+            loadPDFWithPDFJS("https://67-99.github.io/shade/handdraw/" + artwork.src, pdfCanvas, pdfIcon, loader);
         }
         else{
             // 如果是图片，显示图片

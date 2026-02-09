@@ -197,12 +197,13 @@
     width: 100%;
     height: 100%;
     position: relative;
+    overflow: hidden;
 }
-.pdf-preview-frame {
+.pdf-canvas {
     width: 100%;
     height: 100%;
-    border: none;
-    background: white;
+    object-fit: cover;
+    display: none;
 }
 .pdf-fallback-icon {
     position: absolute;
@@ -211,6 +212,18 @@
     transform: translate(-50%, -50%);
     display: none;
     z-index: 2;
+}
+.pdf-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    color: var(--text-muted);
 }
 .pdf-icon {
     font-size: 4rem;
