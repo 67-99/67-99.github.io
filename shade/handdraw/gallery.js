@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadArtworks() {
         try {
             // 从JSON文件加载数据
-            const response = await fetch("https://67-99.github.io/shade/handdraw/" + 'images.json');
+            const response = await fetch('images.json');
             artworks = await response.json();
             // 处理日期并排序
             artworks.forEach(artwork => {
@@ -375,7 +375,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 创建作品元素
+    /**
+     * 创建作品元素
+     * @param {{startDate: Date, endDate: Date} & Object.<string, string>} artwork 
+     * @param {number} index 
+     * @returns {HTMLDivElement} 生成的`<div class=image-item>`元素
+     */
     function createArtworkElement(artwork, index) {
         const item = document.createElement('div');
         item.className = 'image-item';
@@ -399,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
             pdfContainer.appendChild(pdfIcon);
             pdfContainer.appendChild(loader);
             preview.appendChild(pdfContainer);
-            loadPDFWithPDFJS("https://67-99.github.io/shade/handdraw/" + artwork.src, pdfCanvas, pdfIcon, loader);
+            loadPDFWithPDFJS(artwork.src, pdfCanvas, pdfIcon, loader);
         }
         else{
             // 如果是图片，显示图片
@@ -429,17 +434,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if(artwork.start){
             const dates = document.createElement('div');
             dates.className = 'image-dates';
-            let datesText = '';
-            if(artwork.start !== "old"){
-                const date = new Date(artwork.start);
-                datesText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
-            }
-            else
-                datesText = "未知"
-            if(artwork.end){
-                const endDate = new Date(artwork.end);
-                datesText += ` ~ ${endDate.getFullYear()}.${endDate.getMonth() + 1}.${endDate.getDate()}`;
-            }
+            let datesText = artwork.start !== "old"? formatDate(new Date(artwork.start)):  "未知";
+            if(artwork.end)
+                datesText += ` ~ ${formatDate(new Date(artwork.end))}`;
             dates.innerHTML = `<i class="far fa-calendar-alt"></i> ${datesText}`;
             info.appendChild(dates);
         }
@@ -457,38 +454,22 @@ document.addEventListener('DOMContentLoaded', function() {
         return item;
     }
     
-    // 打开PDF预览模态框
-    function openPDFModal(artwork) {
-        pdfModalTitle.textContent = artwork.title || '作品';
-        
-        let startText = '';
-        if (artwork.start) {
-            const date = new Date(artwork.start);
-            startText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
-        } else {
-            startText = '未知';
-        }
-        
-        let endText = '';
-        if (artwork.end) {
-            const date = new Date(artwork.end);
-            endText = `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()}`;
-        } else {
-            endText = '至今';
-        }
-        
-        pdfStartDate.textContent = startText;
-        pdfEndDate.textContent = endText;
-        
-        // 设置PDF查看器
-        if (artwork.src.toLowerCase().endsWith('.pdf')) {
-            // 使用Google Docs Viewer预览PDF
-            pdfViewer.src = `https://docs.google.com/viewer?url=${encodeURIComponent(artwork.src)}&embedded=true`;
-        } else {
-            // 如果是图片，直接显示
+    /**
+     * 打开PDF预览模态框
+     * @param {{startDate: Date, endDate: Date} & Object.<string, string>} artwork 
+     */
+    function openPDFModal(artwork){
+        // 生成标题、日期
+        pdfModalTitle.textContent = (artwork.start && artwork.start !== "old")? artwork.start: "纸绘";
+        if(artwork.end)
+            pdfModalTitle.textContent += " ~ " + formatDate(new Date(artwork.end));
+        pdfStartDate.textContent = (artwork.start && artwork.start !== "old")? formatDate(new Date(artwork.start)): '未知';
+        pdfEndDate.textContent = artwork.end? formatDate(new Date(artwork.end)): '未知';
+        // 设置查看器
+        if (artwork.src.toLowerCase().endsWith('.pdf'))
+            pdfViewer.src = `${artwork.src}#page=1&toolbar=0`;
+        else
             pdfViewer.src = artwork.src;
-        }
-        
         // 显示模态框
         pdfModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
