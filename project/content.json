@@ -21,6 +21,11 @@
                 "title": "InnOSeed黑客松B题",
                 "description": "一个由InnOSeed组织，旨在24内完成demo的项目。",
                 "name": "innoseed-B"
+            },
+            {
+                "title": "自制“电脑”",
+                "description": "一个自制的微处理器，基础来源于turing complete。",
+                "name": "cpu"
             }
         ]
     }
