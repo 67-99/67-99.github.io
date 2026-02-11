@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadArtworks() {
         try {
             // 从JSON文件加载数据
-            const response = await fetch('images.json');
+            const response = await fetch("https://67-99.github.io/shade/handdraw/" + 'images.json');
             artworks = await response.json();
             // 处理日期并排序
             artworks.forEach(artwork => {
@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
             pdfContainer.appendChild(pdfIcon);
             pdfContainer.appendChild(loader);
             preview.appendChild(pdfContainer);
-            loadPDFWithPDFJS(artwork.src, pdfCanvas, pdfIcon, loader);
+            loadPDFWithPDFJS("https://67-99.github.io/shade/handdraw/" + artwork.src, pdfCanvas, pdfIcon, loader);
         }
         else{
             // 如果是图片，显示图片

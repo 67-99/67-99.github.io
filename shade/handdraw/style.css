@@ -1,8 +1,6 @@
-/* 画廊布局 */
-.gallery-layout {
-    display: flex;
-    min-height: 80vh;
-    position: relative;
+/* 标题 */
+.page-header {
+    margin-left: 150px;
 }
 /* 左侧时间轴 */
 .vertical-timeline {
@@ -10,7 +8,7 @@
     background-color: var(--bg-primary);
     position: fixed;
     left: 0;
-    top: 120px;
+    top: 140px;
     bottom: 60px;
     display: flex;
     flex-direction: column;
@@ -155,7 +153,8 @@
 /* 右侧图片墙 */
 .gallery-main {
     flex: 1;
-    margin-left: 120px;
+    margin-left: 180px;
+    margin-right: 30px;
     display: flex;
     flex-direction: column;
 }
@@ -385,89 +384,15 @@
     color: var(--accent-color);
 }
 /* 响应式设计 */
-@media (max-width: 1200px) {
-    .gallery-main {
-        margin-left: 120px;
-    }
-}
 @media (max-width: 992px) {
-    .gallery-layout {
-        flex-direction: column;
-    }
-    .vertical-timeline {
-        position: static;
-        width: 100%;
-        height: auto;
-        min-height: 150px;
-        margin-bottom: 30px;
-        padding: 20px;
-        top: auto;
-        bottom: auto;
-        left: auto;
-        align-items: center;
-    }
-    .timeline-ascii {
-        position: relative;
-        left: auto;
-        top: auto;
-        bottom: auto;
-        width: auto;
-        flex-direction: row;
-        justify-content: space-around;
-        align-items: center;
-        height: 80px;
-    }
-    .year-label {
-        flex-direction: column;
-        height: auto;
-        width: 60px;
-        margin: 0;
-    }
-    .year-text {
-        margin-right: 0;
-        margin-bottom: 5px;
-        width: auto;
-        text-align: center;
-    }
-    .line-horizontal {
-        display: none;
-    }
-    .timeline-vertical-line {
-        display: none;
-    }
-    .time-markers-container {
-        position: relative;
-        left: auto;
-        top: auto;
-        bottom: auto;
-        width: 100%;
-        height: 2px;
-        background-color: var(--border-color);
-        margin-top: 20px;
-    }
-    .time-marker {
-        top: 50%;
-        transform: translate(-50%, -50%);
-    }
-    .timeline-cursor {
-        position: relative;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-    }
-    .gallery-main {
+    .page-header {
         margin-left: 0;
     }
-}
-@media (max-width: 768px) {
-    .images-container {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 20px;
+    .vertical-timeline {
+        display: none;
     }
-    .cursor-date {
-        padding: 6px 10px;
-        font-size: 0.8rem;
-        min-width: 80px;
+    .gallery-main {
+        margin-left: 30px;
     }
 }
 @media (max-width: 576px) {
