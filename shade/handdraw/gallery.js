@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const pdf = await loadingTask.promise;
             const page = await pdf.getPage(1);
             // 设置canvas尺寸为PDF页面原始尺寸
-            const viewport = page.getViewport({ scale: 1 });
+            const viewport = page.getViewport({ scale: 0.5 });
             canvas.width = viewport.width;
             canvas.height = viewport.height;
             // 渲染PDF页面
