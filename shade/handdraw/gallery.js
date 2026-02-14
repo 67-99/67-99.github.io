@@ -46,22 +46,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 return dateB - dateA;
             });
             // 获取时间范围
-            (function(global) {
-                const dates = artworks.map(art => art.startDate.getTime());
-                const years = artworks.map(art => art.startDate.getFullYear());
-                global.Dates = Object.freeze({
-                    MIN_TIME: Math.min(...dates),
-                    MAX_TIME: Date.now(),
-                    TIME_RANGE: Date.now() - Math.min(...dates),
-                    MIN_YEAR: Math.min(...years),
-                    MAX_YEAR: new Date().getFullYear()
-                });
+            const dates = artworks.map(art => art.startDate.getTime());
+            const years = artworks.map(art => art.startDate.getFullYear());
+            const Dates = {
+                MIN_TIME: Math.min(...dates),
+                MAX_TIME: Date.now(),
+                TIME_RANGE: Math.max(Date.now() - Math.min(...dates), 1),
+                MIN_YEAR: Math.min(...years),
+                MAX_YEAR: new Date().getFullYear()
+            };
+            (window || global).Dates = Object.freeze(Dates);
             artworks.forEach(artwork => {
                 // 处理无日期数据
                 if(artwork.start == "old")
                     artwork.startDate = artwork.endDate = new Date(Dates.MIN_TIME);
             });
-            })(window || global);
             // 初始化时间轴
             initTimeline();
             
@@ -350,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const pdf = await loadingTask.promise;
             const page = await pdf.getPage(1);
             // 设置canvas尺寸为PDF页面原始尺寸
-            const viewport = page.getViewport({ scale: 0.5 });
+            const viewport = page.getViewport({ scale: (isMobile ? 0.25 : 0.5) });
             canvas.width = viewport.width;
             canvas.height = viewport.height;
             // 渲染PDF页面
@@ -392,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if(artwork.src.toLowerCase().endsWith('.pdf')){
             // 创建PDF显示容器
             const pdfContainer = document.createElement('div');
-            pdfContainer.className = 'pdf-preview';
+            pdfContainer.className = 'pdf-preview lazy-pdf';
             const pdfCanvas = document.createElement('canvas');
             pdfCanvas.className = 'pdf-canvas';
             const pdfIcon = document.createElement('i');  // 创建PDF图标作为fallback
@@ -404,7 +403,9 @@ document.addEventListener('DOMContentLoaded', function() {
             pdfContainer.appendChild(pdfIcon);
             pdfContainer.appendChild(loader);
             preview.appendChild(pdfContainer);
-            loadPDFWithPDFJS(artwork.src, pdfCanvas, pdfIcon, loader);
+            pdfContainer.dataset.src = artwork.src;
+            pdfContainer.dataset.index = index;
+            lazyPDFObserver.observe(pdfContainer);
         }
         else{
             // 如果是图片，显示图片
@@ -547,6 +548,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // PDF加载监测器
+    const lazyPDFObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const container = entry.target;
+                const canvas = container.querySelector('.pdf-canvas');
+                const icon = container.querySelector('.pdf-fallback-icon');
+                const loader = container.querySelector('.pdf-loader');
+                if (pdfUrl && canvas && !canvas.dataset.rendered) {
+                    canvas.dataset.rendered = 'true';  // 标记已渲染，避免重复
+                    loadPDFWithPDFJS(container.dataset.src, canvas, icon, loader);  // 调用渲染函数
+                    observer.unobserve(container);  // 渲染后可以停止观察
+                }
+            }
+        });
+    }, {
+        rootMargin: '200px 0px',
+        threshold: 0.01
+    });
+
     // 初始化
+    const isMobile = window.innerWidth < 768;
     loadArtworks();
 });
