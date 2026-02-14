@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const timeline = document.querySelector('.timeline-ascii');
         let html = '';
         for (let year = Dates.MAX_YEAR; year > Dates.MIN_YEAR; year--) {
-            const pos = (Dates.MAX_TIME - Date.parse(`${year}-1-1`)) / Dates.TIME_RANGE;
+            const pos = (Dates.MAX_TIME - (new Date(year, 0, 1).getTime())) / Dates.TIME_RANGE;
             html += `
                 <div class="year-label" style="top: ${pos * 100}%;">
                     <span class="year-text">${year}</span>
@@ -554,10 +554,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (entry.isIntersecting) {
                 const container = entry.target;
                 const canvas = container.querySelector('.pdf-canvas');
-                const icon = container.querySelector('.pdf-fallback-icon');
-                const loader = container.querySelector('.pdf-loader');
-                if (pdfUrl && canvas && !canvas.dataset.rendered) {
+                if (container.dataset.src && canvas && !canvas.dataset.rendered) {
                     canvas.dataset.rendered = 'true';  // 标记已渲染，避免重复
+                    const icon = container.querySelector('.pdf-fallback-icon');
+                    const loader = container.querySelector('.pdf-loader');
                     loadPDFWithPDFJS(container.dataset.src, canvas, icon, loader);  // 调用渲染函数
                     observer.unobserve(container);  // 渲染后可以停止观察
                 }
