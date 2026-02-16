@@ -30,11 +30,11 @@
         <div class="popup-card">
             <button class="popup-close" id="popupClose">✕</button>
             <div class="popup-img-container">
-                <img src="https://67-99.github.io/icon/Shade/github-issue.png" alt="欢迎图片" class="popup-img">
+                <img src="https://67-99.github.io/icon/Shade/新年快乐.png" alt="马年大吉" class="popup-img">
             </div>
             <div class="popup-content">
-                <h3>2026新年快乐</h3>
-                <p>虽然放假了，但是1月4号有考试 (;_;)</p>
+                <h3>马年快乐！</h3>
+                <p>放假了，就休息吧(-ω-)</p>
                 <p><small>本站正在持续更新中...</small></p>
             </div>
         </div>
@@ -119,19 +119,22 @@
             const popupOverlay = document.getElementById('popupOverlay');
             const popupClose = document.getElementById('popupClose');
             
-            // 检查popupClosed
-            if(localStorage.getItem('popupClosed') !== null){
+            // 检查上个版本遗留的popupClosed
+            if(localStorage.getItem('popupClosed') !== null)
                 localStorage.removeItem('popupClosed');
-                /* 页面加载后显示弹窗
+            // 检查弹窗时间
+            const lastTime = Number(localStorage.getItem('popupTime'));
+            if(lastTime === null || isNaN(lastTime) || Date.now() - lastTime > 1000000){
+                localStorage.setItem('popupTime', Date.now());
+                // 页面加载后显示弹窗
                 setTimeout(() => {
                     popupOverlay.classList.add('active');
-                }, 500); // 延迟500ms显示，让页面先加载 */
+                }, 500); // 延迟500ms显示，让页面先加载
             }
             
             // 点击关闭按钮
             popupClose.addEventListener('click', function() {
                 popupOverlay.classList.remove('active');
-                localStorage.setItem('popupClosed', 'true');
             });
             
             // 点击弹窗外部区域也可关闭
