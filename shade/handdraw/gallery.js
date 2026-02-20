@@ -377,6 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+
     /**
      * 创建作品元素
      * @param {{startDate: Date, endDate: Date} & Object.<string, string>} artwork 
@@ -390,41 +391,51 @@ document.addEventListener('DOMContentLoaded', function() {
         // 预览区域
         const preview = document.createElement('div');
         preview.className = 'image-preview';
-        // 如果是PDF，显示PDF
-        if(artwork.src.toLowerCase().endsWith('.pdf')){
-            // 创建PDF显示容器
-            const pdfContainer = document.createElement('div');
-            pdfContainer.className = 'pdf-preview lazy-pdf';
-            const pdfCanvas = document.createElement('canvas');
-            pdfCanvas.className = 'pdf-canvas';
-            const pdfIcon = document.createElement('i');  // 创建PDF图标作为fallback
-            pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
-            const loader = document.createElement('div');  // 创建加载指示器
-            loader.className = 'pdf-loader';
-            loader.innerHTML = '<span>加载中...</span>';
-            pdfContainer.appendChild(pdfCanvas);
-            pdfContainer.appendChild(pdfIcon);
-            pdfContainer.appendChild(loader);
-            preview.appendChild(pdfContainer);
-            pdfContainer.dataset.src = artwork.src;
-            pdfContainer.dataset.index = index;
-            lazyPDFObserver.observe(pdfContainer);
+        // 显示预览
+        function loadSrc(src, onerror = undefined){
+            if(!src){
+                if(onerror)
+                    onerror();
+                return;
+            }
+            // 如果是PDF，显示PDF
+            if(src.toLowerCase().endsWith('.pdf')){
+                // 创建PDF显示容器
+                const pdfContainer = document.createElement('div');
+                pdfContainer.className = 'pdf-preview lazy-pdf';
+                const pdfCanvas = document.createElement('canvas');
+                pdfCanvas.className = 'pdf-canvas';
+                const pdfIcon = document.createElement('i');  // 创建PDF图标作为fallback
+                pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
+                const loader = document.createElement('div');  // 创建加载指示器
+                loader.className = 'pdf-loader';
+                loader.innerHTML = '<span>加载中...</span>';
+                pdfContainer.appendChild(pdfCanvas);
+                pdfContainer.appendChild(pdfIcon);
+                pdfContainer.appendChild(loader);
+                pdfContainer.dataset.src = src;
+                pdfContainer.dataset.index = index;
+                lazyPDFObserver.observe(pdfContainer);
+                preview.appendChild(pdfContainer);
+            }
+            else{
+                // 如果是图片，显示图片
+                const img = document.createElement('img');
+                img.src = src;
+                img.alt = artwork.title || '';
+                img.loading = 'lazy';
+                img.onerror = onerror || function() {
+                    // 如果图片加载失败，显示PDF图标
+                    this.style.display = 'none';
+                    this.remove();
+                    const pdfIcon = document.createElement('i');
+                    pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
+                    preview.appendChild(pdfIcon);
+                };
+                preview.appendChild(img);
+            }
         }
-        else{
-            // 如果是图片，显示图片
-            const img = document.createElement('img');
-            img.src = artwork.src;
-            img.alt = artwork.title;
-            img.loading = 'lazy';
-            img.onerror = function() {
-                // 如果图片加载失败，显示PDF图标
-                this.style.display = 'none';
-                const pdfIcon = document.createElement('i');
-                pdfIcon.className = 'fas fa-file-pdf pdf-icon';
-                preview.appendChild(pdfIcon);
-            };
-            preview.appendChild(img);
-        }
+        loadSrc(artwork.img, () => loadSrc(artwork.src));
         // 信息区域
         const info = document.createElement('div');
         info.className = 'image-info';
