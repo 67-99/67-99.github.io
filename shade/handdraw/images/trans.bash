@@ -5,8 +5,8 @@ for input in _*.jpg _*.JPG; do
     [ -e "$input" ] || continue
     # 去掉文件名开头的下划线，作为输出文件名
     output="${input#_}"
-    # 使用 ffmpeg 缩放：高度设为720，宽度自动计算并保持偶数
-    ffmpeg -i "$input" -vf "scale=-1:480" -q:v 2 "$output"
+    # 使用 ffmpeg 缩放：高度设为360，宽度自动计算并保持偶数
+    ffmpeg -i "$input" -vf "scale=-1:360" -q:v 2 "$output"
 
     echo "已转换: $input -> $output"
 done
