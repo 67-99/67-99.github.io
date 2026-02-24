@@ -480,8 +480,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 else if(onerror)
                     onerror()
                 else{
-                    this.style.display = 'none';
-                    this.remove();
                     const pdfIcon = document.createElement('i');
                     pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
                     preview.appendChild(pdfIcon);
