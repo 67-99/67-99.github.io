@@ -457,23 +457,35 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // 如果是PDF，显示PDF
             if(src.toLowerCase().endsWith('.pdf')){
-                // 创建PDF显示容器
-                const pdfContainer = document.createElement('div');
-                pdfContainer.className = 'pdf-preview lazy-pdf';
-                const pdfCanvas = document.createElement('canvas');
-                pdfCanvas.className = 'pdf-canvas';
-                const pdfIcon = document.createElement('i');  // 创建PDF图标作为fallback
-                pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
-                const loader = document.createElement('div');  // 创建加载指示器
-                loader.className = 'pdf-loader';
-                loader.innerHTML = '<span>加载中...</span>';
-                pdfContainer.appendChild(pdfCanvas);
-                pdfContainer.appendChild(pdfIcon);
-                pdfContainer.appendChild(loader);
-                pdfContainer.dataset.src = src;
-                pdfContainer.dataset.index = index;
-                lazyPDFObserver.observe(pdfContainer);
-                preview.appendChild(pdfContainer);
+                if(!isMobile){
+                    // 创建PDF显示容器
+                    const pdfContainer = document.createElement('div');
+                    pdfContainer.className = 'pdf-preview lazy-pdf';
+                    const pdfCanvas = document.createElement('canvas');
+                    pdfCanvas.className = 'pdf-canvas';
+                    const pdfIcon = document.createElement('i');  // 创建PDF图标作为fallback
+                    pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
+                    const loader = document.createElement('div');  // 创建加载指示器
+                    loader.className = 'pdf-loader';
+                    loader.innerHTML = '<span>加载中...</span>';
+                    pdfContainer.appendChild(pdfCanvas);
+                    pdfContainer.appendChild(pdfIcon);
+                    pdfContainer.appendChild(loader);
+                    pdfContainer.dataset.src = src;
+                    pdfContainer.dataset.index = index;
+                    lazyPDFObserver.observe(pdfContainer);
+                    preview.appendChild(pdfContainer);
+                }
+                // 移动端不加载
+                else if(onerror)
+                    onerror()
+                else{
+                    this.style.display = 'none';
+                    this.remove();
+                    const pdfIcon = document.createElement('i');
+                    pdfIcon.className = 'fas fa-file-pdf pdf-icon pdf-fallback-icon';
+                    preview.appendChild(pdfIcon);
+                }
             }
             else{
                 // 如果是图片，显示图片
