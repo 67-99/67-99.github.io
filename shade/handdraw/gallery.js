@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 preview.appendChild(img);
             }
         }
-        imgSrc = artwork.src? artwork.src.replace(/\.[^./]+$/, '.png'): "";
+        const imgSrc = artwork.src? artwork.src.replace(/\.[^./]+$/, '.png'): "";
         checkResourceExists(imgSrc).then((imgExists) => {
             if(imgExists)
                 loadSrc(imgSrc, () => loadSrc(artwork.src));
