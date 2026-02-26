@@ -122,15 +122,16 @@
             // 检查上个版本遗留的popupClosed
             if(localStorage.getItem('popupClosed') !== null)
                 localStorage.removeItem('popupClosed');
+
             // 检查弹窗时间
-            const lastTime = Number(localStorage.getItem('popupTime'));
-            if(lastTime === null || isNaN(lastTime) || Date.now() - lastTime > 1000000){
-                localStorage.setItem('popupTime', Date.now());
-                // 页面加载后显示弹窗
-                setTimeout(() => {
-                    popupOverlay.classList.add('active');
-                }, 500); // 延迟500ms显示，让页面先加载
-            }
+            // const lastTime = Number(localStorage.getItem('popupTime'));
+            // if(lastTime === null || isNaN(lastTime) || Date.now() - lastTime > 1000000){
+            //     localStorage.setItem('popupTime', Date.now());
+            //     // 页面加载后显示弹窗
+            //     setTimeout(() => {
+            //         popupOverlay.classList.add('active');
+            //     }, 500); // 延迟500ms显示，让页面先加载
+            // }
             
             // 点击关闭按钮
             popupClose.addEventListener('click', function() {
