@@ -310,15 +310,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('.nav-links').classList.toggle('active');
     });
 
-    document.querySelector('.mobile-nav-toggle').addEventListener('click', () => {
-        const sidebar = document.querySelector('.sidebar');
-        const overlay = document.querySelector('.sidebar-overlay');
-        sidebar.classList.toggle('active');
-        if (overlay) {
-            overlay.classList.toggle('active');
-        }
-    });
-
     document.addEventListener('click', (e) => {
         const sidebar = document.querySelector('.sidebar');
         const overlay = document.querySelector('.sidebar-overlay');
