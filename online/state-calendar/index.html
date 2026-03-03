@@ -53,8 +53,13 @@
             <div class="date-card" id="dateDisplayCard">
                 <h2 id="displayDate">📅 选定日期</h2>
                 <div class="selected-date-info" id="selectedDateInfo">
-                <span style="font-size:2rem; margin-right:8px;">⏳</span>
-                <span>数据加载中...</span>
+                    <!-- 日期文本容器（动态填充） -->
+                    <span class="date-text" id="dateText">
+                        <span style="font-size:2rem; margin-right:8px;">⏳</span>
+                        <span>数据加载中...</span>
+                    </span>
+                    <!-- 编辑/添加数据按钮 -->
+                    <button class="edit-btn" id="editDataBtn" style="display: none;">✏️</button>
                 </div>
                 <!-- 预留扩展区域：可展示更多内容，符合“根据点击的日期改变” -->
                 <div class="extra-content" id="extraContent">
@@ -64,4 +69,29 @@
         </main>
     </div>
 </body>
+<!-- 模态框（弹窗）放在 body 末尾 -->
+<div class="modal-overlay" id="modalOverlay" style="display: none;">
+    <div class="modal-card">
+        <h3>📝 编辑心情状态</h3>
+        <form id="dataForm">
+            <div class="form-group">
+                <label for="modalDate">日期 (YYYY-MM-DD)</label>
+                <input type="text" id="modalDate" placeholder="" required pattern="\d{4}-\d{2}-\d{2}" disabled>
+            </div>
+            <div class="form-group">
+                <label for="modalValue">数值</label>
+                <input type="number" id="modalValue" step="1" min="-100" max="100" required>
+            </div>
+            <div class="form-group">
+                <label for="modalDescription">描述</label>
+                <textarea id="modalDescription" rows="3" maxlength="500" required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="modalCancel">取消</button>
+                <button type="submit" id="modalSubmit">保存</button>
+            </div>
+            <div id="modalError" class="modal-error"></div>
+        </form>
+    </div>
+</div>
 </html>

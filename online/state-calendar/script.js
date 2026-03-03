@@ -61,9 +61,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const nextBtn = document.getElementById('nextMonthBtn');
     const yearMonthDisplay = document.getElementById('displayYearMonth');
     const calendarGrid = document.getElementById('calendarGrid');
-    const selectedDateInfo = document.getElementById('selectedDateInfo');
+    const dateText = document.getElementById('dateText');
     const displayDate = document.getElementById('displayDate');
     const extraContent = document.getElementById('extraContent');   // 右侧附加内容区
+    const editBtn = document.getElementById('editDataBtn');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalDate = document.getElementById('modalDate');
+    const modalValue = document.getElementById('modalValue');
+    const modalDescription = document.getElementById('modalDescription');
+    const modalCancel = document.getElementById('modalCancel');
+    const modalSubmitBtn = document.getElementById('modalSubmit'); // 注意与 submit 事件区分
+    const modalError = document.getElementById('modalError');
+    const dataForm = document.getElementById('dataForm');
     const getInfo = checkResourceExists("https://workers.dev");
 
     // ---------- 状态 ----------
@@ -112,8 +121,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!selectedDateStr) {
             // 无选中日期：显示占位提示
             displayDate.textContent = "📅 选定日期";
-            selectedDateInfo.innerHTML = `<p class="placeholder">📌 请在左侧选择一个日期</p>`;
+            dateText.innerHTML = `<p class="placeholder">📌 请在左侧选择一个日期</p>`;
             extraContent.innerHTML = `<p>这里可以根据日期展示不同的备忘或信息</p>`;
+            editBtn.style.display = 'none';
             return;
         }
 
@@ -123,26 +133,27 @@ document.addEventListener('DOMContentLoaded', function() {
         if(await getInfo){
             displayDate.textContent = `📅 ${formattedDisplay}`;
             if(isLoading){
-                selectedDateInfo.innerHTML = `<span>⏳ 数据加载中...</span>`;
+                dateText.textContent = "⏳ 数据加载中...";
                 extraContent.textContent = "⏳ 数据加载中...";
             }
             else{
                 const dayInfo = monthData[selectedDateStr];
                 if(dayInfo && dayInfo["value"] >= -100 && dayInfo["description"]){
-                    selectedDateInfo.innerHTML = `<span>心情：${dayInfo["value"]}</span>`;
+                    dateText.textContent = `心情：${dayInfo["value"]}`;
                     extraContent.textContent = dayInfo["description"];
                 }
                 else{
-                    selectedDateInfo.innerHTML = `<span>心情：${0}</span>`;
+                    dateText.textContent = `心情：${0}`;
                     extraContent.textContent = "无数据，一切安好 °▽°";
                 }
             }
+            editBtn.style.display = 'inline-block';
         }
         else{
             const dateObj = new Date(year, month - 1, day);
             const weekdaysCN = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
             const weekday = weekdaysCN[dateObj.getDay()];
-            selectedDateInfo.innerHTML = `
+            dateText.innerHTML = `
                 <span style="font-size:2rem; margin-right:8px;">📆</span>
                 <span>${formattedDisplay} ${weekday}</span>
             `;
@@ -163,6 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     extraMsg += ' 🌿 单日幸运色：绿色';
             }
             extraContent.innerHTML = `<p>${extraMsg}</p>`;
+            editBtn.style.display = 'none';
         }
     }
 
@@ -300,10 +312,84 @@ document.addEventListener('DOMContentLoaded', function() {
     // 渲染日历 (内部调用 updateRightPanel)
     renderCalendar();
 
-    // 附加小细节：若首次选中了今天，需要确保高亮 (render时根据selectedDateStr已处理)
-    // 但注意由于render中通过循环添加active, 如果selectedDateStr有值，相应格子会加active。
-    // 完美。
-    // 确保年份月份显示与实际相符 (已包含在render)
+    // 模态框打开函数
+    function openModal() {
+        if (!selectedDateStr) return; // 无选中不打开
+        // 填充当前选中日期
+        modalDate.value = selectedDateStr;
+        modalValue.value = '';
+        modalDescription.value = '';
+        modalError.textContent = '';
+        modalOverlay.style.display = 'flex';
+    }
+
+    // 提交表单处理 POST 请求
+    async function handleFormSubmit(e) {
+        e.preventDefault();
+        const date = modalDate.value.trim();
+        const value = parseFloat(modalValue.value);
+        const description = modalDescription.value.trim();
+
+        // 基本验证
+        if (!date || isNaN(value) || value < -100 || value > 100 || !description) {
+            modalError.textContent = '请填写完整且有效的数值';
+            return;
+        }
+        // 日期格式验证
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(date)) {
+            modalError.textContent = '日期格式应为 YYYY-MM-DD';
+            return;
+        }
+
+        // 禁用提交按钮防止重复
+        modalSubmitBtn.disabled = true;
+        modalError.textContent = '';
+
+        try {
+            const response = await fetch(`https://calendar-dataset.smart-li.workers.dev/api/states`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date, value, description })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                // 处理 409 或其他错误
+                if (response.status === 409) {
+                    throw new Error('该日期已有数据，无法重复添加（如需覆盖请先删除）');
+                } else {
+                    throw new Error(result.error || '提交失败');
+                }
+            }
+
+            // 成功：关闭模态框，刷新当月数据
+            modalOverlay.style.display = 'none';
+            // 重新获取当月数据，确保右侧显示最新
+            await fetchMonthData(currentYear, currentMonth);
+            // 如果当前选中日期正好是刚修改的日期，更新右侧显示
+            if (selectedDateStr === date) {
+                // 因为 monthData 已更新，直接调用 updateRightPanel 即可
+                updateRightPanel();
+            }
+
+        } catch (error) {
+            modalError.textContent = error.message;
+        } finally {
+            modalSubmitBtn.disabled = false;
+        }
+    }
+
+    // 绑定事件
+    editBtn.addEventListener('click', openModal);
+    modalCancel.addEventListener('click', () => modalOverlay.style.display = 'none');
+    modalOverlay.addEventListener('click', (e) => {
+        if(e.target === modalOverlay)
+            modalOverlay.style.display = 'none';
+    });
+    dataForm.addEventListener('submit', handleFormSubmit);
+
 
     // 移动端菜单
     document.querySelector('.mobile-menu').addEventListener('click', () => {
