@@ -55,10 +55,40 @@ async function checkResourceExists(url, timeout = 3000){
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+function getColorForValue(value) {
+    // 定义关键点：值 => RGB
+    const points = [
+        { val: -100, rgb: [255, 180, 180] },   // 浅红
+        { val: -70,  rgb: [255, 210, 150] },   // 浅橙
+        { val: -40,  rgb: [160, 190, 255] },   // 浅蓝
+        { val: 0,    rgb: [242, 242, 242] },   // 白
+        { val: 100,  rgb: [0, 255, 0] }        // 绿
+    ];
+
+    // 边界处理
+    if (value <= -100) return 'rgb(255,180,180)';
+    if (value >= 100) return 'rgb(0,255,0)';
+
+    // 查找所在区间并线性插值
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        if (value >= p1.val && value <= p2.val) {
+            const t = (value - p1.val) / (p2.val - p1.val);
+            const r = Math.round(p1.rgb[0] + t * (p2.rgb[0] - p1.rgb[0]));
+            const g = Math.round(p1.rgb[1] + t * (p2.rgb[1] - p1.rgb[1]));
+            const b = Math.round(p1.rgb[2] + t * (p2.rgb[2] - p1.rgb[2]));
+            return `rgb(${r},${g},${b})`;
+        }
+    }
+    return 'rgb(255,255,255)'; // 默认白
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
     // ---------- DOM 元素 ----------
     const prevBtn = document.getElementById('prevMonthBtn');
     const nextBtn = document.getElementById('nextMonthBtn');
+    const colorView = document.getElementById('color-preview');
     const yearMonthDisplay = document.getElementById('displayYearMonth');
     const calendarGrid = document.getElementById('calendarGrid');
     const dateText = document.getElementById('dateText');
@@ -110,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
             monthData = {};
         } finally {
             isLoading = false;
+            applyColorsToCalendar();
             // 重新刷新右侧显示（如果已有选中日期）
             if(selectedDateStr)
                 updateRightPanel();
@@ -234,12 +265,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedDateStr = '';
             }
         }
-        // 渲染完成后获取当月数据
-        const hasInfo = await getInfo;
-        if(hasInfo)
-            fetchMonthData(currentYear, currentMonth);
         // 根据最终selectedDateStr更新右侧 (可能清空，也可能保留)
         updateRightPanel();
+    }
+
+    function applyColorsToCalendar() {
+        const dateCells = document.querySelectorAll('.calendar-date');
+        dateCells.forEach(cell => {
+            const dateStr = cell.dataset.date;
+            if (dateStr && monthData[dateStr]) {
+                const value = monthData[dateStr].value;
+                cell.style.backgroundColor = getColorForValue(value);
+            } else {
+                // 无数据时恢复默认背景（由CSS控制）
+                cell.style.backgroundColor = '';
+            }
+        });
     }
 
     // 处理日期点击 (事件委托)
@@ -272,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // 月份切换：上一月
-    prevBtn.addEventListener('click', () => {
+    prevBtn.addEventListener('click', async () => {
         if (currentMonth === 0) {
             currentMonth = 11;
             currentYear -= 1;
@@ -281,10 +322,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         // 切换月份后，一般情况下选中的日期可能不在本月，将在renderCalendar中自动清空
         renderCalendar();
+        // 渲染完成后获取当月数据
+        const hasInfo = await getInfo;
+        if(hasInfo)
+            fetchMonthData(currentYear, currentMonth);
     });
 
     // 月份切换：下一月
-    nextBtn.addEventListener('click', () => {
+    nextBtn.addEventListener('click', async () => {
         if (currentMonth === 11) {
             currentMonth = 0;
             currentYear += 1;
@@ -292,6 +337,10 @@ document.addEventListener('DOMContentLoaded', function() {
             currentMonth += 1;
         }
         renderCalendar();
+        // 渲染完成后获取当月数据
+        const hasInfo = await getInfo;
+        if(hasInfo)
+            fetchMonthData(currentYear, currentMonth);
     });
 
     // ---------- 初始化 ----------
@@ -311,6 +360,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 渲染日历 (内部调用 updateRightPanel)
     renderCalendar();
+
+    // 渲染完成后获取当月数据
+    const hasInfo = await getInfo;
+    if(hasInfo){
+        colorView.classList.toggle('show');;
+        fetchMonthData(currentYear, currentMonth);
+    }
 
     // 模态框打开函数
     function openModal() {
@@ -406,4 +462,74 @@ document.addEventListener('DOMContentLoaded', function() {
             overlay.classList.remove('active');
         }
     });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // ========== 颜色预览模块 ==========
+    const previewToggle = document.getElementById('previewToggle');
+    const previewContent = document.getElementById('previewContent');
+    const valueSlider = document.getElementById('valueSlider');
+    const sliderValue = document.getElementById('sliderValue');
+    const colorRect = document.getElementById('colorRect');
+    const rectHex = document.getElementById('rectHex');
+    const presetButtons = document.querySelectorAll('.preset-buttons button');
+
+    // 展开/折叠
+    previewToggle.addEventListener('click', () => {
+        previewToggle.classList.toggle('collapsed');
+    });
+
+    // RGB 转 HEX 辅助函数
+    function rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(x => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+        }).join('');
+    }
+
+    // 计算亮度 (基于ITU-R BT.709)
+    function getLuminance(r, g, b) {
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    // 更新预览
+    function updatePreview(value) {
+        const color = getColorForValue(value); // 复用之前的插值函数
+        colorRect.style.backgroundColor = color;
+
+        // 提取 RGB 值
+        const rgbMatch = color.match(/\d+/g);
+        if (rgbMatch) {
+            const [r, g, b] = rgbMatch.map(Number);
+            const hex = rgbToHex(r, g, b);
+            rectHex.textContent = hex.toUpperCase();
+
+            // 根据亮度决定文字颜色（阈值 128）
+            const luminance = getLuminance(r, g, b);
+            if (luminance < 128) {
+                colorRect.classList.add('light-text');
+            } else {
+                colorRect.classList.remove('light-text');
+            }
+        }
+        sliderValue.textContent = value;
+    }
+
+    // 监听滑块
+    valueSlider.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        updatePreview(val);
+    });
+
+    // 预设按钮
+    presetButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = parseInt(btn.dataset.value, 10);
+            valueSlider.value = val;
+            updatePreview(val);
+        });
+    });
+
+    // 初始化
+    updatePreview(0);
 });

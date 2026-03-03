@@ -43,7 +43,30 @@
                 <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
             </div>
             <!-- 日历网格 (JS动态填充) -->
-            <div class="calendar-grid" id="calendarGrid"></div>
+            <div class="calendar-grid" id="calendarGrid"></div><!-- 颜色预览折叠面板（可放在 main 内部，或 sidebar 底部） -->
+            <div class="color-preview-panel" id="color-preview">
+                <div class="preview-header" id="previewToggle">
+                    <span>🎨 颜色映射预览</span>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="preview-content" id="previewContent">
+                    <div class="slider-container">
+                        <label for="valueSlider">数值: <span id="sliderValue">0</span></label>
+                        <input type="range" id="valueSlider" min="-100" max="100" value="0" step="1">
+                    </div>
+                    <div class="color-rect" id="colorRect">
+                        <span id="rectHex">#ffffff</span>
+                    </div>
+                    <div class="preset-buttons">
+                        <button data-value="-100">-100</button>
+                        <button data-value="-70">-70</button>
+                        <button data-value="-40">-40</button>
+                        <button data-value="0">0</button>
+                        <button data-value="50">50</button>
+                        <button data-value="100">100</button>
+                    </div>
+                </div>
+            </div>
             <!-- 小小的提示，不影响交互 -->
             <div class="calendar-footer">点击日期，右侧更新</div>
         </aside>
