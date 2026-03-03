@@ -1,3 +1,60 @@
+/**
+ * 检查资源是否存在（最小化数据传输）
+ * @param {string} url - 要检查的资源URL
+ * @param {number} timeout - 超时时间（毫秒），默认3000ms
+ * @returns {Promise<boolean>} - 资源是否存在
+ */
+async function checkResourceExists(url, timeout = 3000){
+    if(!url)
+        return false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    if(url.startsWith('http://') || url.startsWith('https://')) {
+        // 外部链接：进行简化检查（避免跨域限制）
+        try {
+            // 对于外部资源，使用no-cors模式避免CORS限制
+            // 注意：no-cors模式下无法读取响应状态
+            await fetch(url, {method: 'HEAD', mode: 'no-cors', signal: controller.signal, cache: 'no-store'});
+            clearTimeout(timeoutId);
+            // no-cors模式下，只要请求能发出（网络可达）就认为存在
+            // 注意：这无法区分404和200，但能判断网络可达性
+            return true;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                console.warn(`外部资源检查超时: ${url}`);
+                return false;
+            }
+            console.warn(`外部资源检查失败: ${url}`, error);
+            return false;
+        }
+    }
+    // 内部资源：使用HEAD方法（只获取头部，不下载内容）
+    try {
+        // 使用HEAD方法，只获取响应头，不下载内容主体
+        const response = await fetch(url, {method: 'HEAD', signal: controller.signal, cache: 'no-store', headers: {
+                                    'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache'}});
+        clearTimeout(timeoutId);
+        // 对于内部资源，我们可以精确判断状态码
+        // 200-299: 资源存在且正常
+        // 304: 资源存在且未修改（缓存有效）
+        // 401/403: 资源存在但无权访问（也算存在）
+        // 404: 资源不存在
+        // 其他4xx/5xx: 视为不存在
+        return response.ok || response.status === 304 || 
+               response.status === 401 || response.status === 403;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        // 根据不同错误类型处理
+        if (error.name === 'AbortError') {
+            console.warn(`资源检查超时: ${url}`);
+            return false; // 超时视为不可用
+        }
+        console.warn(`资源检查失败: ${url}`, error);
+        return false;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // ---------- DOM 元素 ----------
     const prevBtn = document.getElementById('prevMonthBtn');
@@ -5,13 +62,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const yearMonthDisplay = document.getElementById('displayYearMonth');
     const calendarGrid = document.getElementById('calendarGrid');
     const selectedDateInfo = document.getElementById('selectedDateInfo');
+    const displayDate = document.getElementById('displayDate');
     const extraContent = document.getElementById('extraContent');   // 右侧附加内容区
+    const getInfo = checkResourceExists("https://workers.dev");
 
     // ---------- 状态 ----------
     let currentDate = new Date();                // 初始今天 (2026-02-26 但基于真实当前)
     let currentYear = currentDate.getFullYear();
     let currentMonth = currentDate.getMonth();   // 0-11
     let selectedDateStr = '';                    // 格式 'YYYY-MM-DD'
+    /** @type{Record<string, {value: number, description: string}>} */
+    let monthData = {};          // 缓存当前月份的数据 { "2026-03-01": { value, description }, ... }
+    let isLoading = false;       // 可选：加载状态
 
     // 辅助函数：格式化数字补零
     const padZero = (num) => (num < 10 ? '0' + num : num);
@@ -21,49 +83,91 @@ document.addEventListener('DOMContentLoaded', function() {
         return new Date(year, month + 1, 0).getDate();
     }
 
+    async function fetchMonthData(year, month) {
+        // 月份从0开始，需要补零
+        const start = `${year}-${padZero(month + 1)}-01`;
+        const end = `${year}-${padZero(month + 1)}-${getDaysInMonth(year, month)}`;
+        const url = `https://calendar-dataset.smart-li.workers.dev?start=${start}&end=${end}`;
+        
+        try {
+            isLoading = true;
+            const response = await fetch(url);
+            if(!response.ok)
+                throw new Error(`HTTP error ${response.status}`);
+            const data = await response.json();
+            monthData = data;   // 直接覆盖，因为月份变了
+        } catch (error) {
+            console.error('获取日历数据失败:', error);
+            monthData = {};
+        } finally {
+            isLoading = false;
+            // 重新刷新右侧显示（如果已有选中日期）
+            if(selectedDateStr)
+                updateRightPanel();
+        }
+    }
+
     // 更新右侧显示内容 (根据 selectedDateStr)
-    function updateRightPanel() {
+    async function updateRightPanel() {
         if (!selectedDateStr) {
             // 无选中日期：显示占位提示
+            displayDate.textContent = "📅 选定日期";
             selectedDateInfo.innerHTML = `<p class="placeholder">📌 请在左侧选择一个日期</p>`;
             extraContent.innerHTML = `<p>这里可以根据日期展示不同的备忘或信息</p>`;
             return;
         }
 
-        // 解析选中日期
-        const [year, month, day] = selectedDateStr.split('-').map(Number);
-        const dateObj = new Date(year, month - 1, day);
-        const weekdaysCN = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-        const weekday = weekdaysCN[dateObj.getDay()];
-
         // 构建右侧主要显示
+        const [year, month, day] = selectedDateStr.split('-').map(Number);
         const formattedDisplay = `${year}年${month}月${day}日`;
-        selectedDateInfo.innerHTML = `
-            <span style="font-size:2rem; margin-right:8px;">📆</span>
-            <span>${formattedDisplay} ${weekday}</span>
-        `;
-
-        // 附加内容：模拟不同日期显示不同文案 (展示“根据点击的日期改变”)
-        let extraMsg = '';
-        const dayOfMonth = day;
-        if (dayOfMonth <= 10) {
-            extraMsg = '✨ 上旬 · 宜制定计划';
-        } else if (dayOfMonth <= 20) {
-            extraMsg = '🚀 中旬 · 宜推进项目';
-        } else {
-            extraMsg = '🌙 下旬 · 宜复盘总结';
+        if(await getInfo){
+            displayDate.textContent = `📅 ${formattedDisplay}`;
+            if(isLoading){
+                selectedDateInfo.innerHTML = `<span>⏳ 数据加载中...</span>`;
+                extraContent.textContent = "⏳ 数据加载中...";
+            }
+            else{
+                const dayInfo = monthData[selectedDateStr];
+                if(dayInfo && dayInfo["value"] >= -100 && dayInfo["description"]){
+                    selectedDateInfo.innerHTML = `<span>心情：${dayInfo["value"]}</span>`;
+                    extraContent.textContent = dayInfo["description"];
+                }
+                else{
+                    selectedDateInfo.innerHTML = `<span>心情：${0}</span>`;
+                    extraContent.textContent = "无数据，一切安好 °▽°";
+                }
+            }
         }
-        // 再加点随机细节（但基于日期固定，不会刷新乱变）
-        if ((dayOfMonth % 2) === 0) {
-            extraMsg += ' 🌟 双日幸运色：蓝色';
-        } else {
-            extraMsg += ' 🌿 单日幸运色：绿色';
+        else{
+            const dateObj = new Date(year, month - 1, day);
+            const weekdaysCN = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            const weekday = weekdaysCN[dateObj.getDay()];
+            selectedDateInfo.innerHTML = `
+                <span style="font-size:2rem; margin-right:8px;">📆</span>
+                <span>${formattedDisplay} ${weekday}</span>
+            `;
+            let extraMsg = `<p>⏳ 数据加载中...</p>`;
+            if(!isLoading){
+                // 附加内容：模拟不同日期显示不同文案 (展示“根据点击的日期改变”)
+                const dayOfMonth = day;
+                if(dayOfMonth <= 10)
+                    extraMsg = '✨ 上旬 · 宜制定计划';
+                else if(dayOfMonth <= 20)
+                    extraMsg = '🚀 中旬 · 宜推进项目';
+                else
+                    extraMsg = '🌙 下旬 · 宜复盘总结';
+                // 再加点随机细节（但基于日期固定，不会刷新乱变）
+                if((dayOfMonth % 2) === 0)
+                    extraMsg += ' 🌟 双日幸运色：蓝色';
+                else
+                    extraMsg += ' 🌿 单日幸运色：绿色';
+            }
+            extraContent.innerHTML = `<p>${extraMsg}</p>`;
         }
-        extraContent.innerHTML = `<p>${extraMsg}</p>`;
     }
 
     // 渲染日历网格
-    function renderCalendar() {
+    async function renderCalendar() {
         // 更新头部年月显示
         yearMonthDisplay.textContent = `${currentYear}年${currentMonth + 1}月`;
 
@@ -118,6 +222,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedDateStr = '';
             }
         }
+        // 渲染完成后获取当月数据
+        const hasInfo = await getInfo;
+        if(hasInfo)
+            fetchMonthData(currentYear, currentMonth);
         // 根据最终selectedDateStr更新右侧 (可能清空，也可能保留)
         updateRightPanel();
     }
@@ -195,31 +303,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // 附加小细节：若首次选中了今天，需要确保高亮 (render时根据selectedDateStr已处理)
     // 但注意由于render中通过循环添加active, 如果selectedDateStr有值，相应格子会加active。
     // 完美。
-
     // 确保年份月份显示与实际相符 (已包含在render)
-});
 
-// 移动端菜单
-document.querySelector('.mobile-menu').addEventListener('click', () => {
-    document.querySelector('.nav-links').classList.toggle('active');
-});
+    // 移动端菜单
+    document.querySelector('.mobile-menu').addEventListener('click', () => {
+        document.querySelector('.nav-links').classList.toggle('active');
+    });
 
-document.querySelector('.mobile-nav-toggle').addEventListener('click', () => {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    sidebar.classList.toggle('active');
-    if (overlay) {
-        overlay.classList.toggle('active');
-    }
-});
+    document.querySelector('.mobile-nav-toggle').addEventListener('click', () => {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        sidebar.classList.toggle('active');
+        if (overlay) {
+            overlay.classList.toggle('active');
+        }
+    });
 
-document.addEventListener('click', (e) => {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    const toggleBtn = document.querySelector('.mobile-nav-toggle');
-    
-    if (overlay && overlay.classList.contains('active') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    }
+    document.addEventListener('click', (e) => {
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+        const toggleBtn = document.querySelector('.mobile-nav-toggle');
+        
+        if (overlay && overlay.classList.contains('active') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+    });
 });

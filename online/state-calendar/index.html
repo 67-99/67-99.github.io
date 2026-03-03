@@ -15,12 +15,13 @@
             <ul class="nav-links">
                 <li><a href="../../index.html">首页</a></li>
                 <li class="dropdown">
-                    <a href="../index.html">项目</a>
+                    <a href="../project/index.html">项目</a>
                     <ul class="dropdown-menu">
-                        <li><a href="../index.html#online">在线项目</a></li>
-                        <li><a href="../index.html#offline">离线项目</a></li>
+                        <li><a href="../project/index.html#online">在线项目</a></li>
+                        <li><a href="../project/index.html#offline">离线项目</a></li>
                     </ul>
                 </li>
+                <li><a href="../shade/index.html">画廊</a></li>
             </ul>
             <!-- 移动端控件 -->
             <div class="mobile-menu">☰</div>
@@ -51,9 +52,10 @@
         <!-- 右侧主要内容区域 · 根据点击的日期变化 -->
         <main class="content" id="content-area">
             <div class="date-card" id="dateDisplayCard">
-                <h2>📅 选定日期</h2>
+                <h2 id="displayDate">📅 选定日期</h2>
                 <div class="selected-date-info" id="selectedDateInfo">
-                    <p class="placeholder">请在左侧日历中选择一个日期</p>
+                <span style="font-size:2rem; margin-right:8px;">⏳</span>
+                <span>数据加载中...</span>
                 </div>
                 <!-- 预留扩展区域：可展示更多内容，符合“根据点击的日期改变” -->
                 <div class="extra-content" id="extraContent">
