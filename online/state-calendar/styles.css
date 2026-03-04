@@ -350,6 +350,7 @@ nav * {
 .extra-content {
     color: #3a546d;
     background: #f8fafc;
+    white-space: pre-line;
     padding: 1rem;
     border-radius: 30px;
     border: 1px dashed #b9c9da;

@@ -171,6 +171,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const dayInfo = monthData[selectedDateStr];
                 if(dayInfo && dayInfo["value"] >= -100 && dayInfo["description"]){
                     dateText.textContent = `心情：${dayInfo["value"]}`;
+                    console.log(dayInfo["description"]);
                     extraContent.textContent = dayInfo["description"];
                 }
                 else{
@@ -373,8 +374,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (!selectedDateStr) return; // 无选中不打开
         // 填充当前选中日期
         modalDate.value = selectedDateStr;
-        modalValue.value = '';
-        modalDescription.value = '';
+        const dayInfo = monthData[selectedDateStr];
+        modalValue.value = dayInfo && dayInfo["value"] >= -100? dayInfo["value"]:'';
+        modalDescription.value = dayInfo && dayInfo["description"]? dayInfo["description"]:'';
         modalError.textContent = '';
         modalOverlay.style.display = 'flex';
     }
@@ -467,7 +469,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 document.addEventListener('DOMContentLoaded', function() {
     // ========== 颜色预览模块 ==========
     const previewToggle = document.getElementById('previewToggle');
-    const previewContent = document.getElementById('previewContent');
     const valueSlider = document.getElementById('valueSlider');
     const sliderValue = document.getElementById('sliderValue');
     const colorRect = document.getElementById('colorRect');
