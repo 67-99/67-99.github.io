@@ -6,6 +6,11 @@
                 "title": "教室查询小程序",
                 "description": "一个可以根据课表文件显示教室占用情况的程序。<br><i>注：文件格式参考中南课表</i>",
                 "name": "classroom-check"
+            },
+            {
+                "title": "情绪日历",
+                "description": "这是一个可以记录并查询情绪/状态的网页日历。<br><i>注:有🪜与无🪜会显示两种不同的内容</i></p>",
+                "name": "state-calendar"
             }
         ]
     },
