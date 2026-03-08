@@ -237,14 +237,15 @@ async function createDownloads(section) {
 }
 
 async function createComponent(section) {
-    if(!section.src.startsWith("http://") && !section.src.startsWith("https://") && !section.src.startsWith("./"))
-        section.src = "content/" + section.src;
+    let src = section.src;
+    if(!src.startsWith("http://") && !src.startsWith("https://") && !src.startsWith("./"))
+        src = "content/" + src;
     return `
-        ${section.title ? `<h2><a href="${section.src}" target="_blank">${section.title}</a></h2>` : ''}
+        ${section.title ? `<h2><a href="${src}" target="_blank">${section.title}</a></h2>` : ''}
         ${section.description ? `<p class="component-description">${section.description}</p>` : ''}
         <div class="web-component-container" id="component-${section.id}">
             <div class="component-loading"><div class="loading-spinner"></div><p>加载中...</p></div>
-            <iframe class="web-component-frame" src="content/${section.src}"
+            <iframe class="web-component-frame" src="${src}"
                 ${section.height ? `style="height: ${section.height}px;"` : ''}
                 ${section.sandbox || 'sandbox="allow-scripts allow-same-origin"'}
                 loading="${section.loading || 'lazy'}"
