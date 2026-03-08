@@ -1,3 +1,5 @@
 [
-    {"id": "calendar","title": "日历","type": "html","src": "https://67-99.github.io/online/state-calendar/index.html","sandbox": "allow-scripts allow-same-origin allow-forms"}
+    {"id": "calendar","title": "日历","type": "html","src": "https://67-99.github.io/online/state-calendar/index.html","sandbox": "allow-scripts allow-same-origin allow-forms"},
+    {"id": "purpose","title": "设计初衷","type": "markdown","src": "purpose.md"},
+    {"id": "design","title": "程序设计","type": "markdown","src": "design.md"}
 ]
