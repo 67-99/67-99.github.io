@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 const originalTitle = document.title;
+let timeoutId = null;
 document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible') {
         // 页面变为可见：启动 5 秒临时替换
