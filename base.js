@@ -55,6 +55,16 @@ async function checkResourceExists(url, timeout = 3000){
     }
 }
 
+function setFavicon(src) {
+    let link = document.querySelector("link[rel*='icon']");
+    if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+    }
+    link.href = src;
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
     // ---------- DOM 元素 ----------
     const navs = document.getElementsByClassName('nav-container');
@@ -77,4 +87,30 @@ document.addEventListener('DOMContentLoaded', async function() {
     [...navs].forEach(element => {
         element.innerHTML = navHTML;
     });
+    setFavicon("https://67-99.github.io/icon/Shade/web-icon.png");
+});
+
+const originalTitle = document.title;
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        // 页面变为可见：启动 5 秒临时替换
+        document.title = '欢迎回来！o(*≧▽≦)ブ';
+        setFavicon('https://67-99.github.io/icon/Shade/icon.png');
+        // 设定新定时器
+        if(timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            document.title = originalTitle;
+            setFavicon("https://67-99.github.io/icon/Shade/web-icon.png");
+            timeoutId = null;
+        }, 5000);
+    } else {
+        // 页面隐藏：如果定时器还在，取消后移除图标
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+            document.title = originalTitle;
+        }
+        const existingLink = document.querySelector("link[rel*='icon']");
+        if(existingLink) existingLink.remove(); // 从DOM中彻底移除该标签
+    }
 });
