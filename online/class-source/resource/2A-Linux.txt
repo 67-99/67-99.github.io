@@ -1,0 +1,443 @@
+$(command)
+Do every items in command output
+
+command ... &
+Do command in backgroud
+
+/etc/passwd: Uses and their 
+/etc/shadow -> permission
+/etc/group: User-groups in the system
+
+
+Permissions:
+0123456789
+drwxrwxrwx
+0: filetype (-: regular, d: directory, l: simbolic link, b: blocked device file, c:charactor divice file, p: pipe line, s: socket)
+123: owner permission
+456: owner-group permission
+789: other user permission
+e.g. prw-rw-r--: A pipe with 664(110110100) permission
+e.g. -rwxr-xr--: A normal file with 754 permition
+e.g. drwxrwsrwt(3777): s-> subfile are owned by the group; t-> the files cold only rm/rename by the creator
+permistion change:
+chmod
+Change mode of the prmission
+chmod [permission nums] file
+chmod {ugoa}{+-=}{rwxXst}[,...] file
+Change the pemmision of the file
+u: User g: Group o: others a: all
++: add -: sub =: set
+chown owner file
+Change the owner of the file
+chgrp group file
+Change the owner-group of the file
+Three of them can add -R to do recursively
+su [root] [-]
+Substitude user
+sudo command
+Super do the command with root permision
+
+
+date [+%a %d %m %T %V %Y]
+Get the time of the system
+
+mkfifo pipeName
+make a pipe
+
+tar -cvf tarName Files
+create a tar file for files
+tar -xvf tarFile
+extract tar file
+
+zip fileName Files
+Zip files to fileName
+unzip [-d .]
+Unzip zip file to current directory
+-d folderName
+Unzip zip file to folder
+
+tr -? [] Sets
+Edit sets based on the commands
+-d set
+Delete set from the characters in Sets
+-s set
+Delete all charaters in set from the repeated characters in Sets
+set settings:
+CHAR*[n] n CHARs
+[:alnum:] -> all letters and digits
+[:alpha:] -> all letters
+[:blank:] -> all horizontal whitespace
+[:digit:] -> all digits
+[:lower:] -> all lower case letters
+[:space:] -> all horizontal or vertical whitespace
+[:upper:] -> all upper case letters
+
+gpg
+To encrypt something
+-c file
+Encrypt the file with passphrase
+-d file.gpg
+De-crypt the file with passphrase
+
+which bash
+Get the path of this bash
+
+set
+Get all variables and functions for local bash
+
+env
+Get all variables and functions for all bash
+
+
+Bash
+A file witten bash commands
+
+execute
+"Bash file.sh" without "x" permission
+Also "filePath" with "x" permission
+
+#!(shebang)
+To tell which shell to run the command
+e.g. Use "which" to find the bash path, usually "/bin/bash"
+
+
+variable
+var1=AAA
+Create a local variable
+e.g. No space between "=" and other elements (space is used to split command and arguments)
+export varL=Envi
+Create a environmental variable
+echo "$var1"
+echo "${var1}"
+Use "$" with double quotation mark to use the variables
+e.g. default is "" (blank)
+{var:{-=?}default}
+-: getDefault
+=: setDefault
+?: Create an Error when var not exist
+
+specials
+$BASH: Get the path of this bash
+$PATH: The environment paths (seperate by ":")
+$0: The name of the process
+$1, ..., $n (n in 1~9): values of command arg n
+$*: All values of command args
+$#: number of args
+$$: pid of the command
+$?: exit state of the most resent command
+$!: pid of the background process
+
+$(command)
+command substitution: get command output to current command position
+
+< file
+Input from standard input
+
+<< EOF strings EOF
+Input with multiple lines
+
+<<< string
+Input with a string
+
+;
+split command into another line
+
+bash
+open a new bash in current window (discard local variables)
+
+export PATH=$PATH:path
+Add path to PATH
+
+$PS1
+The title of the bash (default: "\u@\h:\w\$")
+
+$? e.g.
+The exit state of last command (depends on the command): 0 -> No error, 1~255 -> error
+
+read [-?] var1 [var2 ...] [< console]
+read string from source to vars (split by space n-1 times)
+e.g. default: blank or null
+-p text
+Show text befor input
+-s
+Hide the input content
+e.g. Often use in password
+
+while condition
+do
+	block
+done
+while in bash
+Do block when condition
+
+case var in
+	case1 [| ...])
+		block1;;
+	[case2 [| ...])
+		block2;;]
+	[*)
+		default;;]
+esac
+cases in bash
+;; -> end case
+;& -> continue next case
+;;& -> continue to match next case
+
+
+select newVar in list
+do
+	block
+done
+Let the user to select one item in list as newVar
+NOTE: select is a loop
+
+if condition1
+then
+	block1
+[elif condition2
+ then
+	block2]
+[else
+	block3]
+fi
+if in bash
+e.g. condition is true if return is 0
+
+exit num
+Return a value (exit code)
+
+
+condition
+
+test condition
+[ condition ]
+return the condition state
+return 0 if true
+
+[[condition]]
+*Not all bash supported!
+retrun the condition state with advancement
+support regex, ||, &&
+
+var1 = var2
+var1 != var2
+-d file : is file a directory
+-e file : is file exist
+-f file : is file a regular file
+-r file
+-w file
+-x file
+-z string : is string empty
+num1 -lt num2 : is num1 < num2
+num1 -eq num2 : is num1 = num2
+num1 -gt num2 : is num1 > num2
+
+comm1 || comm2
+comm1 && comm2
+Short-circuit for comm2
+
+set -euo pipefail
+Let the script exit when error occurs
+-e: Exit when error command occurs
+-u: Exit when using unbond variables
+-o pipefail: Exit when error sub-command occurs
+note: -e could be closed by +e
+
+file path
+Give the infomation of the file which the path is pointing to
+-b
+Brifely showing the info (no fileName)
+
+[ num1 -le num2 ]: num1<=num2
+[ num1 -ge num2 ]: num1>=num2
+
+for var in list
+do
+	block
+done
+Note: if a non-list varianle in list position, the loop will only go once (var=list)
+
+{m..n}
+a list of numbers from m to n
+
+break
+continue
+Same as other laguages
+
+$((poly))
+expr ploy  # with spaces
+Do math in poly
+%: mod
+^: xor
+Use \* in expr to milti
+Only int an be used
+
+((var_command))
+((var++))
+((var+=1))
+Do variable command as C/C++
+
+let var=poly  # no spaces
+[Unrecommanded] Do math
+
+bc [-l] file
+bc -l <<< ""  # or pipe (|)
+Do float math in poly string
+-l: Use float numbers
+%: UNAVALABLE
+^: power
+sqrt(x): root
+c(x): cos
+s(x): sin
+
+
+Array
+A dict[int, string] array
+
+(items)
+Create an Array
+
+arr[n]=item
+Set an item (n can be any)
+
+arr1+=(arr2)
+Add items to the end
+
+unset arr[n]
+pop arr[n]
+
+arr[i]
+Get the item
+Support negative
+
+arr[@]
+Get all items (arr.values())
+
+!arr[@]
+Get all index (arr.keys())
+
+#arr[@]
+Get the length of the arry (len(arr))
+
+arr[@]:n
+Get array from n to the end
+
+arr[@]:n:len
+Get len items from arr[n]
+
+(${arr1[@]} ${arr2[@]} items)
+Combine arrays
+
+
+Process
+
+ps
+All runing process
+-e
+Process from the system
+-f
+More infomation
+
+top
+Show all active pids
+
+Ctrl+Z
+Stop current process and put it to background
+
+fg process
+Put process to front
+
+bg process
+Put process to continue in background
+
+nice -n priority path
+Start path with a priority
+
+renice -n priority -p pid
+Rename the priority of pid
+
+kill
+Kill process
+-l
+Show all signals that can send by kill
+-[num]
+Kill with send num-th signal
+
+pstree
+Show a tree of all process
+
+function funcName {
+	block
+}
+funcName (){  # NO items in branket!
+	block
+}
+Create a function
+
+local var
+Create a var as local variable
+
+return & exit
+Return: use in functions
+Exit: use in bash (teminal)
+
+bash -x file
+Run file in debug mode
+
+tee files <<< content
+Output content to all outStream and std::out
+tee -a file <<< string 1>&2
+Append (-a) string to file and std::error
+
+getopts optStr var
+Get options to var one by one (often use in while loop)
+optStr:
+Use ":" at the start to silent error parameters (illegal option)
+Use "x:" to add argument with "-x" option
+var == "?" when option is not in optStr
+
+kill -9 pid
+Force to kill pid
+
+trap command signal
+Do command when get signal
+
+trap "command" SIGINT (or 2)
+Catch signal interrupt (Ctrl+C)
+
+{m..n}
+Numbers should be written in code, not variables
+
+seq n
+seq m n
+seq m sep n
+return a array of the sequence
+
+When overwrite default command, use "command commName " to refer the default command.
+
+echo "$var1"
+echo "${var1}"
+Use "$" with double quotation mark to use the variables
+e.g. default is "" (blank)
+${var^^}
+get the UPPERCASE of var
+${var,,}
+get the lowercase of var
+${#var}
+get the length of the variable
+${var:n}
+get from n-th character
+${var:n:len}
+get len characters start from n-th
+${var/search/replace}
+Replace the first search with replace
+${var:{-=?}default}
+-: getDefault
+=: setDefault
+?: Create an Error when var not exist
+
+
+#: Length of sth
+@: array of sth
+*: string format array of sth
+:n:len -> slice sth

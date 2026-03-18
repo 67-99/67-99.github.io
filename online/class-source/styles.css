@@ -1,0 +1,245 @@
+/* 基础样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+body {
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+/* 导航栏样式 */
+nav {
+    background: linear-gradient(135deg, #006600 0%, #11998e 100%);
+    color: white;
+    padding: 1rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+nav * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+.nav-links {
+    display: flex;
+    list-style: none;
+}
+.nav-links li {
+    margin-left: 2rem;
+    position: relative;
+}
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.3s;
+    padding: 0.5rem 0;
+    display: block;
+}
+.nav-links a:hover {
+    opacity: 0.8;
+}
+
+/* 下拉菜单样式 */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    min-width: 180px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    list-style: none;
+    padding: 0.5rem 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+.dropdown:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.dropdown-menu li {
+    margin: 0;
+}
+.dropdown-menu a {
+    color: #333;
+    padding: 0.75rem 1.5rem;
+    display: block;
+    transition: background-color 0.2s;
+}
+.dropdown-menu a:hover {
+    background-color: #f5f5f5;
+    opacity: 1;
+}
+
+/* ----- 新增内容区域样式 ----- */
+.content {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    flex: 1;
+}
+
+/* 页面主标题 (动态生成) */
+.content h1 {
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: #1e2b3c;
+    margin-bottom: 2rem;
+    border-left: 6px solid #11998e;
+    padding-left: 1.2rem;
+}
+
+/* 分类标题 */
+.category-title {
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: #0a3b3b;
+    margin: 2rem 0 1.2rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.category-title i {
+    color: #11998e;
+    font-size: 1.6rem;
+}
+.category-title span {
+    background: #e9ecef;
+    font-size: 0.9rem;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    color: #2d5a5a;
+    margin-left: 1rem;
+}
+
+/* 卡片网格 */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+/* 卡片本身 */
+.card {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
+    padding: 1.2rem 1.2rem 1.2rem 1.2rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #edf2f7;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 26px rgba(0, 80, 70, 0.1);
+    border-color: #c0e0da;
+}
+
+/* 卡片上半部：图标 + 文件名 */
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    min-width: 0; /* 防止溢出 */
+}
+.card-header i {
+    font-size: 2.2rem;
+    width: 2.2rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* 文件类型图标颜色 */
+.file-icon-txt { color: #6c757d; }        /* 文本 */
+.file-icon-docx { color: #2b5797; }       /* Word 蓝 */
+.file-icon-xlsx { color: #1e7145; }       /* Excel 绿 */
+.file-icon-pdf { color: #d32f2f; }        /* 红 (预留) */
+.file-icon-default { color: #11998e; }    /* 其他 */
+
+.file-name {
+    font-weight: 500;
+    word-break: break-word;
+    line-height: 1.4;
+    flex: 1;
+    color: #1e2b3c;
+}
+
+/* 下载按钮 */
+.btn-download {
+    background: #f0f9f7;
+    color: #0d6b5c;
+    border: 1px solid #b8dfd6;
+    border-radius: 40px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    width: 100%;
+    margin-top: 0.4rem;
+}
+.btn-download i {
+    font-size: 0.95rem;
+}
+.btn-download:hover {
+    background: #11998e;
+    color: white;
+    border-color: #11998e;
+}
+
+/* 加载/错误提示 */
+.loading, .error-message {
+    text-align: center;
+    padding: 3rem;
+    font-size: 1.2rem;
+    color: #718096;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+}
+.error-message {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+    .content {
+        padding: 0 1rem;
+    }
+    .category-title {
+        font-size: 1.5rem;
+    }
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+}
