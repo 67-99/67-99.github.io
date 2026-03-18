@@ -54,7 +54,7 @@ async function loadAllContent() {
         // 显示加载中
         contentArea.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-pulse"></i> 正在加载资料清单...</div>';
 
-        // 1. 获取资源数据 (与 index.html 同层的 resource.json)
+        // 1. 获取资源数据
         const response = await fetch('resource.json');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();  // 格式: { "计算机": [...], "数学": [...], ... }
@@ -70,7 +70,7 @@ async function loadAllContent() {
             html += `
                 <div class="category-title">
                     <i class="fa-solid fa-folder-open"></i>
-                    <span>${escapeHtml(category)}</span>
+                    <h2>${escapeHtml(category)}</h2>
                     <span class="count">${files.length}项</span>
                 </div>
                 <div class="card-grid">

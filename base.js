@@ -94,7 +94,7 @@ const originalTitle = document.title;
 let timeoutId = null;
 document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible') {
-        // 页面变为可见：启动 5 秒临时替换
+        // 页面变为可见：启动 3 秒临时替换
         document.title = '欢迎回来！o(*≧▽≦)ブ';
         setFavicon('https://67-99.github.io/icon/Shade/icon.png');
         // 设定新定时器
@@ -103,7 +103,7 @@ document.addEventListener('visibilitychange', function() {
             document.title = originalTitle;
             setFavicon("https://67-99.github.io/icon/Shade/web-icon.png");
             timeoutId = null;
-        }, 5000);
+        }, 3000);
     } else {
         // 页面隐藏：如果定时器还在，取消后移除图标
         if (timeoutId) {
