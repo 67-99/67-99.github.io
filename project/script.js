@@ -44,7 +44,12 @@ function escapeHtml(encodedStr) {
         i++;
     }
     
-    return result;
+    return result
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 // 自定义markdown渲染器
