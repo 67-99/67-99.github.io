@@ -2,7 +2,7 @@
 
 在[城市天际线（cities:skylines）](https://store.steampowered.com/app/255710/Cities_Skylines/)中，可以使用模组进行路牌的设计与放置，但是现有的路牌往往是美国、欧洲风格的，中式路牌少；而游戏和模组内并没有预设交通标志组件（如箭头、多边形贴图），只能用特殊的箭头字体进行拼接组合，使得路牌绘制过程异常艰难。因此，开发路牌生成器便提上了日程。
 
-由于没有模组开发的经历，以及天际线迭代出[城市天际线2（cites:skylines 2）](https://store.steampowered.com/app/255710/Cities_Skylines/)后关闭了创意工坊，转而变为paradox模组平台，所以暂无模组上线计划，在完善路牌生成后可能会试图开发模组。
+由于没有模组开发的经历，以及天际线迭代出[城市天际线2（cites:skylines 2）](https://store.steampowered.com/app/255710/Cities_Skylines/)后关闭了创意工坊，转而变为paradox模组平台，所以模组开发过程十分艰难，目前正在制作，暂无上线计划。
 
 ### 设计目标
 
