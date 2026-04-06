@@ -12,7 +12,7 @@
 
 第一个难题是如何将写出的窗口挂载到游戏中。在仅有的官方[Wiki](https://cs2.paradoxwikis.com/UI_Modding#cs2/api)中，提供了4个挂载点：`Menu`、`Game`、`GameTopLeft`和`GameTopRight`，分别对应主菜单、游戏界面、游戏左上角、游戏右上角。当我试图将按钮挂载到左上角时，按钮成功地显示在了其他按钮后面；而当我通过挂载到游戏界面中，试图显示一个窗口panel时，它却怎么也显示不出来。通过代码输出所有[挂载点](.)后，我依旧找不到能挂载到界面右侧的那个挂载点。最后我研究了现有的的模组[RoadBuilder](https://github.com/JadHajjar/RoadBuilder-CSII)的UI挂载，才发现其实是通过`Game`挂载点和`CSS`样式实现的。
 
-第二个难题是UI与C#端交互。这个模组的本质是用C#生成内容，然后在游戏中显示，所以会涉及图片和C#中的类的显示。对于图片，UI可以通过`<img src={``data:image/png;base64,${image}``}/>`显示图像`base64`字符串，所以可以编码后显示字符串。而对于C#结构体/类的显示就要根据C#-TS交互原理设计了。两侧交互的底层原理是序列化为json后传递，所以对于简单类型如`Vector3`可以在TSX中用`interface`表示并绑定类型，复杂类型可以通过传递json后再拆开（如天际线使用`Colossal.Json.JSON`）。
+第二个难题是UI与C#端交互。这个模组的本质是用C#生成内容，然后在游戏中显示，所以会涉及图片和C#中的类的显示。对于图片，UI可以通过```<img src={`data:image/png;base64,${image}`}/>```显示图像`base64`字符串，所以可以编码后显示字符串。而对于C#结构体/类的显示就要根据C#-TS交互原理设计了。两侧交互的底层原理是序列化为json后传递，所以对于简单类型如`Vector3`可以在TSX中用`interface`表示并绑定类型，复杂类型可以通过传递json后再拆开（如天际线使用`Colossal.Json.JSON`）。
 
 *最麻烦的是代码测试，由于天际线的体量很大，若我通过VS把程序绑在游戏上，游戏就会卡住，于是只能先构建，再启动游戏，每次进存档都要花上1分钟，所以最后就是来来回回地打开、关上游戏……*
 
@@ -109,10 +109,10 @@ private void GetMousePosition()
 
 ```mermaid
 sequenceDiagram
-participant UI as UI层
-participant Sign as 路牌对象
-participant Task as 后台线程
-participant Queue as 主线程任务队列
+as UI层 (ModDataUISystem)
+participant Sign as 路牌对象 (SignTemplate)
+participant Task as 后台线程 (Task.Run)
+participant MainThread as 主线程队列 (ConcurrentQueue<Action>)
 
 UI->>Sign: 修改路牌内容
 activate Sign
