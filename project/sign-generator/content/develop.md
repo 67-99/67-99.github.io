@@ -109,7 +109,7 @@ private void GetMousePosition()
 
 ```mermaid
 sequenceDiagram
-as UI层 (ModDataUISystem)
+participant UI as UI层 (ModDataUISystem)
 participant Sign as 路牌对象 (SignTemplate)
 participant Task as 后台线程 (Task.Run)
 participant MainThread as 主线程队列 (ConcurrentQueue<Action>)
