@@ -134,7 +134,7 @@ alt 成功完成
 else 任务被取消
     Sign->>Sign: 放弃本次结果，等待下次修改
 else 发生异常
-    Sign->>Sign: 记录错误日志
-end
+    Sign->>Sign: 记录错误日志;
 
+end
 ```
