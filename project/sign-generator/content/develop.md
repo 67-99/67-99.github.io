@@ -112,7 +112,7 @@ sequenceDiagram
 participant UI as UI层 (ModDataUISystem)
 participant Sign as 路牌对象 (SignTemplate)
 participant Task as 绘图后台线程 (Task.Run)
-participant MainThread as "主线程队列 (ConcurrentQueue<Action>)"
+participant MainThread as 主线程队列 (ConcurrentQueue＜Action＞)
 UI->>Sign: 修改路牌内容
 activate Sign
 Sign->>Sign: 取消前一个绘图任务
@@ -128,8 +128,8 @@ Task-->>Sign: 任务完成（或被取消）
 deactivate Task
 alt 成功完成
     Sign->>UI: 触发“绘图完成”事件
-    UI->>Queue: 将“更新图像显示”操作入队
-    Queue->>UI: 主线程每帧取操作并执行
+    UI->>MainThread: 将“更新图像显示”操作入队
+    MainThread->>UI: 主线程每帧取操作并执行
     UI->>UI: 刷新界面上的图片
 else 任务被取消
     Sign->>Sign: 放弃本次结果，等待下次修改
