@@ -113,14 +113,12 @@ participant UI as UI层 (ModDataUISystem)
 participant Sign as 路牌对象 (SignTemplate)
 participant Task as 后台线程 (Task.Run)
 participant MainThread as 主线程队列 (ConcurrentQueue<Action>)
-
 UI->>Sign: 修改路牌内容
 activate Sign
 Sign->>Sign: 取消前一个绘图任务
 Sign->>Sign: 创建新取消令牌
 Sign->>Task: 启动异步绘图任务
 deactivate Sign
-
 activate Task
 loop 绘图步骤（频繁检查取消状态）
     Task->>Task: 计算尺寸
@@ -128,7 +126,6 @@ loop 绘图步骤（频繁检查取消状态）
 end
 Task-->>Sign: 任务完成（或被取消）
 deactivate Task
-
 alt 成功完成
     Sign->>UI: 触发“绘图完成”事件
     UI->>Queue: 将“更新图像显示”操作入队
@@ -139,4 +136,5 @@ else 任务被取消
 else 发生异常
     Sign->>Sign: 记录错误日志
 end
+
 ```

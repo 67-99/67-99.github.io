@@ -68,8 +68,10 @@ renderer.code = function(...args) {
         language = args[1] || '';
         isEscaped = args[2] || false;
     }
-    if(language === 'mermaid')
+    if(language === 'mermaid'){
+    console.log('Mermaid code passed to renderer:', JSON.stringify(code));
         return `<div class="mermaid">${code}</div>`;
+    }
     if(language)
         return `<pre><code class="language-${language}">${isEscaped ? code : escapeHtml(code)}</code></pre>`;
     return `<pre><code>${isEscaped ? code : escapeHtml(code)}</code></pre>`;
