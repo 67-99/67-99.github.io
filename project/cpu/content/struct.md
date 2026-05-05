@@ -11,7 +11,7 @@
 
 <table>
   <thead>
-    <tr><th colspan="4" style="text-align: center;">
+    <tr><th colspan="5" style="text-align: center;">
         <strong>OPcode 模式与动作编码表</strong></th>
     </tr>
     <tr>
@@ -19,46 +19,63 @@
       <th style="text-align: center;">模式名称</th>
       <th style="text-align: center;">动作编码</th>
       <th style="text-align: center;">动作描述</th>
+      <th style="text-align: center;">助记符</th>
     </tr>
   </thead>
   <tbody style="text-align: center;">
     <tr>
       <td rowspan="8"><code>0x00</code><br><code>0x10</code></td>
       <td rowspan="8"><strong>Calc</strong><br>算术运算</td>
-    <td><code>0x0</code></td><td><code>+</code>(加法)</td></tr>
-    <tr><td><code>0x1</code></td><td><code>-</code>(减法)</td></tr>
-    <tr><td><code>0x2</code></td><td><code>AND</code>(与运算)</td></tr>
-    <tr><td><code>0x3</code></td><td><code>OR</code>(或运算)</td></tr>
-    <tr><td><code>0x4</code></td><td><code>NOT</code>(非运算)</td></tr>
-    <tr><td><code>0x5</code></td><td><code>XOR</code>(异或运算)</td></tr>
-    <tr><td><code>0x6</code></td><td><code>&lt;&lt;</code>(左移)</td></tr>
-    <tr><td><code>0x7</code></td><td><code>&gt;&gt;</code>(右移)</td></tr>
+    <td><code>0x0</code></td><td><code>+</code>(加法)</td><td><code>add</code></td></tr>
+    <tr><td><code>0x1</code></td><td><code>-</code>(减法)</td><td><code>sub</code></td></tr>
+    <tr><td><code>0x2</code></td><td><code>AND</code>(与运算)</td><td><code>and</code></td></tr>
+    <tr><td><code>0x3</code></td><td><code>OR</code>(或运算)</td><td><code>or</code></td></tr>
+    <tr><td><code>0x4</code></td><td><code>NOT</code>(非运算)</td><td><code>not</code></td></tr>
+    <tr><td><code>0x5</code></td><td><code>XOR</code>(异或运算)</td><td><code>xor</code></td></tr>
+    <tr><td><code>0x6</code></td><td><code>&lt;&lt;</code>(左移)</td><td><code>shl</code></td></tr>
+    <tr><td><code>0x7</code></td><td><code>&gt;&gt;</code>(右移)</td><td><code>shr</code></td></tr>
     <tr>
       <td rowspan="6"><code>0x08</code></td>
       <td rowspan="6"><strong>RAM</strong><br>内存访问</td>
-    <td><code>0x0</code></td><td>读<code>Operand1</code>&<code>Operand2</code></td></tr>
-    <tr><td><code>0x1</code></td><td>读 (非单tic)</td></tr>
-    <tr><td><code>0x2</code></td><td>读、写</td></tr>
-    <tr><td><code>0x3</code></td><td>写 (非单tic)</td></tr>
-    <tr><td><code>0x4</code></td><td>读 (单tic)</td></tr>
-    <tr><td><code>0x7</code></td><td>写 (单tic)</td></tr>
+    <td><code>0x0</code></td><td>读<code>Operand1</code>&<code>Operand2</code></td><td><code>ramrr</code></td></tr>
+    <tr><td><code>0x1</code></td><td>读 (非单tic)</td><td><code>ram_r</code></td></tr>
+    <tr><td><code>0x2</code></td><td>读、写</td><td><code>ramrw</code></td></tr>
+    <tr><td><code>0x3</code></td><td>写 (非单tic)</td><td><code>ram_w</code></td></tr>
+    <tr><td><code>0x4</code></td><td>读 (单tic)</td><td><code>ramr</code></td></tr>
+    <tr><td><code>0x7</code></td><td>写 (单tic)</td><td><code>ramw</code></td></tr>
     <tr>
       <td rowspan="6"><code>0x20</code></td>
       <td rowspan="6"><strong>If/JUMP</strong><br>条件跳转/比较</td>
-    <td><code>0x0</code></td><td><code>=</code>(等于)</td></tr>
-    <tr><td><code>0x1</code></td><td><code>≠</code>(不等于)</td></tr>
-    <tr><td><code>0x2</code></td><td><code>&lt;</code>(小于)</td></tr>
-    <tr><td><code>0x3</code></td><td><code>≤</code>(小于等于)</td></tr>
-    <tr><td><code>0x4</code></td><td><code>&gt;</code>(大于)</td></tr>
-    <tr><td><code>0x5</code></td><td><code>≥</code>(大于等于)</td></tr>
+    <td><code>0x0</code></td><td><code>=</code>(等于)</td><td><code>JE</code></td></tr>
+    <tr><td><code>0x1</code></td><td><code>≠</code>(不等于)</td><td><code>JNE</code></td></tr>
+    <tr><td><code>0x2</code></td><td><code>&lt;</code>(小于)</td><td><code>JB</code></td></tr>
+    <tr><td><code>0x3</code></td><td><code>≤</code>(小于等于)</td><td><code>JBE</code></td></tr>
+    <tr><td><code>0x4</code></td><td><code>&gt;</code>(大于)</td><td><code>JA</code></td></tr>
+    <tr><td><code>0x5</code></td><td><code>≥</code>(大于等于)</td><td><code>JAE</code></td></tr>
     <tr><td><code>0x30</code></td><td><strong>call</strong><br>函数调用</td>
-      <td colspan="2" style="text-align: center;"><code>PC</code>（代码位置）压栈</td></tr>
+      <td colspan="2" style="text-align: center;"><code>PC</code>（代码位置）压栈</td><td><code>CALL</code></td></tr>
     <tr><td><code>0x38</code></td><td><strong>ret</strong><br>函数返回</td>
-      <td colspan="2" style="text-align: center;"><code>PC</code>（代码位置）弹栈</td></tr>
+      <td colspan="2" style="text-align: center;"><code>PC</code>（代码位置）弹栈</td><td><code>RET</code></td></tr>
   </tbody>
 </table>
 
 > 注：所有动作编码均按升序排列，RAM模式中单tic标志位于bit3(0x4)
+
+对于寄存器操作数，助记符如下：
+|操作数|助记符|名称|
+|:--:|:--:|:--:|
+|`0x0`|reg0|寄存器0|
+|`0x1`|reg1|寄存器1|
+|`0x2`|reg2|寄存器2|
+|`0x3`|reg3|寄存器3|
+|`0x4`|reg4|寄存器4|
+|`0x5`|reg5|寄存器5|
+|`0x6`|tick|PC|
+|`0x7`|in<br>out|输入<br>输出|
+|`0x40`|stack|栈|
+|`0x80`|ram|RAM|
+
+在这个“电脑”中，一条指令由4Bytes组成，分别为`Opcode`、`In1`、`In2`、`Out`。若指令不需要其中一部分，则该部分无所谓填什么，但需要占位。
 
 ### [logisim](https://cburch.com/logisim/)电路
 [logisim](https://cburch.com/logisim/)中的元件与图灵完备中提供的并不相同，如logisim中没有`dualReg`、`dualRAM`、`stack`。为了最大程度复刻但不添加过多新元器件，我决定微调`dualRAM`，并与`dualReg`、`stack`使用`regester`与`RAM`实现，具体实现方式如下：
