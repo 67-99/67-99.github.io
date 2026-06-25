@@ -1,12 +1,16 @@
 {
     "计算机":[
         {"name": "Linux-bash", "type": "txt", "src": "2A-Linux.txt"},
-        {"name": "计算机系统2A", "type": "docx", "src": "2A-hardware.docx"}
+        {"name": "计算机系统2A", "type": "docx", "src": "2A-hardware.docx"},
+        {"name": "计算机系统2B-硬件部分", "type": "docx", "src": "2B-hardware.docx"},
+        {"name": "计算机系统2B-OS部分", "type": "docx", "src": "2B-OS.docx"},
+        {"name": "算法与人工智能-AI部分", "type": "docx", "src": "algo-AI.docx"}
     ],
     "数学":[
         {"name": "微积分1", "type": "docx", "src": "Calculus1.docx"},
         {"name": "微积分2", "type": "docx", "src": "Calculus2.docx"},
-        {"name": "数理逻辑", "type": "docx", "src": "Math-logic.docx"}
+        {"name": "数理逻辑", "type": "docx", "src": "Math-logic.docx"},
+        {"name": "概率论与数理统计", "type": "docx", "src": "Math-prob.docx"}
     ],
     "政治":[
         {"name": "大学生心理", "type": "xlsx", "src": "大学生心理健康-人名表.xlsx"}
