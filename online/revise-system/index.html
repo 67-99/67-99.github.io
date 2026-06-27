@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>做题系统</title>
+    <!-- MathJax v3 -->
+    <script>
+        MathJax = {
+            tex: { inlineMath: [
+                    ['$', '$'],
+                    ['\\(', '\\)']
+                ] },
+            svg: { fontCache: 'global' },
+            options: { skipHtmlTypes: 'script' }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async>
+    </script>
+    <!-- Mermaid -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js">
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+    <script src="../../base.js" defer></script>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container"></div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div id="app">
+        <!-- 标题页 -->
+        <div id="page-title" class="page active">
+            <div class="title-content">
+                <h1>📚 答题系统</h1>
+                <p class="subtitle">选择题目集，开始练习</p>
+                <div class="set-selector">
+                    <label for="set-combo">选择题目集：</label>
+                    <select id="set-combo"></select>
+                </div>
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+                    <button id="btn-upload" class="btn-secondary">📤 上传本地 JSON</button>
+                    <button id="btn-clear-cache" class="btn-secondary" style="background: #e2e8f0; color: #b91c1c;">🗑️ 清除答案缓存</button>
+                </div>
+                <button id="btn-start" class="btn-primary">开始答题</button>
+                <div id="default-hint" style="margin-top:12px;font-size:0.9rem;color:#888;">
+                    💡 首次使用将自动生成默认题库，也可上传自定义 JSON 或从服务器加载题库。
+                </div>
+                <div id="load-status" style="margin-top: 8px; font-size: 0.9rem; color: #2563eb;"></div>
+            </div>
+        </div>
+
+        <!-- 答题页 -->
+        <div id="page-quiz" class="page">
+            <div class="quiz-layout">
+                <!-- 左侧题目列表 -->
+                <div class="quiz-sidebar">
+                    <div class="sidebar-header">📋 题目列表</div>
+                    <ul id="question-list"></ul>
+                </div>
+                <!-- 右侧题目内容 -->
+                <div class="quiz-main">
+                    <div id="question-container">
+                        <!-- 由 JS 动态渲染 -->
+                    </div>
+                    <div class="quiz-nav">
+                        <button id="btn-prev" class="btn-secondary">上一题</button>
+                        <button id="btn-submit" class="btn-secondary" style="color: white; background-color: #114599;">提交答案</button>
+                        <button id="btn-next" class="btn-secondary" style="display:none;">下一题</button>
+                        <button id="btn-finish" class="btn-danger">结束答题</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 完成页：错题 + 简答题回顾 -->
+        <div id="page-finish" class="page">
+            <div class="finish-content">
+                <h2>🏁 答题完成</h2>
+                <div id="stats-text"></div>
+                <div id="review-container">
+                    <div class="review-section">
+                        <h3>❌ 错题回顾</h3>
+                        <div id="wrong-list"></div>
+                    </div>
+                    <div class="review-section">
+                        <h3>📝 简答题回顾</h3>
+                        <div id="essay-list"></div>
+                    </div>
+                </div>
+                <button id="btn-restart" class="btn-primary">重新开始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件输入 -->
+    <input type="file" id="file-input" accept=".json" style="display:none" />
+</body>
+</html>
