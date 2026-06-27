@@ -464,19 +464,23 @@ function showQuestion(index) {
     const q = pageQuestions[index];
     const record = getRecord(currentSetName, q.id);
 
+    // 有记录（已提交）时才显示选项解析
+    const showExplanations = !!record;
+
     let html = `<div class="question-title">第${q.id}题  [${typeShort(q.type)}]  ${renderMarkdown(q.question)}</div>`;
 
     const userAns = (record && record.userAnswer !== undefined) ? record.userAnswer : (selectedAnswers[q.id] || null);
     if (q.type === 'single') {
-        html += renderSingleChoice(q, userAns);
+        html += renderSingleChoice(q, userAns, showExplanations);
     } else if (q.type === 'multiple') {
-        html += renderMultipleChoice(q, userAns);
+        html += renderMultipleChoice(q, userAns, showExplanations);
     } else if (q.type === 'fill') {
         html += renderFill(q, userAns);
     } else if (q.type === 'essay') {
         html += renderEssay(q, userAns);
     }
 
+    // 如果已提交，显示结果框（含整体解析）
     if (record) {
         const correct = record.correct;
         const expl = q.explanation || '';
@@ -518,11 +522,11 @@ function typeShort(t) {
     return { single: '单选', multiple: '多选', fill: '填空', essay: '简答' } [t] || t;
 }
 
-function renderSingleChoice(q, userAns) {
+function renderSingleChoice(q, userAns, showExplanations = false) {
     let html = '<div class="options-group">';
     q.options.forEach((opt, idx) => {
         const checked = (userAns === opt) ? 'selected' : '';
-        const expl = (q.option_explanations && q.option_explanations[idx]) ? q.option_explanations[idx] : '';
+        const expl = (showExplanations && q.option_explanations && q.option_explanations[idx]) ? q.option_explanations[idx] : '';
         html += `<div class="option-item ${checked}" data-optindex="${idx}" data-value="${escapeHtml(opt)}">${renderMarkdown(opt)}`;
         if (expl) html += `<div class="option-explain">${renderMarkdown(expl)}</div>`;
         html += '</div>';
@@ -531,12 +535,12 @@ function renderSingleChoice(q, userAns) {
     return html;
 }
 
-function renderMultipleChoice(q, userAns) {
+function renderMultipleChoice(q, userAns, showExplanations = false) {
     let html = '<div class="options-group">';
     const selectedSet = new Set(Array.isArray(userAns) ? userAns : []);
     q.options.forEach((opt, idx) => {
         const checked = selectedSet.has(opt) ? 'selected' : '';
-        const expl = (q.option_explanations && q.option_explanations[idx]) ? q.option_explanations[idx] : '';
+        const expl = (showExplanations && q.option_explanations && q.option_explanations[idx]) ? q.option_explanations[idx] : '';
         html += `<div class="option-item ${checked}" data-optindex="${idx}" data-value="${escapeHtml(opt)}">${renderMarkdown(opt)}`;
         if (expl) html += `<div class="option-explain">${renderMarkdown(expl)}</div>`;
         html += '</div>';
