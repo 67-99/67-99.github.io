@@ -56,7 +56,11 @@ const btnSubmit = document.getElementById('btn-submit');
 const btnFinish = document.getElementById('btn-finish');
 const btnRestart = document.getElementById('btn-restart');
 const btnUpload = document.getElementById('btn-upload');
-const btnClearCache = document.getElementById('btn-clear-cache');
+const btnManage = document.getElementById('btn-manage');
+const btnBackFromManage = document.getElementById('btn-back-from-manage');
+const manageSetList = document.getElementById('manage-set-list');
+const manageCacheList = document.getElementById('manage-cache-list');
+const btnClearAllCache = document.getElementById('btn-clear-all-cache');
 const fileInput = document.getElementById('file-input');
 const questionList = document.getElementById('question-list');
 const questionContainer = document.getElementById('question-container');
@@ -317,7 +321,9 @@ async function init() {
     });
     btnUpload.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', handleFileUpload);
-    btnClearCache.addEventListener('click', clearCache);
+    btnManage.addEventListener('click', showManagePage);
+    btnBackFromManage.addEventListener('click', () => showPage('title'));
+    btnClearAllCache.addEventListener('click', clearAllCache);
 }
 
 // ============ 刷新题库下拉列表 ============
@@ -360,7 +366,6 @@ function refreshSetCombo() {
 }
 
 // ============ 加载远程题库 ============
-
 async function loadRemoteSets() {
     const statusEl = loadStatus;
     try {
@@ -471,22 +476,6 @@ function handleFileUpload(e) {
     fileInput.value = '';
 }
 
-// ============ 清除缓存 ============
-function clearCache() {
-    if (confirm('确定要清除所有答题记录吗？此操作不可撤销。')) {
-        localStorage.removeItem('quiz_records');
-        records = {};
-        if (pageQuiz.classList.contains('active')) {
-            showQuestion(currentIndex);
-            pageQuestions.forEach((q, idx) => updateListItemMark(idx));
-        }
-        if (loadStatus) {
-            loadStatus.textContent = '🗑️ 答案缓存已清除';
-            setTimeout(() => { if (loadStatus) loadStatus.textContent = ''; }, 3000);
-        }
-    }
-}
-
 // ============ 记录管理 ============
 function loadRecords() {
     const stored = localStorage.getItem('quiz_records');
@@ -508,6 +497,149 @@ function setRecord(setName, qid, userAnswer, correct) {
     const key = getRecordKey(setName, qid);
     records[key] = { userAnswer, correct, timestamp: new Date().toISOString() };
     saveRecords();
+}
+
+// ============ 管理页面 ============
+function showManagePage() {
+    showPage('manage');
+    renderManagePage();
+}
+
+function renderManagePage() {
+    // ----- 左侧题库列表 -----
+    const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
+    const setNames = Object.keys(allSets);
+    manageSetList.innerHTML = '';
+    if (setNames.length === 0) {
+        manageSetList.innerHTML = '<div class="manage-empty">暂无题库</div>';
+    } else {
+        setNames.forEach(name => {
+            const isDefault = QUESTION_SETS.hasOwnProperty(name);
+            const isUpload = loadedRemoteSets.hasOwnProperty(name);
+            const div = document.createElement('div');
+            div.className = 'set-item';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'set-name';
+            nameSpan.textContent = name;
+            const tag = document.createElement('span');
+            tag.className = 'set-tag' + (isDefault ? ' default' : ' upload');
+            tag.textContent = isDefault ? '默认' : '上传';
+            nameSpan.appendChild(tag);
+            div.appendChild(nameSpan);
+
+            if (isUpload) {
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-del-set';
+                delBtn.textContent = '✕';
+                delBtn.title = '删除该题库';
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`确定要删除题库“${name}”吗？此操作不可撤销。`)) {
+                        delete loadedRemoteSets[name];
+                        refreshSetCombo();
+                        // 如果当前选中的是这个题库，切换到默认题库
+                        if (currentSetName === name) {
+                            const allSetsNow = { ...QUESTION_SETS, ...loadedRemoteSets };
+                            const first = Object.keys(allSetsNow)[0];
+                            if (first) {
+                                setCombo.value = first;
+                                currentSetName = first;
+                            }
+                        }
+                        renderManagePage(); // 刷新左侧列表
+                        // 同时刷新下拉列表（已由 refreshSetCombo 完成）
+                    }
+                });
+                div.appendChild(delBtn);
+            } else {
+                // 默认题库不可删除
+                const dummy = document.createElement('span');
+                dummy.style.width = '1.5rem';
+                div.appendChild(dummy);
+            }
+            manageSetList.appendChild(div);
+        });
+    }
+
+    // ----- 右侧缓存列表 -----
+    const cacheRecords = getCacheGrouped();
+    manageCacheList.innerHTML = '';
+    if (Object.keys(cacheRecords).length === 0) {
+        manageCacheList.innerHTML = '<div class="manage-empty">暂无缓存记录</div>';
+    } else {
+        Object.keys(cacheRecords).forEach(setName => {
+            const count = cacheRecords[setName];
+            const div = document.createElement('div');
+            div.className = 'cache-item';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'cache-name';
+            nameSpan.textContent = setName;
+            const countSpan = document.createElement('span');
+            countSpan.className = 'cache-count';
+            countSpan.textContent = `${count} 题`;
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-del-cache';
+            delBtn.textContent = '清除';
+            delBtn.addEventListener('click', () => {
+                if (confirm(`确定要清除题库“${setName}”的所有缓存答案吗？`)) {
+                    clearCacheForSet(setName);
+                    renderManagePage(); // 刷新
+                }
+            });
+            div.appendChild(nameSpan);
+            div.appendChild(countSpan);
+            div.appendChild(delBtn);
+            manageCacheList.appendChild(div);
+        });
+    }
+}
+
+// 获取按题库分组的缓存条目数
+function getCacheGrouped() {
+    const groups = {};
+    for (const key in records) {
+        // key 格式: "setName_id"
+        const underscoreIndex = key.indexOf('_');
+        if (underscoreIndex === -1) continue;
+        const setName = key.substring(0, underscoreIndex);
+        if (!groups[setName]) groups[setName] = 0;
+        groups[setName]++;
+    }
+    return groups;
+}
+
+// 清除某个题库的所有缓存
+function clearCacheForSet(setName) {
+    const prefix = setName + '_';
+    for (const key in records) {
+        if (key.startsWith(prefix)) {
+            delete records[key];
+        }
+    }
+    saveRecords();
+    // 如果当前在答题界面，刷新显示
+    if (pageQuiz.classList.contains('active')) {
+        // 重新显示当前题目（会重新读取记录）
+        showQuestion(currentIndex);
+        // 更新列表标记
+        pageQuestions.forEach((q, idx) => updateListItemMark(idx));
+    }
+}
+
+// 清空所有缓存
+function clearAllCache() {
+    if (!confirm('确定要清空所有缓存答案吗？此操作不可撤销。')) return;
+    records = {};
+    saveRecords();
+    if (pageQuiz.classList.contains('active')) {
+        showQuestion(currentIndex);
+        pageQuestions.forEach((q, idx) => updateListItemMark(idx));
+    }
+    renderManagePage();
+    if (loadStatus) {
+        loadStatus.textContent = '🗑️ 所有缓存已清除';
+        setTimeout(() => { if (loadStatus) loadStatus.textContent = ''; }, 3000);
+    }
 }
 
 // ============ 开始答题 ============
@@ -583,6 +715,7 @@ function showPage(page) {
     if (page === 'title') pageTitle.classList.add('active');
     else if (page === 'quiz') pageQuiz.classList.add('active');
     else if (page === 'finish') pageFinish.classList.add('active');
+    else if (page === 'manage') document.getElementById('page-manage').classList.add('active');
 }
 
 // ============ 渲染题目列表 ============
@@ -1107,11 +1240,6 @@ function formatAnswerDisplay(q, ans) {
 
 // ============ 重新开始 ============
 function restart() {
-    const setKey = currentSetName;
-    Object.keys(records).forEach(key => {
-        if (key.startsWith(setKey + '_')) delete records[key];
-    });
-    saveRecords();
     selectedAnswers = {};
     showPage('title');
     questionList.innerHTML = '';

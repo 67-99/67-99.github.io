@@ -222,6 +222,135 @@ nav * {
     background: #b91c1c;
 }
 
+/* ===== 管理页 ===== */
+.manage-container {
+    display: flex;
+    flex-direction: column;
+    height: 70vh;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 1rem 0;
+    width: 100%;
+}
+.manage-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0.8rem;
+}
+.manage-header h2 {
+    font-size: 1.8rem;
+    color: #0f3b3e;
+    margin: 0;
+}
+.manage-body {
+    display: flex;
+    gap: 2rem;
+    flex-grow: 1;
+}
+.manage-left,
+.manage-right {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    min-height: 300px;
+}
+.manage-left h3,
+.manage-right h3 {
+    font-size: 1.2rem;
+    margin-top: 0;
+    margin-bottom: 0.8rem;
+    color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.4rem;
+}
+.btn-back-blue {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    margin-top: 0.2rem;
+    padding: 0.4rem 1.2rem;
+    height: 100%;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 1rem;
+    line-height: 1.4;
+    transition: background 0.2s;
+}
+.btn-back-blue:hover {
+    background: #2563eb;
+}
+.set-item,
+.cache-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.set-item .set-name {
+    font-weight: 500;
+}
+.set-item .set-tag {
+    font-size: 0.7rem;
+    background: #e2e8f0;
+    padding: 0.1rem 0.6rem;
+    border-radius: 12px;
+    color: #475569;
+    margin-left: 0.5rem;
+}
+.set-item .set-tag.default {
+    background: #d1fae5;
+    color: #065f46;
+}
+.set-item .set-tag.upload {
+    background: #dbeafe;
+    color: #1e40af;
+}
+.set-item .btn-del-set {
+    background: none;
+    border: none;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 0.4rem;
+}
+.set-item .btn-del-set:hover {
+    color: #b91c1c;
+}
+.cache-item .cache-name {
+    font-weight: 500;
+}
+.cache-item .cache-count {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+.cache-item .btn-del-cache {
+    background: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 0.1rem 0.6rem;
+    font-size: 0.8rem;
+    color: #475569;
+    cursor: pointer;
+}
+.cache-item .btn-del-cache:hover {
+    background: #fee2e2;
+    border-color: #dc2626;
+    color: #dc2626;
+}
+.manage-empty {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    padding: 1rem 0;
+    text-align: center;
+}
+
 /* 答题页布局 */
 .quiz-layout {
     display: flex;
@@ -538,6 +667,9 @@ nav * {
     }
     .quiz-main {
         min-height: 400px;
+    }
+    .manage-body {
+        flex-direction: column;
     }
     .title-content h1 {
         font-size: 2rem;
