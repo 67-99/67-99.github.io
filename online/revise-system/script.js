@@ -520,29 +520,62 @@ function startQuiz() {
     }
     currentQuestions = setData.questions.slice();
     pageQuestions = currentQuestions;
-    selectedAnswers = {};
 
+    // 清空旧的列表和题目容器
+    questionList.innerHTML = '';
+    questionContainer.innerHTML = '';
+
+    // 显示进度条
     if (progressArea) {
         progressArea.style.display = 'block';
-        if (progressLabel) progressLabel.textContent = '正在加载题目...';
+        if (progressLabel) progressLabel.textContent = '正在加载题目... 0%';
         if (progressBar) progressBar.style.width = '0%';
     }
 
-    let loaded = 0;
     const total = currentQuestions.length;
-    const interval = setInterval(() => {
-        loaded++;
-        const pct = (loaded / total) * 100;
-        if (progressBar) progressBar.style.width = Math.min(pct, 100) + '%';
-        if (progressLabel) progressLabel.textContent = `已加载 ${loaded}/${total} 题...`;
-        if (loaded >= total) {
-            clearInterval(interval);
+    let rendered = 0;
+    const BATCH_SIZE = 20;          // 每批渲染的题目数
+    const totalBatches = Math.ceil(total / BATCH_SIZE);
+
+    function renderBatch() {
+        const start = rendered;
+        const end = Math.min(rendered + BATCH_SIZE, total);
+        // 使用文档片段批量添加，减少重排
+        const fragment = document.createDocumentFragment();
+        for (let i = start; i < end; i++) {
+            const q = currentQuestions[i];
+            const li = document.createElement('li');
+            li.textContent = `第${q.id}题  ${typeShort(q.type)}`;
+            li.dataset.index = i;
+            li.addEventListener('click', () => {
+                saveCurrentAnswer();
+                showQuestion(i);
+            });
+            fragment.appendChild(li);
+        }
+        questionList.appendChild(fragment);
+
+        rendered = end;
+        const percent = Math.round((rendered / total) * 100);
+        if (progressBar) progressBar.style.width = percent + '%';
+        if (progressLabel) progressLabel.textContent = `正在加载题目... ${percent}%`;
+
+        if (rendered < total) {
+            // 使用 setTimeout 让出主线程，避免卡顿
+            setTimeout(renderBatch, 0);
+        } else {
+            // 全部渲染完成
             if (progressArea) progressArea.style.display = 'none';
             showPage('quiz');
-            renderQuestionList();
+            // 默认选中第一题
             showQuestion(0);
+            // 更新列表高亮
+            updateListActive(0);
         }
-    }, 50);
+    }
+
+    // 开始分批渲染
+    renderBatch();
 }
 
 function showPage(page) {
