@@ -76,6 +76,89 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ============ 校验题目数据结构 ============
+function validateQuestions(questions, sourceName = '题库') {
+    if (!Array.isArray(questions) || questions.length === 0) {
+        return { valid: false, errors: [`❌ ${sourceName}：数据不是非空数组`] };
+    }
+
+    const errors = [];
+    const idSet = new Set();
+    const validTypes = ['single', 'multiple', 'fill', 'essay'];
+
+    questions.forEach((q, index) => {
+        const num = index + 1;
+
+        // ---- 1. 校验 id ----
+        if (!q.hasOwnProperty('id') || typeof q.id !== 'number' || isNaN(q.id)) {
+            errors.push(`第 ${num} 题缺少有效的 id (必须为数字)`);
+        } else if (idSet.has(q.id)) {
+            errors.push(`第 ${num} 题 id=${q.id} 重复，请修改`);
+        } else {
+            idSet.add(q.id);
+        }
+
+        // ---- 2. 校验 type ----
+        if (!q.type || !validTypes.includes(q.type)) {
+            errors.push(`第 ${num} 题 type 无效 ("${q.type}")，须为 single / multiple / fill / essay`);
+        }
+
+        // ---- 3. 校验 question ----
+        if (!q.hasOwnProperty('question') || typeof q.question !== 'string' || q.question.trim() === '') {
+            errors.push(`第 ${num} 题缺少题目内容 (question)`);
+        }
+
+        // ---- 4. 根据 type 校验特有字段 ----
+        if (q.type === 'single' || q.type === 'multiple') {
+            // 4a. 选项
+            if (!Array.isArray(q.options) || q.options.length === 0) {
+                errors.push(`第 ${num} 题缺少选项 (options)`);
+            } else {
+                // 选项解释（可选，但若有则长度必须匹配）
+                if (q.hasOwnProperty('option_explanations')) {
+                    if (!Array.isArray(q.option_explanations)) {
+                        errors.push(`第 ${num} 题 option_explanations 必须是数组`);
+                    } else if (q.option_explanations.length !== q.options.length) {
+                        errors.push(`第 ${num} 题 option_explanations 长度 (${q.option_explanations.length}) 与 options 长度 (${q.options.length}) 不一致`);
+                    }
+                }
+            }
+
+            // 4b. 答案
+            if (q.type === 'single') {
+                if (typeof q.answer !== 'string' || q.answer.trim() === '') {
+                    errors.push(`第 ${num} 题 (单选) 缺少有效答案 (answer)`);
+                } else if (Array.isArray(q.options) && !q.options.includes(q.answer)) {
+                    errors.push(`第 ${num} 题 答案 "${q.answer}" 不在选项列表中`);
+                }
+            } else if (q.type === 'multiple') {
+                if (!Array.isArray(q.answer) || q.answer.length === 0) {
+                    errors.push(`第 ${num} 题 (多选) 缺少有效答案数组 (answer)`);
+                } else if (Array.isArray(q.options)) {
+                    const invalid = q.answer.filter(a => !q.options.includes(a));
+                    if (invalid.length > 0) {
+                        errors.push(`第 ${num} 题 答案中包含不在选项中的项: [${invalid.join(', ')}]`);
+                    }
+                }
+            }
+        } else if (q.type === 'fill') {
+            // 填空：答案可以是字符串或字符串数组
+            const isValid = (typeof q.answer === 'string' && q.answer.trim() !== '') ||
+                            (Array.isArray(q.answer) && q.answer.length > 0 && q.answer.every(a => typeof a === 'string' && a.trim() !== ''));
+            if (!q.hasOwnProperty('answer') || !isValid) {
+                errors.push(`第 ${num} 题 (填空) 缺少有效答案 (answer)，须为非空字符串或非空字符串数组`);
+            }
+        } else if (q.type === 'essay') {
+            // 简答：答案可以为空字符串，但字段必须存在
+            if (!q.hasOwnProperty('answer') || typeof q.answer !== 'string') {
+                errors.push(`第 ${num} 题 (简答) 缺少答案字段 (answer)，可为空字符串`);
+            }
+        }
+    });
+
+    return { valid: errors.length === 0, errors };
+}
+
 // ---------- Markdown 渲染 ----------
 function renderMarkdown(text) {
     if (!text) return '';
@@ -237,8 +320,21 @@ async function init() {
     btnClearCache.addEventListener('click', clearCache);
 }
 
+// ============ 刷新题库下拉列表 ============
 function refreshSetCombo() {
-    const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
+    const remoteNames = Object.keys(loadedRemoteSets);
+    const hasRemote = remoteNames.length > 0;
+
+    // 决定显示哪些题库
+    let allSets = {};
+    if (hasRemote) {
+        // 有远程/上传题库 → 只显示这些，隐藏“默认题库”
+        allSets = { ...loadedRemoteSets };
+    } else {
+        // 没有外部题库 → 显示“默认题库”
+        allSets = { ...QUESTION_SETS };
+    }
+
     const names = Object.keys(allSets);
     setCombo.innerHTML = '';
     names.forEach(name => {
@@ -247,15 +343,24 @@ function refreshSetCombo() {
         opt.textContent = name;
         setCombo.appendChild(opt);
     });
+
+    // 保持当前选中有效，否则自动选第一个
     if (names.includes(currentSetName)) {
         setCombo.value = currentSetName;
     } else if (names.length > 0) {
         setCombo.value = names[0];
         currentSetName = names[0];
     }
+
+    // 控制默认提示：只有“默认题库”且无外部题库时才显示
+    if (defaultHint) {
+        const onlyDefault = !hasRemote && names.length === 1 && names[0] === '默认题库';
+        defaultHint.style.display = onlyDefault ? 'block' : 'none';
+    }
 }
 
 // ============ 加载远程题库 ============
+
 async function loadRemoteSets() {
     const statusEl = loadStatus;
     try {
@@ -291,21 +396,31 @@ async function loadRemoteSets() {
                     continue;
                 }
                 const setName = fileName.replace(/\.[^/.]+$/, '');
+                // ✅ 校验远程题库
+                const validation = validateQuestions(questions, fileName);
+                if (!validation.valid) {
+                    console.warn(`⚠️ 跳过 ${fileName}，原因：`, validation.errors.join('; '));
+                    if (loadStatus) loadStatus.textContent = `⚠️ 跳过无效题库：${fileName}`;
+                    continue; // 跳过此文件，不加载
+                }
                 loadedRemoteSets[setName] = { questions: questions };
                 loadedCount++;
             } catch (e) {
                 console.warn(`加载 ${fileName} 出错:`, e);
             }
         }
+        // ✅ 无论加载结果如何，刷新下拉（保证 UI 同步）
+        refreshSetCombo();
         if (loadedCount > 0) {
             if (statusEl) statusEl.textContent = `✅ 成功加载 ${loadedCount} 个远程题库`;
-            refreshSetCombo();
         } else {
             if (statusEl) statusEl.textContent = 'ℹ️ 未加载到远程题库，使用本地题库';
         }
     } catch (e) {
         console.warn('加载远程题库失败:', e);
         if (statusEl) statusEl.textContent = 'ℹ️ 远程题库不可用，使用本地题库';
+        // 即使失败也刷新下拉（确保显示默认题库）
+        refreshSetCombo();
     }
 }
 
@@ -323,9 +438,18 @@ function handleFileUpload(e) {
             } else if (data && Array.isArray(data.questions)) {
                 questions = data.questions;
             } else {
-                alert('JSON 格式错误：需要包含 questions 数组或直接是题目数组');
+                alert('❌ JSON 格式错误：需要包含 questions 数组或直接是题目数组');
                 return;
             }
+
+            // ✅ 执行校验
+            const validation = validateQuestions(questions, file.name);
+            if (!validation.valid) {
+                alert(`⚠️ 上传的题库存在以下问题，请修正后重新上传：\n\n${validation.errors.join('\n')}`);
+                return; // 阻止加载
+            }
+
+            // 校验通过，继续加载
             const setName = file.name.replace(/\.[^/.]+$/, '') + '(上传)';
             let finalName = setName;
             let idx = 1;
@@ -340,7 +464,7 @@ function handleFileUpload(e) {
             if (loadStatus) loadStatus.textContent = `✅ 已上传题库：${finalName}`;
             if (defaultHint) defaultHint.style.display = 'none';
         } catch (err) {
-            alert('解析 JSON 失败：' + err.message);
+            alert('❌ 解析 JSON 失败：' + err.message);
         }
     };
     reader.readAsText(file);
