@@ -312,6 +312,10 @@ nav * {
     background: #dbeafe;
     color: #1e40af;
 }
+.set-item .set-tag.remote {
+    background: #fef3c7;
+    color: #92400e;
+}
 .set-item .btn-del-set {
     background: none;
     border: none;
@@ -470,7 +474,7 @@ nav * {
     font-family: inherit;
 }
 .essay-text {
-    min-height: 100px;
+    min-height: 114px;
     resize: vertical;
 }
 .result-box {

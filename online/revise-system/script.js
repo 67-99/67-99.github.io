@@ -319,6 +319,8 @@ async function init() {
             data._hash = computeQuestionsHash(data.questions);
         }
         if (!data._name) data._name = name;
+        // 默认题库标记为 'default'
+        data._source = 'default';
     }
     refreshSetCombo();
     try {
@@ -347,7 +349,7 @@ async function init() {
 // ============ 刷新题库下拉列表 ============
 function refreshSetCombo() {
     const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
-    // 构建 name -> [{hash, data}] 映射，用于检测同名冲突
+    // 构建 name -> [{hash, data}] 映射
     const nameMap = {};
     for (const [key, data] of Object.entries(allSets)) {
         const displayName = data._name || key;
@@ -356,28 +358,41 @@ function refreshSetCombo() {
         nameMap[displayName].push({ hash, data });
     }
 
-    setCombo.innerHTML = '';
+    // 先构建所有选项（带 source 标记）
+    const options = [];
     for (const [name, items] of Object.entries(nameMap)) {
         if (items.length === 1) {
             const opt = document.createElement('option');
             opt.value = items[0].hash;
             opt.textContent = name;
             opt.dataset.name = name;
-            setCombo.appendChild(opt);
+            opt.dataset.source = items[0].data._source || 'default';
+            options.push(opt);
         } else {
-            // 同名冲突，附加哈希后缀
             items.forEach(item => {
                 const opt = document.createElement('option');
                 opt.value = item.hash;
                 const suffix = item.hash.slice(0, 6);
                 opt.textContent = `${name} [${suffix}]`;
                 opt.dataset.name = name;
-                setCombo.appendChild(opt);
+                opt.dataset.source = item.data._source || 'default';
+                options.push(opt);
             });
         }
     }
 
-    // 恢复当前选中（若当前 hash 存在）
+    // 排序：默认题库排最后，其余按名称排序
+    options.sort((a, b) => {
+        const aIsDefault = a.dataset.source === 'default';
+        const bIsDefault = b.dataset.source === 'default';
+        if (aIsDefault && !bIsDefault) return 1;
+        if (!aIsDefault && bIsDefault) return -1;
+        return a.textContent.localeCompare(b.textContent);
+    });
+    setCombo.innerHTML = '';
+    options.forEach(opt => setCombo.appendChild(opt));
+
+    // 恢复当前选中
     if (currentSetHash && [...setCombo.options].some(o => o.value === currentSetHash)) {
         setCombo.value = currentSetHash;
     } else if (setCombo.options.length > 0) {
@@ -438,10 +453,11 @@ async function loadRemoteSets() {
                 }
                 const setName = fileName.replace(/\.[^/.]+$/, '');
                 const hash = computeQuestionsHash(questions);
-                // 存储时统一结构
+                // 存储时统一结构，标记为远程
                 loadedRemoteSets[setName] = {
                     _name: setName,
                     _hash: hash,
+                    _source: 'remote',   // 远程来源
                     questions: questions
                 };
                 loadedCount++;
@@ -488,11 +504,6 @@ function handleFileUpload(e) {
 
             const baseName = file.name.replace(/\.[^/.]+$/, '');
             const hash = computeQuestionsHash(questions);
-            // 如果已存在同名不同hash，则给用户提示，但允许添加（会附加后缀）
-            // 但我们直接以 baseName 作为显示名，并存储
-            const displayName = baseName;
-            // 避免覆盖已有同名条目（但loadedRemoteSets是对象，键可能冲突，我们使用 baseName + hash 作为键？）
-            // 但为了管理方便，我们仍用 baseName 作为键，但若已存在，则加上后缀
             let key = baseName;
             let counter = 1;
             while (loadedRemoteSets[key] && loadedRemoteSets[key]._hash !== hash) {
@@ -502,6 +513,7 @@ function handleFileUpload(e) {
             loadedRemoteSets[key] = {
                 _name: baseName,
                 _hash: hash,
+                _source: 'upload',   // 上传来源（本地）
                 questions: questions
             };
             refreshSetCombo();
@@ -539,7 +551,6 @@ function getRecord(setName, hash, qid) {
     const key = getRecordKey(setName, hash, qid);
     const rec = records[key];
     if (rec) {
-        // 可选：增加版本检查，但这里依靠 hash 已足够
         return rec;
     }
     return null;
@@ -549,11 +560,9 @@ function setRecord(setName, hash, qid, userAnswer, correct) {
     records[key] = { userAnswer, correct, timestamp: new Date().toISOString() };
     saveRecords();
 }
-// 清理旧格式（可选，在 init 中调用一次）
 function cleanOldRecords() {
     const toDelete = [];
     for (const key in records) {
-        // 如果键只有两个下划线分隔（旧格式），则删除
         const parts = key.split('_');
         if (parts.length === 2) {
             toDelete.push(key);
@@ -582,20 +591,35 @@ function renderManagePage() {
         setEntries.forEach(([key, data]) => {
             const displayName = data._name || key;
             const hash = data._hash || computeQuestionsHash(data.questions);
-            const isDefault = QUESTION_SETS.hasOwnProperty(key);
-            const isUpload = loadedRemoteSets.hasOwnProperty(key);
+            const source = data._source || 'default'; // 'default', 'upload', 'remote'
+            const isDefault = (source === 'default');
+            const isUpload = (source === 'upload');
+            const isRemote = (source === 'remote');
+
             const div = document.createElement('div');
             div.className = 'set-item';
+
             const nameSpan = document.createElement('span');
             nameSpan.className = 'set-name';
             nameSpan.textContent = displayName + (isDefault ? '' : ` [${hash.slice(0,6)}]`);
+
             const tag = document.createElement('span');
-            tag.className = 'set-tag' + (isDefault ? ' default' : ' upload');
-            tag.textContent = isDefault ? '默认' : '上传';
+            tag.className = 'set-tag';
+            if (isDefault) {
+                tag.classList.add('default');
+                tag.textContent = '默认';
+            } else if (isUpload) {
+                tag.classList.add('upload');
+                tag.textContent = '本地';
+            } else if (isRemote) {
+                tag.classList.add('remote');
+                tag.textContent = '远程';
+            }
             nameSpan.appendChild(tag);
             div.appendChild(nameSpan);
 
-            if (isUpload) {
+            // 只有非默认题库才显示删除按钮
+            if (!isDefault) {
                 const delBtn = document.createElement('button');
                 delBtn.className = 'btn-del-set';
                 delBtn.textContent = '✕';
@@ -666,10 +690,9 @@ function renderManagePage() {
 function getCacheGrouped() {
     const groups = {};
     for (const key in records) {
-        // 新格式：名称_哈希_题号
         const parts = key.split('_');
         if (parts.length >= 3) {
-            const groupKey = parts.slice(0, 2).join('_'); // 取前两部分
+            const groupKey = parts.slice(0, 2).join('_');
             if (!groups[groupKey]) groups[groupKey] = 0;
             groups[groupKey]++;
         }
@@ -711,7 +734,6 @@ function clearAllCache() {
 // ============ 开始答题 ============
 function startQuiz() {
     const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
-    // 根据当前 hash 查找题库
     let setData = null;
     for (const [key, data] of Object.entries(allSets)) {
         const hash = data._hash || computeQuestionsHash(data.questions);
