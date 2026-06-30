@@ -38,13 +38,15 @@ const QUESTION_SETS = {
 
 let loadedRemoteSets = {};
 
-let currentSetName = '默认题库';
+let currentSetName = '默认题库';   // 显示名称
+let currentSetHash = '';          // 内容哈希
 let currentQuestions = [];
 let records = {};
 let currentIndex = 0;
 let pageQuestions = [];
 let selectedAnswers = {};
 
+// DOM 元素引用
 const pageTitle = document.getElementById('page-title');
 const pageQuiz = document.getElementById('page-quiz');
 const pageFinish = document.getElementById('page-finish');
@@ -80,6 +82,35 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ============ 哈希计算（稳定序列化） ============
+function stableStringify(questions) {
+    const sorted = questions.slice().sort((a, b) => a.id - b.id);
+    return JSON.stringify(sorted, (key, value) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            const keys = Object.keys(value).sort();
+            const obj = {};
+            for (const k of keys) obj[k] = value[k];
+            return obj;
+        }
+        return value;
+    });
+}
+
+function hashCode(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0;
+    }
+    return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+function computeQuestionsHash(questions) {
+    const stable = stableStringify(questions);
+    return hashCode(stable);
+}
+
 // ============ 校验题目数据结构 ============
 function validateQuestions(questions, sourceName = '题库') {
     if (!Array.isArray(questions) || questions.length === 0) {
@@ -93,7 +124,6 @@ function validateQuestions(questions, sourceName = '题库') {
     questions.forEach((q, index) => {
         const num = index + 1;
 
-        // ---- 1. 校验 id ----
         if (!q.hasOwnProperty('id') || typeof q.id !== 'number' || isNaN(q.id)) {
             errors.push(`第 ${num} 题缺少有效的 id (必须为数字)`);
         } else if (idSet.has(q.id)) {
@@ -102,23 +132,18 @@ function validateQuestions(questions, sourceName = '题库') {
             idSet.add(q.id);
         }
 
-        // ---- 2. 校验 type ----
         if (!q.type || !validTypes.includes(q.type)) {
             errors.push(`第 ${num} 题 type 无效 ("${q.type}")，须为 single / multiple / fill / essay`);
         }
 
-        // ---- 3. 校验 question ----
         if (!q.hasOwnProperty('question') || typeof q.question !== 'string' || q.question.trim() === '') {
             errors.push(`第 ${num} 题缺少题目内容 (question)`);
         }
 
-        // ---- 4. 根据 type 校验特有字段 ----
         if (q.type === 'single' || q.type === 'multiple') {
-            // 4a. 选项
             if (!Array.isArray(q.options) || q.options.length === 0) {
                 errors.push(`第 ${num} 题缺少选项 (options)`);
             } else {
-                // 选项解释（可选，但若有则长度必须匹配）
                 if (q.hasOwnProperty('option_explanations')) {
                     if (!Array.isArray(q.option_explanations)) {
                         errors.push(`第 ${num} 题 option_explanations 必须是数组`);
@@ -128,7 +153,6 @@ function validateQuestions(questions, sourceName = '题库') {
                 }
             }
 
-            // 4b. 答案
             if (q.type === 'single') {
                 if (typeof q.answer !== 'string' || q.answer.trim() === '') {
                     errors.push(`第 ${num} 题 (单选) 缺少有效答案 (answer)`);
@@ -146,14 +170,12 @@ function validateQuestions(questions, sourceName = '题库') {
                 }
             }
         } else if (q.type === 'fill') {
-            // 填空：答案可以是字符串或字符串数组
             const isValid = (typeof q.answer === 'string' && q.answer.trim() !== '') ||
                             (Array.isArray(q.answer) && q.answer.length > 0 && q.answer.every(a => typeof a === 'string' && a.trim() !== ''));
             if (!q.hasOwnProperty('answer') || !isValid) {
                 errors.push(`第 ${num} 题 (填空) 缺少有效答案 (answer)，须为非空字符串或非空字符串数组`);
             }
         } else if (q.type === 'essay') {
-            // 简答：答案可以为空字符串，但字段必须存在
             if (!q.hasOwnProperty('answer') || typeof q.answer !== 'string') {
                 errors.push(`第 ${num} 题 (简答) 缺少答案字段 (answer)，可为空字符串`);
             }
@@ -168,7 +190,6 @@ function renderMarkdown(text) {
     if (!text) return '';
     let html = text;
 
-    // 1. 提取代码块（包括 mermaid）
     const codeBlocks = [];
     let codeIndex = 0;
     const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
@@ -178,7 +199,6 @@ function renderMarkdown(text) {
         const code = match[2];
         const placeholder = `__CODEBLOCK_${codeIndex}__`;
         if (lang === 'mermaid') {
-            // 保留原始内容，稍后放入 div.mermaid
             codeBlocks.push({ type: 'mermaid', code, placeholder });
         } else {
             const escaped = escapeHtml(code);
@@ -189,7 +209,6 @@ function renderMarkdown(text) {
         codeIndex++;
     }
 
-    // 2. 处理表格（Markdown 表格 → HTML table）
     const lines = html.split('\n');
     let inTable = false;
     let tableRows = [];
@@ -197,7 +216,6 @@ function renderMarkdown(text) {
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const trimmed = line.trim();
-        // 判断是否为表格行：以 | 开头和结尾，且至少含两个 |
         if (/^\|.*\|$/.test(trimmed) && (trimmed.match(/\|/g) || []).length >= 3) {
             if (!inTable) {
                 inTable = true;
@@ -218,18 +236,13 @@ function renderMarkdown(text) {
     }
     html = processedLines.join('\n');
 
-    // 3. 行内代码
     html = html.replace(/`([^`]+)`/g, (m, code) => `<code>${escapeHtml(code)}</code>`);
-
-    // 4. 换行 → <br>（但代码块占位符和表格已被保护，不会受影响）
     html = html.replace(/\n/g, '<br>');
 
-    // 5. 替换代码块占位符
     codeBlocks.forEach(block => {
         if (block.type === 'code') {
             html = html.replace(block.placeholder, block.rendered);
         } else if (block.type === 'mermaid') {
-            // 放入 div.mermaid，后续由 mermaid.run 处理
             html = html.replace(block.placeholder, `<div class="mermaid">${block.code}</div>`);
         }
     });
@@ -237,7 +250,6 @@ function renderMarkdown(text) {
     return html;
 }
 
-// 渲染表格（辅助函数）
 function renderTable(rows) {
     if (rows.length < 2) return rows.join('\n');
     const headerCells = rows[0].split('|').filter(c => c.trim() !== '');
@@ -272,7 +284,6 @@ function renderTable(rows) {
     return html;
 }
 
-// 内联渲染（用于表格单元格，只处理行内代码和换行）
 function renderInlineMarkdown(text) {
     let html = escapeHtml(text);
     html = html.replace(/`([^`]+)`/g, (m, code) => `<code>${escapeHtml(code)}</code>`);
@@ -280,12 +291,10 @@ function renderInlineMarkdown(text) {
     return html;
 }
 
-// ---------- Mermaid 降级 ----------
 function handleMermaidFallback(container) {
     const mermaidDivs = container.querySelectorAll('.mermaid');
     mermaidDivs.forEach(div => {
         const code = div.textContent;
-        // 生成备选
         const encoded = encodeURIComponent(code);
         const imgUrl = `https://mermaid.ink/img/${encoded}`;
         const liveUrl = `https://mermaid.live/edit#pako:${btoa(unescape(encodeURIComponent(code)))}`;
@@ -304,6 +313,13 @@ function handleMermaidFallback(container) {
 // ============ 初始化 ============
 async function init() {
     loadRecords();
+    // 为默认题库计算并附加哈希
+    for (const [name, data] of Object.entries(QUESTION_SETS)) {
+        if (!data._hash) {
+            data._hash = computeQuestionsHash(data.questions);
+        }
+        if (!data._name) data._name = name;
+    }
     refreshSetCombo();
     try {
         await loadRemoteSets();
@@ -316,7 +332,9 @@ async function init() {
     btnFinish.addEventListener('click', finishQuiz);
     btnRestart.addEventListener('click', restart);
     setCombo.addEventListener('change', (e) => {
-        currentSetName = e.target.value;
+        const selected = e.target.options[e.target.selectedIndex];
+        currentSetName = selected.dataset.name || selected.textContent;
+        currentSetHash = selected.value;
         if (defaultHint) defaultHint.style.display = 'none';
     });
     btnUpload.addEventListener('click', () => fileInput.click());
@@ -328,39 +346,51 @@ async function init() {
 
 // ============ 刷新题库下拉列表 ============
 function refreshSetCombo() {
-    const remoteNames = Object.keys(loadedRemoteSets);
-    const hasRemote = remoteNames.length > 0;
-
-    // 决定显示哪些题库
-    let allSets = {};
-    if (hasRemote) {
-        // 有远程/上传题库 → 只显示这些，隐藏“默认题库”
-        allSets = { ...loadedRemoteSets };
-    } else {
-        // 没有外部题库 → 显示“默认题库”
-        allSets = { ...QUESTION_SETS };
+    const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
+    // 构建 name -> [{hash, data}] 映射，用于检测同名冲突
+    const nameMap = {};
+    for (const [key, data] of Object.entries(allSets)) {
+        const displayName = data._name || key;
+        const hash = data._hash || computeQuestionsHash(data.questions);
+        if (!nameMap[displayName]) nameMap[displayName] = [];
+        nameMap[displayName].push({ hash, data });
     }
 
-    const names = Object.keys(allSets);
     setCombo.innerHTML = '';
-    names.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        setCombo.appendChild(opt);
-    });
-
-    // 保持当前选中有效，否则自动选第一个
-    if (names.includes(currentSetName)) {
-        setCombo.value = currentSetName;
-    } else if (names.length > 0) {
-        setCombo.value = names[0];
-        currentSetName = names[0];
+    for (const [name, items] of Object.entries(nameMap)) {
+        if (items.length === 1) {
+            const opt = document.createElement('option');
+            opt.value = items[0].hash;
+            opt.textContent = name;
+            opt.dataset.name = name;
+            setCombo.appendChild(opt);
+        } else {
+            // 同名冲突，附加哈希后缀
+            items.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.hash;
+                const suffix = item.hash.slice(0, 6);
+                opt.textContent = `${name} [${suffix}]`;
+                opt.dataset.name = name;
+                setCombo.appendChild(opt);
+            });
+        }
     }
 
-    // 控制默认提示：只有“默认题库”且无外部题库时才显示
+    // 恢复当前选中（若当前 hash 存在）
+    if (currentSetHash && [...setCombo.options].some(o => o.value === currentSetHash)) {
+        setCombo.value = currentSetHash;
+    } else if (setCombo.options.length > 0) {
+        setCombo.value = setCombo.options[0].value;
+        const selected = setCombo.options[setCombo.selectedIndex];
+        currentSetName = selected.dataset.name || selected.textContent;
+        currentSetHash = selected.value;
+    }
+
+    // 控制默认提示
+    const hasRemote = Object.keys(loadedRemoteSets).length > 0;
     if (defaultHint) {
-        const onlyDefault = !hasRemote && names.length === 1 && names[0] === '默认题库';
+        const onlyDefault = !hasRemote && Object.keys(nameMap).length === 1 && nameMap['默认题库'];
         defaultHint.style.display = onlyDefault ? 'block' : 'none';
     }
 }
@@ -400,21 +430,25 @@ async function loadRemoteSets() {
                     console.warn(`文件 ${fileName} 格式不正确，需要包含 questions 数组`);
                     continue;
                 }
-                const setName = fileName.replace(/\.[^/.]+$/, '');
-                // ✅ 校验远程题库
                 const validation = validateQuestions(questions, fileName);
                 if (!validation.valid) {
                     console.warn(`⚠️ 跳过 ${fileName}，原因：`, validation.errors.join('; '));
                     if (loadStatus) loadStatus.textContent = `⚠️ 跳过无效题库：${fileName}`;
-                    continue; // 跳过此文件，不加载
+                    continue;
                 }
-                loadedRemoteSets[setName] = { questions: questions };
+                const setName = fileName.replace(/\.[^/.]+$/, '');
+                const hash = computeQuestionsHash(questions);
+                // 存储时统一结构
+                loadedRemoteSets[setName] = {
+                    _name: setName,
+                    _hash: hash,
+                    questions: questions
+                };
                 loadedCount++;
             } catch (e) {
                 console.warn(`加载 ${fileName} 出错:`, e);
             }
         }
-        // ✅ 无论加载结果如何，刷新下拉（保证 UI 同步）
         refreshSetCombo();
         if (loadedCount > 0) {
             if (statusEl) statusEl.textContent = `✅ 成功加载 ${loadedCount} 个远程题库`;
@@ -424,7 +458,6 @@ async function loadRemoteSets() {
     } catch (e) {
         console.warn('加载远程题库失败:', e);
         if (statusEl) statusEl.textContent = 'ℹ️ 远程题库不可用，使用本地题库';
-        // 即使失败也刷新下拉（确保显示默认题库）
         refreshSetCombo();
     }
 }
@@ -447,26 +480,37 @@ function handleFileUpload(e) {
                 return;
             }
 
-            // ✅ 执行校验
             const validation = validateQuestions(questions, file.name);
             if (!validation.valid) {
                 alert(`⚠️ 上传的题库存在以下问题，请修正后重新上传：\n\n${validation.errors.join('\n')}`);
-                return; // 阻止加载
+                return;
             }
 
-            // 校验通过，继续加载
-            const setName = file.name.replace(/\.[^/.]+$/, '') + '(上传)';
-            let finalName = setName;
-            let idx = 1;
-            while (loadedRemoteSets[finalName] || QUESTION_SETS[finalName]) {
-                finalName = setName + ` (${idx})`;
-                idx++;
+            const baseName = file.name.replace(/\.[^/.]+$/, '');
+            const hash = computeQuestionsHash(questions);
+            // 如果已存在同名不同hash，则给用户提示，但允许添加（会附加后缀）
+            // 但我们直接以 baseName 作为显示名，并存储
+            const displayName = baseName;
+            // 避免覆盖已有同名条目（但loadedRemoteSets是对象，键可能冲突，我们使用 baseName + hash 作为键？）
+            // 但为了管理方便，我们仍用 baseName 作为键，但若已存在，则加上后缀
+            let key = baseName;
+            let counter = 1;
+            while (loadedRemoteSets[key] && loadedRemoteSets[key]._hash !== hash) {
+                key = `${baseName} (${counter})`;
+                counter++;
             }
-            loadedRemoteSets[finalName] = { questions: questions };
+            loadedRemoteSets[key] = {
+                _name: baseName,
+                _hash: hash,
+                questions: questions
+            };
             refreshSetCombo();
-            setCombo.value = finalName;
-            currentSetName = finalName;
-            if (loadStatus) loadStatus.textContent = `✅ 已上传题库：${finalName}`;
+            // 自动选中新上传的题库
+            setCombo.value = hash;
+            const selected = setCombo.options[setCombo.selectedIndex];
+            currentSetName = selected.dataset.name || selected.textContent;
+            currentSetHash = selected.value;
+            if (loadStatus) loadStatus.textContent = `✅ 已上传题库：${key}`;
             if (defaultHint) defaultHint.style.display = 'none';
         } catch (err) {
             alert('❌ 解析 JSON 失败：' + err.message);
@@ -476,7 +520,7 @@ function handleFileUpload(e) {
     fileInput.value = '';
 }
 
-// ============ 记录管理 ============
+// ============ 记录管理（使用 名称+哈希 作为键前缀） ============
 function loadRecords() {
     const stored = localStorage.getItem('quiz_records');
     if (stored) {
@@ -488,15 +532,37 @@ function loadRecords() {
 function saveRecords() {
     localStorage.setItem('quiz_records', JSON.stringify(records));
 }
-function getRecordKey(setName, qid) { return `${setName}_${qid}`; }
-function getRecord(setName, qid) {
-    const key = getRecordKey(setName, qid);
-    return records[key] || null;
+function getRecordKey(setName, hash, qid) {
+    return `${setName}_${hash}_${qid}`;
 }
-function setRecord(setName, qid, userAnswer, correct) {
-    const key = getRecordKey(setName, qid);
+function getRecord(setName, hash, qid) {
+    const key = getRecordKey(setName, hash, qid);
+    const rec = records[key];
+    if (rec) {
+        // 可选：增加版本检查，但这里依靠 hash 已足够
+        return rec;
+    }
+    return null;
+}
+function setRecord(setName, hash, qid, userAnswer, correct) {
+    const key = getRecordKey(setName, hash, qid);
     records[key] = { userAnswer, correct, timestamp: new Date().toISOString() };
     saveRecords();
+}
+// 清理旧格式（可选，在 init 中调用一次）
+function cleanOldRecords() {
+    const toDelete = [];
+    for (const key in records) {
+        // 如果键只有两个下划线分隔（旧格式），则删除
+        const parts = key.split('_');
+        if (parts.length === 2) {
+            toDelete.push(key);
+        }
+    }
+    if (toDelete.length > 0) {
+        toDelete.forEach(k => delete records[k]);
+        saveRecords();
+    }
 }
 
 // ============ 管理页面 ============
@@ -508,19 +574,21 @@ function showManagePage() {
 function renderManagePage() {
     // ----- 左侧题库列表 -----
     const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
-    const setNames = Object.keys(allSets);
+    const setEntries = Object.entries(allSets);
     manageSetList.innerHTML = '';
-    if (setNames.length === 0) {
+    if (setEntries.length === 0) {
         manageSetList.innerHTML = '<div class="manage-empty">暂无题库</div>';
     } else {
-        setNames.forEach(name => {
-            const isDefault = QUESTION_SETS.hasOwnProperty(name);
-            const isUpload = loadedRemoteSets.hasOwnProperty(name);
+        setEntries.forEach(([key, data]) => {
+            const displayName = data._name || key;
+            const hash = data._hash || computeQuestionsHash(data.questions);
+            const isDefault = QUESTION_SETS.hasOwnProperty(key);
+            const isUpload = loadedRemoteSets.hasOwnProperty(key);
             const div = document.createElement('div');
             div.className = 'set-item';
             const nameSpan = document.createElement('span');
             nameSpan.className = 'set-name';
-            nameSpan.textContent = name;
+            nameSpan.textContent = displayName + (isDefault ? '' : ` [${hash.slice(0,6)}]`);
             const tag = document.createElement('span');
             tag.className = 'set-tag' + (isDefault ? ' default' : ' upload');
             tag.textContent = isDefault ? '默认' : '上传';
@@ -534,25 +602,25 @@ function renderManagePage() {
                 delBtn.title = '删除该题库';
                 delBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    if (confirm(`确定要删除题库“${name}”吗？此操作不可撤销。`)) {
-                        delete loadedRemoteSets[name];
+                    if (confirm(`确定要删除题库“${displayName}”吗？此操作不可撤销。`)) {
+                        delete loadedRemoteSets[key];
                         refreshSetCombo();
-                        // 如果当前选中的是这个题库，切换到默认题库
-                        if (currentSetName === name) {
+                        if (currentSetHash === hash) {
                             const allSetsNow = { ...QUESTION_SETS, ...loadedRemoteSets };
-                            const first = Object.keys(allSetsNow)[0];
+                            const first = Object.values(allSetsNow)[0];
                             if (first) {
-                                setCombo.value = first;
-                                currentSetName = first;
+                                const firstHash = first._hash || computeQuestionsHash(first.questions);
+                                setCombo.value = firstHash;
+                                const selected = setCombo.options[setCombo.selectedIndex];
+                                currentSetName = selected.dataset.name || selected.textContent;
+                                currentSetHash = selected.value;
                             }
                         }
-                        renderManagePage(); // 刷新左侧列表
-                        // 同时刷新下拉列表（已由 refreshSetCombo 完成）
+                        renderManagePage();
                     }
                 });
                 div.appendChild(delBtn);
             } else {
-                // 默认题库不可删除
                 const dummy = document.createElement('span');
                 dummy.style.width = '1.5rem';
                 div.appendChild(dummy);
@@ -562,18 +630,18 @@ function renderManagePage() {
     }
 
     // ----- 右侧缓存列表 -----
-    const cacheRecords = getCacheGrouped();
+    const cacheGroups = getCacheGrouped();
     manageCacheList.innerHTML = '';
-    if (Object.keys(cacheRecords).length === 0) {
+    if (Object.keys(cacheGroups).length === 0) {
         manageCacheList.innerHTML = '<div class="manage-empty">暂无缓存记录</div>';
     } else {
-        Object.keys(cacheRecords).forEach(setName => {
-            const count = cacheRecords[setName];
+        Object.keys(cacheGroups).forEach(groupKey => {
+            const count = cacheGroups[groupKey];
             const div = document.createElement('div');
             div.className = 'cache-item';
             const nameSpan = document.createElement('span');
             nameSpan.className = 'cache-name';
-            nameSpan.textContent = setName;
+            nameSpan.textContent = groupKey;
             const countSpan = document.createElement('span');
             countSpan.className = 'cache-count';
             countSpan.textContent = `${count} 题`;
@@ -581,9 +649,9 @@ function renderManagePage() {
             delBtn.className = 'btn-del-cache';
             delBtn.textContent = '清除';
             delBtn.addEventListener('click', () => {
-                if (confirm(`确定要清除题库“${setName}”的所有缓存答案吗？`)) {
-                    clearCacheForSet(setName);
-                    renderManagePage(); // 刷新
+                if (confirm(`确定要清除题库“${groupKey}”的所有缓存答案吗？`)) {
+                    clearCacheForSet(groupKey);
+                    renderManagePage();
                 }
             });
             div.appendChild(nameSpan);
@@ -594,34 +662,32 @@ function renderManagePage() {
     }
 }
 
-// 获取按题库分组的缓存条目数
+// 获取按 “名称_哈希” 分组的缓存条目数
 function getCacheGrouped() {
     const groups = {};
     for (const key in records) {
-        // key 格式: "setName_id"
-        const underscoreIndex = key.indexOf('_');
-        if (underscoreIndex === -1) continue;
-        const setName = key.substring(0, underscoreIndex);
-        if (!groups[setName]) groups[setName] = 0;
-        groups[setName]++;
+        // 新格式：名称_哈希_题号
+        const parts = key.split('_');
+        if (parts.length >= 3) {
+            const groupKey = parts.slice(0, 2).join('_'); // 取前两部分
+            if (!groups[groupKey]) groups[groupKey] = 0;
+            groups[groupKey]++;
+        }
     }
     return groups;
 }
 
-// 清除某个题库的所有缓存
-function clearCacheForSet(setName) {
-    const prefix = setName + '_';
+// 清除某个题库（按 groupKey）的所有缓存
+function clearCacheForSet(groupKey) {
+    const prefix = groupKey + '_';
     for (const key in records) {
         if (key.startsWith(prefix)) {
             delete records[key];
         }
     }
     saveRecords();
-    // 如果当前在答题界面，刷新显示
     if (pageQuiz.classList.contains('active')) {
-        // 重新显示当前题目（会重新读取记录）
         showQuestion(currentIndex);
-        // 更新列表标记
         pageQuestions.forEach((q, idx) => updateListItemMark(idx));
     }
 }
@@ -645,7 +711,15 @@ function clearAllCache() {
 // ============ 开始答题 ============
 function startQuiz() {
     const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
-    const setData = allSets[currentSetName];
+    // 根据当前 hash 查找题库
+    let setData = null;
+    for (const [key, data] of Object.entries(allSets)) {
+        const hash = data._hash || computeQuestionsHash(data.questions);
+        if (hash === currentSetHash) {
+            setData = data;
+            break;
+        }
+    }
     if (!setData) {
         alert('未找到该题库，请重新选择。');
         return;
@@ -653,11 +727,9 @@ function startQuiz() {
     currentQuestions = setData.questions.slice();
     pageQuestions = currentQuestions;
 
-    // 清空旧的列表和题目容器
     questionList.innerHTML = '';
     questionContainer.innerHTML = '';
 
-    // 显示进度条
     if (progressArea) {
         progressArea.style.display = 'block';
         if (progressLabel) progressLabel.textContent = '正在加载题目... 0%';
@@ -666,18 +738,23 @@ function startQuiz() {
 
     const total = currentQuestions.length;
     let rendered = 0;
-    const BATCH_SIZE = 20;          // 每批渲染的题目数
-    const totalBatches = Math.ceil(total / BATCH_SIZE);
+    const BATCH_SIZE = 20;
 
     function renderBatch() {
         const start = rendered;
         const end = Math.min(rendered + BATCH_SIZE, total);
-        // 使用文档片段批量添加，减少重排
         const fragment = document.createDocumentFragment();
         for (let i = start; i < end; i++) {
             const q = currentQuestions[i];
             const li = document.createElement('li');
-            li.textContent = `第${q.id}题  ${typeShort(q.type)}`;
+            let text = `第${q.id}题  ${typeShort(q.type)}`;
+            const record = getRecord(currentSetName, currentSetHash, q.id);
+            if (record) {
+                if (record.correct === true) text += ' ✔';
+                else if (record.correct === false) text += ' ✘';
+                else if (record.correct === null) text += ' ?';
+            }
+            li.textContent = text;
             li.dataset.index = i;
             li.addEventListener('click', () => {
                 saveCurrentAnswer();
@@ -693,20 +770,15 @@ function startQuiz() {
         if (progressLabel) progressLabel.textContent = `正在加载题目... ${percent}%`;
 
         if (rendered < total) {
-            // 使用 setTimeout 让出主线程，避免卡顿
             setTimeout(renderBatch, 0);
         } else {
-            // 全部渲染完成
             if (progressArea) progressArea.style.display = 'none';
             showPage('quiz');
-            // 默认选中第一题
             showQuestion(0);
-            // 更新列表高亮
             updateListActive(0);
         }
     }
 
-    // 开始分批渲染
     renderBatch();
 }
 
@@ -718,18 +790,19 @@ function showPage(page) {
     else if (page === 'manage') document.getElementById('page-manage').classList.add('active');
 }
 
-// ============ 渲染题目列表 ============
+// ============ 渲染题目列表（用于重新加载） ============
 function renderQuestionList() {
     questionList.innerHTML = '';
     pageQuestions.forEach((q, idx) => {
         const li = document.createElement('li');
-        li.textContent = `第${q.id}题  ${typeShort(q.type)}`;
-        const record = getRecord(currentSetName, q.id);
+        let text = `第${q.id}题  ${typeShort(q.type)}`;
+        const record = getRecord(currentSetName, currentSetHash, q.id);
         if (record) {
-            if (record.correct === true) li.textContent += ' ✔';
-            else if (record.correct === false) li.textContent += ' ✘';
-            else if (record.correct === null) li.textContent += ' ?';
+            if (record.correct === true) text += ' ✔';
+            else if (record.correct === false) text += ' ✘';
+            else if (record.correct === null) text += ' ?';
         }
+        li.textContent = text;
         li.dataset.index = idx;
         li.addEventListener('click', () => {
             saveCurrentAnswer();
@@ -752,9 +825,8 @@ function showQuestion(index) {
     if (index < 0 || index >= pageQuestions.length) return;
     currentIndex = index;
     const q = pageQuestions[index];
-    const record = getRecord(currentSetName, q.id);
+    const record = getRecord(currentSetName, currentSetHash, q.id);
 
-    // 有记录（已提交）时才显示选项解析
     const showExplanations = !!record;
 
     let html = `<div class="question-title">第${q.id}题  [${typeShort(q.type)}]  ${renderMarkdown(q.question)}</div>`;
@@ -770,7 +842,6 @@ function showQuestion(index) {
         html += renderEssay(q, userAns);
     }
 
-    // 如果已提交，显示结果框（含整体解析）
     if (record) {
         const correct = record.correct;
         const expl = q.explanation || '';
@@ -793,16 +864,13 @@ function showQuestion(index) {
         markOptions(q, userAns);
     }
 
-    // 渲染 LaTeX
     if (window.MathJax && MathJax.typesetPromise) {
         MathJax.typesetPromise([questionContainer]).catch(() => {});
     }
-    // 渲染 Mermaid
     if (window.mermaid) {
         mermaid.run({ nodes: questionContainer.querySelectorAll('.mermaid') })
             .catch(() => handleMermaidFallback(questionContainer));
     } else {
-        // 未加载 mermaid，直接降级
         handleMermaidFallback(questionContainer);
     }
 }
@@ -854,7 +922,7 @@ function bindEvents(q, userAns) {
     const optionItems = questionContainer.querySelectorAll('.option-item');
     optionItems.forEach(el => {
         el.addEventListener('click', function() {
-            const record = getRecord(currentSetName, q.id);
+            const record = getRecord(currentSetName, currentSetHash, q.id);
             if (record) return;
             const value = this.dataset.value;
             if (q.type === 'single') {
@@ -877,7 +945,7 @@ function bindEvents(q, userAns) {
     const fillInput = document.getElementById('fill-input');
     if (fillInput) {
         fillInput.addEventListener('input', function() {
-            if (getRecord(currentSetName, q.id)) return;
+            if (getRecord(currentSetName, currentSetHash, q.id)) return;
             selectedAnswers[q.id] = this.value.trim();
             saveCurrentAnswer();
         });
@@ -885,7 +953,7 @@ function bindEvents(q, userAns) {
     const essayText = document.getElementById('essay-text');
     if (essayText) {
         essayText.addEventListener('input', function() {
-            if (getRecord(currentSetName, q.id)) return;
+            if (getRecord(currentSetName, currentSetHash, q.id)) return;
             selectedAnswers[q.id] = this.value.trim();
             saveCurrentAnswer();
         });
@@ -895,7 +963,7 @@ function bindEvents(q, userAns) {
 function saveCurrentAnswer() {
     const q = pageQuestions[currentIndex];
     if (!q) return;
-    const record = getRecord(currentSetName, q.id);
+    const record = getRecord(currentSetName, currentSetHash, q.id);
     if (record) return;
     if (q.type === 'single' || q.type === 'multiple') {
         const items = questionContainer.querySelectorAll('.option-item');
@@ -925,7 +993,7 @@ function saveCurrentAnswer() {
 function submitAnswer() {
     const q = pageQuestions[currentIndex];
     if (!q) return;
-    const record = getRecord(currentSetName, q.id);
+    const record = getRecord(currentSetName, currentSetHash, q.id);
     if (record) {
         alert('本题已提交，不能重复提交。');
         return;
@@ -945,7 +1013,7 @@ function submitAnswer() {
     }
 
     const correct = checkAnswer(q, userAns);
-    setRecord(currentSetName, q.id, userAns, correct);
+    setRecord(currentSetName, currentSetHash, q.id, userAns, correct);
     showQuestion(currentIndex);
     updateListItemMark(currentIndex);
     btnSubmit.style.display = 'none';
@@ -1018,7 +1086,7 @@ function markOptions(q, userAns) {
 function updateListItemMark(index) {
     const q = pageQuestions[index];
     if (!q) return;
-    const record = getRecord(currentSetName, q.id);
+    const record = getRecord(currentSetName, currentSetHash, q.id);
     const items = questionList.querySelectorAll('li');
     if (items[index]) {
         let text = `第${q.id}题  ${typeShort(q.type)}`;
@@ -1051,7 +1119,7 @@ function updateNavButtons() {
     btnNext.style.display = (currentIndex < pageQuestions.length - 1) ? 'inline-block' : 'none';
     const q = pageQuestions[currentIndex];
     if (q) {
-        const record = getRecord(currentSetName, q.id);
+        const record = getRecord(currentSetName, currentSetHash, q.id);
         btnSubmit.style.display = record ? 'none' : 'inline-block';
         if (record) {
             if (currentIndex < pageQuestions.length - 1) {
@@ -1076,7 +1144,7 @@ function finishQuiz() {
     const essayItems = [];
 
     pageQuestions.forEach(q => {
-        const rec = getRecord(currentSetName, q.id);
+        const rec = getRecord(currentSetName, currentSetHash, q.id);
         if (rec) {
             answered++;
             if (rec.correct === true) {
@@ -1127,7 +1195,6 @@ function finishQuiz() {
 
     showPage('finish');
 
-    // 渲染 LaTeX 和 Mermaid
     if (window.MathJax && MathJax.typesetPromise) {
         requestAnimationFrame(() => {
             MathJax.typesetPromise([document.getElementById('review-container'), document.getElementById('stats-text')])
@@ -1249,4 +1316,8 @@ function restart() {
     essayList.innerHTML = '';
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// 初始化时清理旧格式缓存
+document.addEventListener('DOMContentLoaded', () => {
+    cleanOldRecords();
+    init();
+});
