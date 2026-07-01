@@ -354,6 +354,18 @@ nav * {
     padding: 1rem 0;
     text-align: center;
 }
+.btn-download-cache {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0 0.2rem;
+    color: #2563eb;
+    transition: color 0.2s;
+}
+.btn-download-cache:hover {
+    color: #1d4ed8;
+}
 
 /* 答题页布局 */
 .quiz-layout {

@@ -569,46 +569,83 @@ function setRecord(setName, hash, q, userAnswer, correct) {
     saveRecords();
 }
 function cleanOldRecords() {
-    // 构建当前所有题库的 setKey 集合
+    // 1. 收集所有已加载的题库信息（默认 + 远程 + 上传）
     const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
-    const validKeys = new Set();
-    for (const [name, data] of Object.entries(allSets)) {
+    // 构建索引：外层键 -> { 题目列表, id->_index 映射 }
+    const setMap = {};
+    for (const [key, data] of Object.entries(allSets)) {
+        const name = data._name || key;
         const hash = data._hash || computeQuestionsHash(data.questions);
-        const setKey = name + '_' + hash;
-        validKeys.add(setKey);
+        const outerKey = `${name}_${hash}`;
+        // 确保题目已分配 _index
+        if (!data.questions[0] || data.questions[0]._index === undefined) {
+            assignIndices(data.questions);
+        }
+        const idToIndex = {};
+        data.questions.forEach(q => {
+            idToIndex[String(q.id)] = q._index;
+        });
+        setMap[outerKey] = {
+            questions: data.questions,
+            idToIndex: idToIndex
+        };
     }
 
-    const newRecords = {};
-    let changed = false;
+    const toDelete = [];
+    const toAdd = {};
 
+    // 2. 遍历所有缓存记录
     for (const key in records) {
-        // 如果 key 本身就是一个有效题库键，且其值是对象（新格式），则保留
-        if (validKeys.has(key) && typeof records[key] === 'object' && records[key] !== null && !Array.isArray(records[key])) {
-            newRecords[key] = records[key];
-            continue;
-        }
+        if (!records.hasOwnProperty(key)) continue;
+        const parts = key.split('_');
+        // 旧格式：三个部分（题库名_哈希_题号）
+        if (parts.length === 3) {
+            const setName = parts[0];
+            const hash = parts[1];
+            const id = parts[2];
+            const outerKey = `${setName}_${hash}`;
 
-        // 尝试匹配旧格式：key 以某个 validKey + "_" 开头
-        let matched = false;
-        for (const validKey of validKeys) {
-            if (key.startsWith(validKey + '_')) {
-                const indexPart = key.substring(validKey.length + 1);
-                // 迁移到新结构
-                if (!newRecords[validKey]) {
-                    newRecords[validKey] = {};
+            // 检查该题库是否存在
+            if (setMap[outerKey]) {
+                const idToIndex = setMap[outerKey].idToIndex;
+                const foundIndex = idToIndex[id];
+                if (foundIndex !== undefined) {
+                    // 迁移到新结构：外层键 -> 内层 _index -> 记录对象
+                    if (!toAdd[outerKey]) {
+                        toAdd[outerKey] = {};
+                    }
+                    toAdd[outerKey][foundIndex] = records[key];
+                    toDelete.push(key);
+                } else {
+                    // 题库存在，但该题号不存在（可能题库已修改），丢弃该记录
+                    toDelete.push(key);
                 }
-                newRecords[validKey][indexPart] = records[key];
-                matched = true;
-                changed = true;
-                break;
+            } else {
+                // 题库已不存在，丢弃
+                toDelete.push(key);
             }
         }
-        // 未匹配且不是新格式，则丢弃（旧格式但题库已删除）
+        // 新格式（两部分）保持不变
     }
 
-    if (changed) {
-        records = newRecords;
+    // 3. 执行迁移：删除旧键，添加新键
+    for (const key of toDelete) {
+        delete records[key];
+    }
+    for (const outerKey in toAdd) {
+        if (!records[outerKey]) {
+            records[outerKey] = {};
+        }
+        // 合并迁移的数据（若已有同 _index 的记录，则覆盖，但通常不会）
+        Object.assign(records[outerKey], toAdd[outerKey]);
+    }
+
+    // 4. 如果有任何变更，保存到 localStorage
+    if (toDelete.length > 0 || Object.keys(toAdd).length > 0) {
         saveRecords();
+        console.log(`✅ 缓存迁移完成：迁移 ${Object.keys(toAdd).reduce((sum, k) => sum + Object.keys(toAdd[k]).length, 0)} 条记录，清理 ${toDelete.length} 条旧键`);
+    } else {
+        console.log('ℹ️ 缓存格式已是最新，无需迁移');
     }
 }
 
@@ -619,7 +656,7 @@ function showManagePage() {
 }
 
 function renderManagePage() {
-    // ----- 左侧题库列表 -----
+    // ----- 左侧：题库列表（仅显示名称 + 标签 + 删除） -----
     const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
     const setEntries = Object.entries(allSets);
     manageSetList.innerHTML = '';
@@ -629,10 +666,8 @@ function renderManagePage() {
         setEntries.forEach(([key, data]) => {
             const displayName = data._name || key;
             const hash = data._hash || computeQuestionsHash(data.questions);
-            const source = data._source || 'default'; // 'default', 'upload', 'remote'
+            const source = data._source || 'default';
             const isDefault = (source === 'default');
-            const isUpload = (source === 'upload');
-            const isRemote = (source === 'remote');
 
             const div = document.createElement('div');
             div.className = 'set-item';
@@ -646,17 +681,17 @@ function renderManagePage() {
             if (isDefault) {
                 tag.classList.add('default');
                 tag.textContent = '默认';
-            } else if (isUpload) {
+            } else if (source === 'upload') {
                 tag.classList.add('upload');
                 tag.textContent = '本地';
-            } else if (isRemote) {
+            } else if (source === 'remote') {
                 tag.classList.add('remote');
                 tag.textContent = '远程';
             }
             nameSpan.appendChild(tag);
             div.appendChild(nameSpan);
 
-            // 只有非默认题库才显示删除按钮
+            // 删除按钮（仅非默认题库）
             if (!isDefault) {
                 const delBtn = document.createElement('button');
                 delBtn.className = 'btn-del-set';
@@ -687,11 +722,12 @@ function renderManagePage() {
                 dummy.style.width = '1.5rem';
                 div.appendChild(dummy);
             }
+
             manageSetList.appendChild(div);
         });
     }
 
-    // ----- 右侧缓存列表 -----
+    // ----- 右侧：缓存列表（显示题库名、题目数、下载 + 清除按钮） -----
     const cacheGroups = getCacheGrouped();
     manageCacheList.innerHTML = '';
     if (Object.keys(cacheGroups).length === 0) {
@@ -701,12 +737,32 @@ function renderManagePage() {
             const count = cacheGroups[groupKey];
             const div = document.createElement('div');
             div.className = 'cache-item';
+
             const nameSpan = document.createElement('span');
             nameSpan.className = 'cache-name';
             nameSpan.textContent = groupKey;
+
             const countSpan = document.createElement('span');
             countSpan.className = 'cache-count';
             countSpan.textContent = `${count} 题`;
+
+            // 操作按钮容器
+            const actionsDiv = document.createElement('div');
+            actionsDiv.style.display = 'flex';
+            actionsDiv.style.gap = '0.5rem';
+            actionsDiv.style.alignItems = 'center';
+
+            // 下载按钮
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'btn-download-cache';
+            downloadBtn.textContent = '📥';
+            downloadBtn.title = '下载该题库的缓存答案';
+            downloadBtn.addEventListener('click', () => {
+                downloadCacheAnswers(groupKey);
+            });
+            actionsDiv.appendChild(downloadBtn);
+
+            // 清除按钮
             const delBtn = document.createElement('button');
             delBtn.className = 'btn-del-cache';
             delBtn.textContent = '清除';
@@ -716,9 +772,11 @@ function renderManagePage() {
                     renderManagePage();
                 }
             });
+            actionsDiv.appendChild(delBtn);
+
             div.appendChild(nameSpan);
             div.appendChild(countSpan);
-            div.appendChild(delBtn);
+            div.appendChild(actionsDiv);
             manageCacheList.appendChild(div);
         });
     }
@@ -757,6 +815,47 @@ function clearAllCache() {
         loadStatus.textContent = '🗑️ 所有缓存已清除';
         setTimeout(() => { if (loadStatus) loadStatus.textContent = ''; }, 3000);
     }
+}
+
+// 下载指定缓存组（题库）的答案为 JSON 文件
+function downloadCacheAnswers(outerKey) {
+    if (!records[outerKey] || Object.keys(records[outerKey]).length === 0) {
+        alert(`该题库暂无缓存答案可下载。`);
+        return;
+    }
+
+    // 尝试从题库列表中获取显示名称（用于文件命名）
+    const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
+    let displayName = outerKey;
+    for (const [key, data] of Object.entries(allSets)) {
+        const name = data._name || key;
+        const hash = data._hash || computeQuestionsHash(data.questions);
+        if (`${name}_${hash}` === outerKey) {
+            displayName = name;
+            break;
+        }
+    }
+
+    // 构建下载数据
+    const data = {
+        name: displayName,
+        outerKey: outerKey,
+        exportedAt: new Date().toISOString(),
+        totalAnswers: Object.keys(records[outerKey]).length,
+        answers: records[outerKey]  // { 索引: { userAnswer, correct, timestamp } }
+    };
+
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `answers_${displayName}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 // ============ 开始答题 ============
