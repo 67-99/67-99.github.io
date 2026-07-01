@@ -82,12 +82,19 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function assignIndices(questions) {
+    questions.forEach((q, idx) => {
+        q._index = idx;
+    });
+    return questions;
+}
+
 // ============ 哈希计算（稳定序列化） ============
 function stableStringify(questions) {
-    const sorted = questions.slice().sort((a, b) => a.id - b.id);
-    return JSON.stringify(sorted, (key, value) => {
+    return JSON.stringify(questions, (key, value) => {
+        if (key === '_index') return undefined;
         if (value && typeof value === 'object' && !Array.isArray(value)) {
-            const keys = Object.keys(value).sort();
+            const keys = Object.keys(value).sort(); // 对象内部key排序保持稳定
             const obj = {};
             for (const k of keys) obj[k] = value[k];
             return obj;
@@ -118,18 +125,15 @@ function validateQuestions(questions, sourceName = '题库') {
     }
 
     const errors = [];
-    const idSet = new Set();
     const validTypes = ['single', 'multiple', 'fill', 'essay'];
 
     questions.forEach((q, index) => {
         const num = index + 1;
 
-        if (!q.hasOwnProperty('id') || typeof q.id !== 'number' || isNaN(q.id)) {
-            errors.push(`第 ${num} 题缺少有效的 id (必须为数字)`);
-        } else if (idSet.has(q.id)) {
-            errors.push(`第 ${num} 题 id=${q.id} 重复，请修改`);
-        } else {
-            idSet.add(q.id);
+        if (!q.hasOwnProperty('id') || 
+            (typeof q.id !== 'number' && typeof q.id !== 'string') ||
+            (typeof q.id === 'string' && q.id.trim() === '')) {
+            errors.push(`第 ${num} 题缺少有效的 id (必须为数字或非空字符串)`);
         }
 
         if (!q.type || !validTypes.includes(q.type)) {
@@ -321,6 +325,7 @@ async function init() {
         if (!data._name) data._name = name;
         // 默认题库标记为 'default'
         data._source = 'default';
+        assignIndices(data.questions);
     }
     refreshSetCombo();
     try {
@@ -453,6 +458,7 @@ async function loadRemoteSets() {
                 }
                 const setName = fileName.replace(/\.[^/.]+$/, '');
                 const hash = computeQuestionsHash(questions);
+                assignIndices(questions);
                 // 存储时统一结构，标记为远程
                 loadedRemoteSets[setName] = {
                     _name: setName,
@@ -510,6 +516,7 @@ function handleFileUpload(e) {
                 key = `${baseName} (${counter})`;
                 counter++;
             }
+            assignIndices(questions);
             loadedRemoteSets[key] = {
                 _name: baseName,
                 _hash: hash,
@@ -544,32 +551,63 @@ function loadRecords() {
 function saveRecords() {
     localStorage.setItem('quiz_records', JSON.stringify(records));
 }
-function getRecordKey(setName, hash, qid) {
-    return `${setName}_${hash}_${qid}`;
+function getRecordKey(setName, hash, index) {
+    return `${setName}_${hash}_${index}`;
 }
-function getRecord(setName, hash, qid) {
-    const key = getRecordKey(setName, hash, qid);
-    const rec = records[key];
-    if (rec) {
-        return rec;
+function getRecord(setName, hash, q) {
+    const setKey = setName + '_' + hash;
+    const setData = records[setKey];
+    if (!setData) return null;
+    return setData[q._index] || null;
+}
+function setRecord(setName, hash, q, userAnswer, correct) {
+    const setKey = setName + '_' + hash;
+    if (!records[setKey]) {
+        records[setKey] = {};
     }
-    return null;
-}
-function setRecord(setName, hash, qid, userAnswer, correct) {
-    const key = getRecordKey(setName, hash, qid);
-    records[key] = { userAnswer, correct, timestamp: new Date().toISOString() };
+    records[setKey][q._index] = { userAnswer, correct, timestamp: new Date().toISOString() };
     saveRecords();
 }
 function cleanOldRecords() {
-    const toDelete = [];
-    for (const key in records) {
-        const parts = key.split('_');
-        if (parts.length === 2) {
-            toDelete.push(key);
-        }
+    // 构建当前所有题库的 setKey 集合
+    const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
+    const validKeys = new Set();
+    for (const [name, data] of Object.entries(allSets)) {
+        const hash = data._hash || computeQuestionsHash(data.questions);
+        const setKey = name + '_' + hash;
+        validKeys.add(setKey);
     }
-    if (toDelete.length > 0) {
-        toDelete.forEach(k => delete records[k]);
+
+    const newRecords = {};
+    let changed = false;
+
+    for (const key in records) {
+        // 如果 key 本身就是一个有效题库键，且其值是对象（新格式），则保留
+        if (validKeys.has(key) && typeof records[key] === 'object' && records[key] !== null && !Array.isArray(records[key])) {
+            newRecords[key] = records[key];
+            continue;
+        }
+
+        // 尝试匹配旧格式：key 以某个 validKey + "_" 开头
+        let matched = false;
+        for (const validKey of validKeys) {
+            if (key.startsWith(validKey + '_')) {
+                const indexPart = key.substring(validKey.length + 1);
+                // 迁移到新结构
+                if (!newRecords[validKey]) {
+                    newRecords[validKey] = {};
+                }
+                newRecords[validKey][indexPart] = records[key];
+                matched = true;
+                changed = true;
+                break;
+            }
+        }
+        // 未匹配且不是新格式，则丢弃（旧格式但题库已删除）
+    }
+
+    if (changed) {
+        records = newRecords;
         saveRecords();
     }
 }
@@ -690,24 +728,14 @@ function renderManagePage() {
 function getCacheGrouped() {
     const groups = {};
     for (const key in records) {
-        const parts = key.split('_');
-        if (parts.length >= 3) {
-            const groupKey = parts.slice(0, 2).join('_');
-            if (!groups[groupKey]) groups[groupKey] = 0;
-            groups[groupKey]++;
-        }
+        groups[key] = Object.keys(records[key]).length;
     }
     return groups;
 }
 
 // 清除某个题库（按 groupKey）的所有缓存
 function clearCacheForSet(groupKey) {
-    const prefix = groupKey + '_';
-    for (const key in records) {
-        if (key.startsWith(prefix)) {
-            delete records[key];
-        }
-    }
+    delete records[groupKey];
     saveRecords();
     if (pageQuiz.classList.contains('active')) {
         showQuestion(currentIndex);
@@ -746,6 +774,9 @@ function startQuiz() {
         alert('未找到该题库，请重新选择。');
         return;
     }
+    if (!setData.questions[0] || setData.questions[0]._index === undefined) {
+        assignIndices(setData.questions);
+    }
     currentQuestions = setData.questions.slice();
     pageQuestions = currentQuestions;
 
@@ -770,7 +801,7 @@ function startQuiz() {
             const q = currentQuestions[i];
             const li = document.createElement('li');
             let text = `第${q.id}题  ${typeShort(q.type)}`;
-            const record = getRecord(currentSetName, currentSetHash, q.id);
+            const record = getRecord(currentSetName, currentSetHash, q);
             if (record) {
                 if (record.correct === true) text += ' ✔';
                 else if (record.correct === false) text += ' ✘';
@@ -818,7 +849,7 @@ function renderQuestionList() {
     pageQuestions.forEach((q, idx) => {
         const li = document.createElement('li');
         let text = `第${q.id}题  ${typeShort(q.type)}`;
-        const record = getRecord(currentSetName, currentSetHash, q.id);
+        const record = getRecord(currentSetName, currentSetHash, q);
         if (record) {
             if (record.correct === true) text += ' ✔';
             else if (record.correct === false) text += ' ✘';
@@ -847,7 +878,7 @@ function showQuestion(index) {
     if (index < 0 || index >= pageQuestions.length) return;
     currentIndex = index;
     const q = pageQuestions[index];
-    const record = getRecord(currentSetName, currentSetHash, q.id);
+    const record = getRecord(currentSetName, currentSetHash, q);
 
     const showExplanations = !!record;
 
@@ -944,7 +975,7 @@ function bindEvents(q, userAns) {
     const optionItems = questionContainer.querySelectorAll('.option-item');
     optionItems.forEach(el => {
         el.addEventListener('click', function() {
-            const record = getRecord(currentSetName, currentSetHash, q.id);
+            const record = getRecord(currentSetName, currentSetHash, q);
             if (record) return;
             const value = this.dataset.value;
             if (q.type === 'single') {
@@ -967,7 +998,7 @@ function bindEvents(q, userAns) {
     const fillInput = document.getElementById('fill-input');
     if (fillInput) {
         fillInput.addEventListener('input', function() {
-            if (getRecord(currentSetName, currentSetHash, q.id)) return;
+            if (getRecord(currentSetName, currentSetHash, q)) return;
             selectedAnswers[q.id] = this.value.trim();
             saveCurrentAnswer();
         });
@@ -975,7 +1006,7 @@ function bindEvents(q, userAns) {
     const essayText = document.getElementById('essay-text');
     if (essayText) {
         essayText.addEventListener('input', function() {
-            if (getRecord(currentSetName, currentSetHash, q.id)) return;
+            if (getRecord(currentSetName, currentSetHash, q)) return;
             selectedAnswers[q.id] = this.value.trim();
             saveCurrentAnswer();
         });
@@ -985,7 +1016,7 @@ function bindEvents(q, userAns) {
 function saveCurrentAnswer() {
     const q = pageQuestions[currentIndex];
     if (!q) return;
-    const record = getRecord(currentSetName, currentSetHash, q.id);
+    const record = getRecord(currentSetName, currentSetHash, q);
     if (record) return;
     if (q.type === 'single' || q.type === 'multiple') {
         const items = questionContainer.querySelectorAll('.option-item');
@@ -1015,7 +1046,7 @@ function saveCurrentAnswer() {
 function submitAnswer() {
     const q = pageQuestions[currentIndex];
     if (!q) return;
-    const record = getRecord(currentSetName, currentSetHash, q.id);
+    const record = getRecord(currentSetName, currentSetHash, q);
     if (record) {
         alert('本题已提交，不能重复提交。');
         return;
@@ -1035,7 +1066,7 @@ function submitAnswer() {
     }
 
     const correct = checkAnswer(q, userAns);
-    setRecord(currentSetName, currentSetHash, q.id, userAns, correct);
+    setRecord(currentSetName, currentSetHash, q, userAns, correct);
     showQuestion(currentIndex);
     updateListItemMark(currentIndex);
     btnSubmit.style.display = 'none';
@@ -1108,7 +1139,7 @@ function markOptions(q, userAns) {
 function updateListItemMark(index) {
     const q = pageQuestions[index];
     if (!q) return;
-    const record = getRecord(currentSetName, currentSetHash, q.id);
+    const record = getRecord(currentSetName, currentSetHash, q);
     const items = questionList.querySelectorAll('li');
     if (items[index]) {
         let text = `第${q.id}题  ${typeShort(q.type)}`;
@@ -1141,7 +1172,7 @@ function updateNavButtons() {
     btnNext.style.display = (currentIndex < pageQuestions.length - 1) ? 'inline-block' : 'none';
     const q = pageQuestions[currentIndex];
     if (q) {
-        const record = getRecord(currentSetName, currentSetHash, q.id);
+        const record = getRecord(currentSetName, currentSetHash, q);
         btnSubmit.style.display = record ? 'none' : 'inline-block';
         if (record) {
             if (currentIndex < pageQuestions.length - 1) {
@@ -1166,7 +1197,7 @@ function finishQuiz() {
     const essayItems = [];
 
     pageQuestions.forEach(q => {
-        const rec = getRecord(currentSetName, currentSetHash, q.id);
+        const rec = getRecord(currentSetName, currentSetHash, q);
         if (rec) {
             answered++;
             if (rec.correct === true) {
