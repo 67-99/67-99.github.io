@@ -1,0 +1,633 @@
+{
+  "questions": [
+  {
+    "id": 1,
+    "type": "essay",
+    "question": "设 $A,B,C$ 是三个事件，且 $P(A)=P(B)=P(C)=\\frac{1}{2}$，$P(AB)=P(BC)=P(AC)=\\frac{1}{4}$，$P(ABC)=\\frac{1}{8}$。判断 $A,B,C$ 是否两两独立？是否相互独立？计算 $P((A\\cup B)\\setminus C)$。",
+    "answer": "两两独立：$P(AB)=\\frac{1}{4}=P(A)P(B)=\\frac{1}{2}\\cdot\\frac{1}{2}$，同理其余两对，故两两独立。\n相互独立：$P(ABC)=\\frac{1}{8}=P(A)P(B)P(C)=\\frac{1}{8}$，故相互独立。\n$P((A\\cup B)\\setminus C)=P(A\\cup B)-P((A\\cup B)\\cap C)$。\n$P(A\\cup B)=P(A)+P(B)-P(AB)=\\frac{1}{2}+\\frac{1}{2}-\\frac{1}{4}=\\frac{3}{4}$。\n$P((A\\cup B)\\cap C)=P(AC\\cup BC)=P(AC)+P(BC)-P(ABC)=\\frac{1}{4}+\\frac{1}{4}-\\frac{1}{8}=\\frac{3}{8}$。\n所以 $P((A\\cup B)\\setminus C)=\\frac{3}{4}-\\frac{3}{8}=\\frac{3}{8}$。",
+    "explanation": ""
+  },
+  {
+    "id": 2,
+    "type": "essay",
+    "question": "袋中有 $n$ 个编号不同的球，每次随机取一球，记录后放回，并额外放入 $c$ 个同号球。求第 $k$ 次取到某个特定球（如1号）的概率。",
+    "answer": "由于每次抽取后放回并增加相同数量的同号球，所有球在每次抽取时的地位仍然对称，因此第 $k$ 次取到特定球的概率恒等于 $\\frac{1}{n}$。严格证明可用归纳法或对称性。",
+    "explanation": ""
+  },
+  {
+    "id": 3,
+    "type": "essay",
+    "question": "甲、乙两人轮流掷一枚均匀硬币，甲先掷。谁先掷出正面谁获胜。求甲获胜的概率。若改为掷出连续两次正面才获胜，且仍由甲先掷，求甲获胜的概率。",
+    "answer": "（1）设甲获胜概率为 $p$，则 $p = \\frac{1}{2} + \\frac{1}{2}(1-p)$，解得 $p = \\frac{2}{3}$。\n（2）设状态 $P$ 为轮到某人掷且之前无连续正面，$Q$ 为轮到某人掷且上一轮该人掷出正面。定义 $a = P(\\text{甲胜}\\mid \\text{轮到甲,状态}P)$，$c = P(\\text{甲胜}\\mid \\text{轮到甲,状态}Q)$。由对称性得方程：$a = \\frac{1}{2}c + \\frac{1}{2}(1-a)$，$c = \\frac{1}{2}\\cdot1 + \\frac{1}{2}(1-a)$。解得 $a = \\frac{4}{7}$。",
+    "explanation": ""
+  },
+  {
+    "id": 4,
+    "type": "essay",
+    "question": "某工厂有 $N$ 台机器，每台机器的故障率为 $p$，且独立。维修工每次只能修理一台机器。现有 $r$ 名维修工。求在某一时刻，所有故障机器都能立即被修理的概率（即故障机器数 ≤ $r$）。",
+    "answer": "故障机器数 $X \\sim B(N,p)$，所求概率为 $P(X \\le r) = \\sum_{k=0}^{r} \\binom{N}{k} p^k (1-p)^{N-k}$。",
+    "explanation": ""
+  },
+  {
+    "id": 5,
+    "type": "essay",
+    "question": "设 $P(A)=0.4$，$P(B)=0.5$，$P(A\\cup B)=0.7$。计算 $P(A|B)$，$P(B|A)$，$P(A|\\overline{B})$，并判断 $A$ 与 $B$ 是否独立。",
+    "answer": "$P(AB)=P(A)+P(B)-P(A\\cup B)=0.4+0.5-0.7=0.2$。\n$P(A|B)=\\frac{0.2}{0.5}=0.4$，$P(B|A)=\\frac{0.2}{0.4}=0.5$，$P(A|\\overline{B})=\\frac{P(A)-P(AB)}{1-P(B)}=\\frac{0.4-0.2}{0.5}=0.4$。\n因为 $P(AB)=0.2 = P(A)P(B)=0.2$，所以独立。",
+    "explanation": ""
+  },
+  {
+    "id": 6,
+    "type": "essay",
+    "question": "某疾病在人群中的患病率为 $0.001$。有一种检测方法，患病者检测呈阳性的概率为 $0.99$，未患病者检测呈阳性的概率为 $0.05$。某人检测呈阳性，求他真正患病的概率。若此人第二次独立检测仍呈阳性，此时患病的概率又是多少？",
+    "answer": "第一次阳性：$P(D|+)=\\frac{0.001\\times0.99}{0.001\\times0.99+0.999\\times0.05}\\approx0.01944$。\n两次阳性：$P(D|++)=\\frac{0.001\\times0.99^2}{0.001\\times0.99^2+0.999\\times0.05^2}\\approx0.2818$。",
+    "explanation": ""
+  },
+  {
+    "id": 7,
+    "type": "essay",
+    "question": "设 $A_1, A_2, \\ldots, A_n$ 相互独立，且 $P(A_i)=p_i$。证明：$P\\left(\\bigcup_{i=1}^n A_i\\right) = 1 - \\prod_{i=1}^n (1-p_i)$。并求当 $n=3, p_1=0.2, p_2=0.3, p_3=0.4$ 时，至少有一个发生的概率。",
+    "answer": "由独立性，$P\\left(\\bigcap \\overline{A_i}\\right)=\\prod (1-p_i)$，故 $P(\\cup A_i)=1-\\prod(1-p_i)$。代入得 $1-0.8\\times0.7\\times0.6=1-0.336=0.664$。",
+    "explanation": ""
+  },
+  {
+    "id": 8,
+    "type": "essay",
+    "question": "将 $m$ 个不同的球随机放入 $n$ 个不同的盒子（$m \\leq n$），每个盒子容量不限。求：（a）指定 $k$ 个盒子各恰有一个球的概率；（b）恰好有 $k$ 个盒子非空的概率。",
+    "answer": "(a) 先选 $k$ 个球放入指定盒子，排列 $\\frac{m!}{(m-k)!}$，剩余 $m-k$ 球随意放 $n^{m-k}$，样本空间 $n^m$，概率 $\\frac{m!}{(m-k)!} n^{m-k} / n^m$。\n(b) 选 $k$ 个盒子 $\\binom{n}{k}$，将 $m$ 个球放入这 $k$ 个盒子且每个至少一个，满射数 $k!S(m,k)$，概率 $\\binom{n}{k} k! S(m,k) / n^m$，$S(m,k)$ 为第二类斯特林数。",
+    "explanation": ""
+  },
+  {
+    "id": 9,
+    "type": "essay",
+    "question": "甲、乙两人约定在 $[0,T]$ 时段内到达某地，到达时刻均匀分布且独立。若甲先到则等待乙 $t_1$ 分钟，乙先到则等待甲 $t_2$ 分钟，超过等待时间则离开。求两人能相遇的概率。",
+    "answer": "设 $X,Y$ 为到达时刻，相遇条件为 $|X-Y|\\le t_1$ 当 $X\\le Y$，$|X-Y|\\le t_2$ 当 $X>Y$。概率为 $\\frac{1}{T^2}\\left(\\int_0^T \\min(t_1,T-x)dx + \\int_0^T \\min(t_2,T-x)dx\\right) = \\frac{t_1+t_2}{T} - \\frac{t_1^2+t_2^2}{2T^2}$（假设 $t_1,t_2\\le T$）。",
+    "explanation": ""
+  },
+  {
+    "id": 10,
+    "type": "essay",
+    "question": "有三个箱子，第一个箱子有3红2白，第二个有2红4白，第三个有4红1白。随机选一个箱子，然后从中取一球，发现是红球。求这个红球来自第二个箱子的概率。若取出红球后不放回，再取一球，结果仍是红球，此时该箱为第二个箱子的概率是多少？",
+    "answer": "第一次红球：$P(2|R)=\\frac{\\frac13\\cdot\\frac13}{\\frac13(\\frac35+\\frac13+\\frac45)}=\\frac{5}{26}$。\n第二次又红球（不放回）：$P(2|RR)=\\frac{\\frac13\\cdot\\frac13\\cdot\\frac15}{\\frac13(\\frac35\\cdot\\frac24+\\frac13\\cdot\\frac15+\\frac45\\cdot\\frac34)}=\\frac{2}{29}$。",
+    "explanation": ""
+  },
+  {
+    "id": 11,
+    "type": "essay",
+    "question": "设随机变量 $X$ 的分布函数为 $F(x)=\\begin{cases} 0, & x<0 \\\\ \\frac{1}{3}, & 0\\le x<1 \\\\ \\frac{1}{2}, & 1\\le x<2 \\\\ \\frac{5}{6}, & 2\\le x<3 \\\\ 1, & x\\ge 3 \\end{cases}$。求 $X$ 的分布列，并计算 $P(0.5<X\\le 2.5)$ 和 $P(X>1|X\\le 2)$。",
+    "answer": "分布列：$P(X=0)=\\frac13$，$P(X=1)=\\frac16$，$P(X=2)=\\frac13$，$P(X=3)=\\frac16$。\n$P(0.5<X\\le2.5)=F(2.5)-F(0.5)=\\frac56-\\frac13=\\frac12$。\n$P(X>1|X\\le2)=\\frac{P(X=2)}{F(2)}=\\frac{1/3}{5/6}=\\frac25$。",
+    "explanation": ""
+  },
+  {
+    "id": 12,
+    "type": "essay",
+    "question": "某工厂生产的产品中次品率为 $0.01$。现独立抽取100件，分别用二项分布和泊松分布近似计算恰好有2件次品的概率，并比较误差。",
+    "answer": "二项：$P(X=2)=\\binom{100}{2}(0.01)^2(0.99)^{98}\\approx0.1846$。\n泊松：$\\lambda=1$，$P(X=2)=\\frac{1^2 e^{-1}}{2!}\\approx0.1839$。误差约 $0.0007$。",
+    "explanation": ""
+  },
+  {
+    "id": 13,
+    "type": "essay",
+    "question": "设 $X\\sim B(n,p)$，已知 $E(X)=2.4$，$D(X)=1.44$。求 $n,p$ 以及 $P(X\\ge 3)$。",
+    "answer": "$np=2.4$，$np(1-p)=1.44$，相除得 $1-p=0.6$，$p=0.4$，$n=6$。\n$P(X\\ge3)=1-\\sum_{k=0}^2 \\binom{6}{k}0.4^k0.6^{6-k}=0.45568$。",
+    "explanation": ""
+  },
+  {
+    "id": 14,
+    "type": "essay",
+    "question": "某商店每天顾客数服从参数 $\\lambda=20$ 的泊松分布，每位顾客消费额独立且服从指数分布 $e(\\theta=50)$（单位：元）。求一天总消费额的期望和方差。",
+    "answer": "顾客数 $N\\sim P(20)$，消费 $Y_i\\sim\\text{Exp}(50)$，$E(Y_i)=50$，$D(Y_i)=2500$。总消费 $S=\\sum_{i=1}^N Y_i$，$E(S)=E(N)E(Y)=20\\times50=1000$，$D(S)=E(N)D(Y)+D(N)(E(Y))^2=20\\times2500+20\\times2500=100000$。",
+    "explanation": ""
+  },
+  {
+    "id": 15,
+    "type": "essay",
+    "question": "设 $X\\sim N(10,4)$，求 $P(8<X<12)$，$P(X>15)$，以及 $c$ 使得 $P(|X-10|<c)=0.95$。",
+    "answer": "$P(8<X<12)=P(-1<Z<1)=2\\Phi(1)-1\\approx0.6826$。\n$P(X>15)=P(Z>2.5)=1-\\Phi(2.5)\\approx0.0062$。\n$P(|X-10|<c)=0.95\\Rightarrow P(|Z|<c/2)=0.95\\Rightarrow c/2=1.96\\Rightarrow c=3.92$。",
+    "explanation": ""
+  },
+  {
+    "id": 16,
+    "type": "essay",
+    "question": "设 $X$ 服从参数为 $\\lambda$ 的指数分布，且 $P(X>3)=0.2$。求 $\\lambda$ 及 $P(X>5|X>2)$。",
+    "answer": "$P(X>3)=e^{-3\\lambda}=0.2\\Rightarrow \\lambda=-\\frac{\\ln0.2}{3}=\\frac{\\ln5}{3}\\approx0.5365$。由无记忆性，$P(X>5|X>2)=P(X>3)=0.2$。",
+    "explanation": ""
+  },
+  {
+    "id": 17,
+    "type": "essay",
+    "question": "一批产品共 $N=100$ 件，其中 $M=10$ 件次品。不放回抽取 $n=5$ 件，求恰好有2件次品的概率（用超几何分布），并用二项分布近似计算，比较结果。",
+    "answer": "超几何：$P(X=2)=\\frac{\\binom{10}{2}\\binom{90}{3}}{\\binom{100}{5}}\\approx0.0702$。\n二项近似：$p=0.1$，$P(X=2)=\\binom{5}{2}0.1^20.9^3=0.0729$。接近。",
+    "explanation": ""
+  },
+  {
+    "id": 18,
+    "type": "essay",
+    "question": "设 $X\\sim N(\\mu,\\sigma^2)$，且 $P(X\\le 0)=0.2$，$P(X\\ge 1)=0.3$。求 $\\mu,\\sigma^2$。",
+    "answer": "$\\Phi\\left(\\frac{-\\mu}{\\sigma}\\right)=0.2\\Rightarrow \\frac{-\\mu}{\\sigma}=-0.8416\\Rightarrow \\mu=0.8416\\sigma$。\n$1-\\Phi\\left(\\frac{1-\\mu}{\\sigma}\\right)=0.3\\Rightarrow \\Phi\\left(\\frac{1-\\mu}{\\sigma}\\right)=0.7\\Rightarrow \\frac{1-\\mu}{\\sigma}=0.5244$。代入得 $\\frac{1-0.8416\\sigma}{\\sigma}=0.5244\\Rightarrow \\frac{1}{\\sigma}=1.366\\Rightarrow \\sigma\\approx0.732$，$\\mu\\approx0.616$。",
+    "explanation": ""
+  },
+  {
+    "id": 19,
+    "type": "essay",
+    "question": "某路口每小时通过的车流量服从泊松分布，平均每小时120辆。求：（a）在30秒内没有车通过的概率；（b）在2分钟内至少有3辆车通过的概率；（c）在1小时内恰好有100辆的概率（用泊松公式）。",
+    "answer": "(a) 30秒对应 $\\lambda=1$，$P(0)=e^{-1}\\approx0.3679$。\n(b) 2分钟对应 $\\lambda=4$，$P(\\ge3)=1-e^{-4}(1+4+8)=1-13e^{-4}\\approx0.7621$。\n(c) $P(X=100)=\\frac{120^{100}e^{-120}}{100!}$。",
+    "explanation": ""
+  },
+  {
+    "id": 20,
+    "type": "essay",
+    "question": "设 $X$ 的分布函数为 $F(x)=1-e^{-x^2}, x\\ge 0$。求 $X$ 的密度函数，并判断它是否属于指数分布或正态分布？计算 $P(X>1)$。",
+    "answer": "$f(x)=F'(x)=2xe^{-x^2}, x\\ge0$。不是指数（指数密度为 $\\lambda e^{-\\lambda x}$），也不是正态。$P(X>1)=1-F(1)=e^{-1}\\approx0.3679$。",
+    "explanation": ""
+  },
+  {
+    "id": 21,
+    "type": "essay",
+    "question": "设 $X\\sim U(0,1)$，求 $Y=X^2$ 的概率密度函数。",
+    "answer": "$x=\\sqrt{y}$，$\\frac{dx}{dy}=\\frac{1}{2\\sqrt{y}}$，$f_Y(y)=f_X(\\sqrt{y})\\cdot\\frac{1}{2\\sqrt{y}}=1\\cdot\\frac{1}{2\\sqrt{y}}=\\frac{1}{2\\sqrt{y}},\\ 0<y<1$。",
+    "explanation": ""
+  },
+  {
+    "id": 22,
+    "type": "essay",
+    "question": "设 $X\\sim N(0,1)$，求 $Y=|X|$ 的分布函数和密度函数，并计算 $E(Y)$。",
+    "answer": "$F_Y(y)=P(|X|\\le y)=2\\Phi(y)-1,\\ y\\ge0$。$f_Y(y)=2\\phi(y)=\\frac{2}{\\sqrt{2\\pi}}e^{-y^2/2}$。$E(Y)=\\int_0^\\infty y\\cdot2\\phi(y)dy=\\sqrt{\\frac{2}{\\pi}}$。",
+    "explanation": ""
+  },
+  {
+    "id": 23,
+    "type": "essay",
+    "question": "设 $X$ 的密度函数为 $f_X(x)=\\frac{1}{\\pi(1+x^2)}, x\\in\\mathbb{R}$（柯西分布）。求 $Y=\\frac{1}{X}$ 的密度函数。",
+    "answer": "$x=1/y$，$\\left|\\frac{dx}{dy}\\right|=\\frac{1}{y^2}$，$f_Y(y)=f_X(1/y)\\cdot\\frac{1}{y^2}=\\frac{1}{\\pi(1+1/y^2)}\\cdot\\frac{1}{y^2}=\\frac{1}{\\pi(1+y^2)}$，仍是柯西分布。",
+    "explanation": ""
+  },
+  {
+    "id": 24,
+    "type": "essay",
+    "question": "设 $X\\sim U(0,2\\pi)$，求 $Y=\\sin X$ 的密度函数。",
+    "answer": "对于 $|y|<1$，方程 $\\sin x=y$ 在 $(0,2\\pi)$ 内有四个解？实际两个解 $x_1=\\arcsin y$，$x_2=\\pi-\\arcsin y$（考虑 $0$ 到 $2\\pi$ 还有两个解 $\\pi+\\arcsin y$ 和 $2\\pi-\\arcsin y$ 但正弦值为 $-y$）。正确推导得 $f_Y(y)=\\frac{1}{\\pi\\sqrt{1-y^2}},\\ |y|<1$。",
+    "explanation": ""
+  },
+  {
+    "id": 25,
+    "type": "essay",
+    "question": "设 $X$ 的密度函数为 $f_X(x)=2x, 0<x<1$，求 $Y=e^{-X}$ 的密度函数。",
+    "answer": "$x=-\\ln y$，$\\frac{dx}{dy}=-\\frac{1}{y}$，绝对值 $\\frac{1}{y}$，$f_Y(y)=f_X(-\\ln y)\\cdot\\frac{1}{y}=2(-\\ln y)\\cdot\\frac{1}{y}=\\frac{-2\\ln y}{y},\\ y\\in(e^{-1},1)$。",
+    "explanation": ""
+  },
+  {
+    "id": 26,
+    "type": "essay",
+    "question": "设 $X\\sim N(0,1)$，定义 $Y=\\begin{cases} X, & |X|\\le 1 \\\\ -X, & |X|>1 \\end{cases}$。求 $Y$ 的分布。",
+    "answer": "由对称性可证 $Y\\sim N(0,1)$。例如 $P(Y\\le y)=\\Phi(y)$ 对任意 $y$ 成立。",
+    "explanation": ""
+  },
+  {
+    "id": 27,
+    "type": "essay",
+    "question": "设 $X$ 服从参数为 $\\lambda$ 的指数分布，求 $Y=\\ln X$ 的密度函数。",
+    "answer": "$x=e^y$，$\\frac{dx}{dy}=e^y$，$f_X(x)=\\lambda e^{-\\lambda x}$，$f_Y(y)=\\lambda e^{-\\lambda e^y} e^y = \\lambda e^{y-\\lambda e^y},\\ y\\in\\mathbb{R}$。",
+    "explanation": ""
+  },
+  {
+    "id": 28,
+    "type": "essay",
+    "question": "设 $X$ 的分布函数为 $F_X(x)$ 且严格单调连续。证明：$Y=F_X(X)$ 服从 $U(0,1)$。并利用此结论，若 $Y\\sim U(0,1)$，如何生成服从指数分布的随机变量？",
+    "answer": "$P(Y\\le y)=P(F_X(X)\\le y)=P(X\\le F_X^{-1}(y))=F_X(F_X^{-1}(y))=y$，故 $Y\\sim U(0,1)$。\n若 $Y\\sim U(0,1)$，令 $X=-\\frac{1}{\\lambda}\\ln(1-Y)$，则 $X\\sim\\text{Exp}(\\lambda)$。",
+    "explanation": ""
+  },
+  {
+    "id": 29,
+    "type": "essay",
+    "question": "设 $X$ 的密度函数为 $f_X(x)=\\frac{1}{2}e^{-|x|}, x\\in\\mathbb{R}$（拉普拉斯分布），求 $Y=X^2$ 的密度函数。",
+    "answer": "当 $y>0$，$x=\\pm\\sqrt{y}$，$\\left|\\frac{dx}{dy}\\right|=\\frac{1}{2\\sqrt{y}}$，$f_Y(y)=f_X(\\sqrt{y})\\cdot\\frac{1}{2\\sqrt{y}}+f_X(-\\sqrt{y})\\cdot\\frac{1}{2\\sqrt{y}}=2\\cdot\\frac12 e^{-\\sqrt{y}}\\cdot\\frac{1}{2\\sqrt{y}}=\\frac{e^{-\\sqrt{y}}}{2\\sqrt{y}}$。",
+    "explanation": ""
+  },
+  {
+    "id": 30,
+    "type": "essay",
+    "question": "设 $X\\sim U(0,1)$，求 $Y=\\tan(\\pi X - \\frac{\\pi}{2})$ 的密度函数（提示：柯西分布）。",
+    "answer": "令 $U=\\pi X-\\frac{\\pi}{2}\\sim U(-\\frac{\\pi}{2},\\frac{\\pi}{2})$，$Y=\\tan U$，则 $f_Y(y)=\\frac{1}{\\pi(1+y^2)}$，即标准柯西分布。",
+    "explanation": ""
+  },
+  {
+    "id": 31,
+    "type": "essay",
+    "question": "设二维随机变量 $(X,Y)$ 的联合密度函数为 $f(x,y)=c e^{-(2x+3y)}, x>0, y>0$。求常数 $c$，边缘密度 $f_X(x), f_Y(y)$，并判断 $X,Y$ 是否独立。计算 $P(X<Y)$。",
+    "answer": "$c=6$，$f_X(x)=2e^{-2x}$，$f_Y(y)=3e^{-3y}$，独立。$P(X<Y)=\\frac{2}{5}$。",
+    "explanation": ""
+  },
+  {
+    "id": 32,
+    "type": "essay",
+    "question": "设 $(X,Y)$ 服从区域 $D=\\{(x,y): 0\\le x\\le 1, 0\\le y\\le x^2\\}$ 上的均匀分布。求联合密度函数，边缘密度函数，以及 $E(XY)$。",
+    "answer": "$|D|=\\frac13$，$f(x,y)=3$ 在 $D$ 上。$f_X(x)=3x^2$，$f_Y(y)=3(1-\\sqrt{y})$，$E(XY)=\\frac14$。",
+    "explanation": ""
+  },
+  {
+    "id": 33,
+    "type": "essay",
+    "question": "设 $X$ 和 $Y$ 相互独立，且均服从 $U(0,1)$。求 $Z=X+Y$ 的密度函数。",
+    "answer": "$f_Z(z)=\\begin{cases} z, & 0\\le z\\le1 \\\\ 2-z, & 1<z\\le2 \\\\ 0, & \\text{其他} \\end{cases}$。",
+    "explanation": ""
+  },
+  {
+    "id": 34,
+    "type": "essay",
+    "question": "设 $X$ 和 $Y$ 相互独立，$X\\sim N(0,1)$，$Y\\sim N(0,1)$。求 $Z=\\max(X,Y)$ 和 $W=\\min(X,Y)$ 的分布函数。",
+    "answer": "$F_Z(z)=\\Phi(z)^2$，$F_W(w)=1-(1-\\Phi(w))^2$。",
+    "explanation": ""
+  },
+  {
+    "id": 35,
+    "type": "essay",
+    "question": "设二维随机变量 $(X,Y)$ 的联合分布函数为 $F(x,y)= (1-e^{-x})(1-e^{-y})$，当 $x>0,y>0$，否则为0。求联合密度，并判断独立性。计算 $P(X>1,Y\\le 2)$。",
+    "answer": "$f(x,y)=e^{-x}e^{-y}$，独立。$P(X>1,Y\\le2)=e^{-1}(1-e^{-2})$。",
+    "explanation": ""
+  },
+  {
+    "id": 36,
+    "type": "essay",
+    "question": "设 $(X,Y)$ 的联合密度为 $f(x,y)=\\frac{1}{2\\pi\\sigma_1\\sigma_2\\sqrt{1-\\rho^2}}\\exp\\left(-\\frac{1}{2(1-\\rho^2)}\\left(\\frac{x^2}{\\sigma_1^2}-\\frac{2\\rho xy}{\\sigma_1\\sigma_2}+\\frac{y^2}{\\sigma_2^2}\\right)\\right)$（即零均值二维正态）。求 $X$ 和 $Y$ 的边缘分布，并证明当 $\\rho=0$ 时独立。",
+    "answer": "边缘 $X\\sim N(0,\\sigma_1^2)$，$Y\\sim N(0,\\sigma_2^2)$。当 $\\rho=0$ 时，$f(x,y)=\\frac{1}{2\\pi\\sigma_1\\sigma_2}e^{-x^2/(2\\sigma_1^2)-y^2/(2\\sigma_2^2)}=f_X(x)f_Y(y)$，故独立。",
+    "explanation": ""
+  },
+  {
+    "id": 37,
+    "type": "essay",
+    "question": "设 $X$ 和 $Y$ 相互独立，$X\\sim \\text{Exp}(\\lambda)$，$Y\\sim \\text{Exp}(\\mu)$。求 $Z=\\min(X,Y)$ 的分布，以及 $P(X<Y)$。",
+    "answer": "$Z\\sim\\text{Exp}(\\lambda+\\mu)$，$P(X<Y)=\\frac{\\lambda}{\\lambda+\\mu}$。",
+    "explanation": ""
+  },
+  {
+    "id": 38,
+    "type": "essay",
+    "question": "设 $(X,Y)$ 的联合密度为 $f(x,y)=2e^{-x-y}, 0<y<x<\\infty$。求边缘密度 $f_X(x), f_Y(y)$，判断独立性。求 $E(Y|X=x)$。",
+    "answer": "$f_X(x)=2e^{-x}(1-e^{-x})$，$f_Y(y)=2e^{-2y}$，不独立。$E(Y|X=x)=\\frac{1-(x+1)e^{-x}}{1-e^{-x}}$。",
+    "explanation": ""
+  },
+  {
+    "id": 39,
+    "type": "essay",
+    "question": "设 $X,Y$ 独立同分布于 $U(0,1)$。求 $Z=|X-Y|$ 的密度函数。",
+    "answer": "$f_Z(z)=2-2z,\\ 0<z<1$。",
+    "explanation": ""
+  },
+  {
+    "id": 40,
+    "type": "essay",
+    "question": "设 $(X,Y)$ 服从二维指数分布：$f(x,y)=\\theta_1\\theta_2 e^{-\\theta_1 x-\\theta_2 y}, x>0,y>0$。求 $P(X<Y)$ 和 $P(X<Y|X<1)$。",
+    "answer": "$P(X<Y)=\\frac{\\theta_1}{\\theta_1+\\theta_2}$，$P(X<Y|X<1)=\\frac{\\theta_1}{\\theta_1+\\theta_2}\\cdot\\frac{1-e^{-(\\theta_1+\\theta_2)}}{1-e^{-\\theta_1}}$。",
+    "explanation": ""
+  },
+  {
+    "id": 41,
+    "type": "essay",
+    "question": "设 $X\\sim N(0,1)$，求 $E(X^3)$，$E(X^4)$，以及 $E(|X|)$。",
+    "answer": "$E(X^3)=0$，$E(X^4)=3$，$E(|X|)=\\sqrt{2/\\pi}$。",
+    "explanation": ""
+  },
+  {
+    "id": 42,
+    "type": "essay",
+    "question": "设 $X$ 的密度函数为 $f(x)=\\frac{1}{2}e^{-|x|}, x\\in\\mathbb{R}$。求 $E(X)$，$D(X)$，以及 $E(\\cos X)$。",
+    "answer": "$E(X)=0$，$D(X)=E(X^2)=2$，$E(\\cos X)=\\frac12$。",
+    "explanation": ""
+  },
+  {
+    "id": 43,
+    "type": "essay",
+    "question": "已知 $E(X)=2$，$E(Y)=3$，$D(X)=1$，$D(Y)=4$，$\\text{Cov}(X,Y)= -1$。求：（a）$E(3X-2Y+1)$；（b）$D(3X-2Y+1)$；（c）$\\text{Corr}(X,Y)$。",
+    "answer": "(a) $1$；(b) $37$；(c) $-0.5$。",
+    "explanation": ""
+  },
+  {
+    "id": 44,
+    "type": "essay",
+    "question": "设 $X$ 服从参数为 $\\lambda$ 的泊松分布，利用 $E(X^2)=D(X)+(E(X))^2$ 求 $E(X^2)$，并推导 $E(X^3)$。",
+    "answer": "$E(X^2)=\\lambda+\\lambda^2$。$E(X^3)=\\lambda^3+3\\lambda^2+\\lambda$。",
+    "explanation": ""
+  },
+  {
+    "id": 45,
+    "type": "essay",
+    "question": "利用 Cauchy-Schwarz 不等式证明：对于任意随机变量 $X,Y$，有 $|\\text{Cov}(X,Y)|\\le \\sqrt{D(X)D(Y)}$，并说明等号成立的条件。",
+    "answer": "令 $U=X-E(X)$，$V=Y-E(Y)$，则 $(E(UV))^2\\le E(U^2)E(V^2)$，即 $|\\text{Cov}|\\le\\sqrt{D(X)D(Y)}$。等号成立当 $U$ 与 $V$ 几乎处处成比例，即 $Y-E(Y)=c(X-E(X))$。",
+    "explanation": ""
+  },
+  {
+    "id": 46,
+    "type": "essay",
+    "question": "设 $X_1,X_2,\\ldots,X_n$ 独立同分布，$E(X_i)=\\mu$，$D(X_i)=\\sigma^2$。定义样本方差 $S_n^2=\\frac{1}{n-1}\\sum_{i=1}^n (X_i-\\overline{X})^2$。证明 $E(S_n^2)=\\sigma^2$。",
+    "answer": "标准推导：$E(S_n^2)=\\frac{1}{n-1}E\\left(\\sum (X_i^2)-n\\overline{X}^2\\right)=\\frac{1}{n-1}\\left(n(\\sigma^2+\\mu^2)-n(\\frac{\\sigma^2}{n}+\\mu^2)\\right)=\\sigma^2$。",
+    "explanation": ""
+  },
+  {
+    "id": 47,
+    "type": "essay",
+    "question": "设 $X$ 的期望为 $\\mu$，方差为 $\\sigma^2>0$。利用切比雪夫不等式估计 $P(|X-\\mu|\\ge 3\\sigma)$ 的上界，并与正态分布下的精确概率比较。",
+    "answer": "切比雪夫给出上界 $\\frac{1}{9}\\approx0.1111$。正态下 $P(|Z|\\ge3)\\approx0.0027$，远小于上界。",
+    "explanation": ""
+  },
+  {
+    "id": 48,
+    "type": "essay",
+    "question": "设随机变量 $X$ 和 $Y$ 满足 $D(X)=D(Y)=1$，$\\text{Cov}(X,Y)=0.5$。求 $D(X+Y)$ 和 $D(X-Y)$，并求 $\\text{Corr}(X+Y, X-Y)$。",
+    "answer": "$D(X+Y)=3$，$D(X-Y)=1$，$\\text{Cov}(X+Y,X-Y)=0$，故相关系数为0。",
+    "explanation": ""
+  },
+  {
+    "id": 49,
+    "type": "essay",
+    "question": "设 $X\\sim U(0,1)$，$Y=X^2$。求 $\\text{Cov}(X,Y)$ 和 $\\text{Corr}(X,Y)$，并解释结果。",
+    "answer": "$\\text{Cov}(X,Y)=\\frac{1}{12}$，$\\text{Corr}=\\frac{\\sqrt{135}}{12}\\approx0.9682$，强正相关。",
+    "explanation": ""
+  },
+  {
+    "id": 50,
+    "type": "essay",
+    "question": "设 $X$ 和 $Y$ 独立，且均服从 $N(0,1)$。定义 $U=X+Y$，$V=X-Y$。求 $\\text{Corr}(U,V)$，并判断 $U$ 和 $V$ 是否独立。",
+    "answer": "$\\text{Cov}(U,V)=0$，故 $\\text{Corr}=0$。对于正态分布，不相关即独立，所以 $U,V$ 独立。",
+    "explanation": ""
+  },
+  {
+    "id": 51,
+    "type": "essay",
+    "question": "设 $X_1,X_2,\\ldots$ 独立同分布，$P(X_i=1)=p$，$P(X_i=0)=1-p$。用切比雪夫大数定理说明 $\\frac{1}{n}\\sum_{i=1}^n X_i$ 依概率收敛到 $p$，并给出 $n$ 使得 $P\\left(\\left|\\frac{1}{n}\\sum X_i-p\\right|<0.01\\right)\\ge 0.95$（利用切比雪夫不等式）。",
+    "answer": "由切比雪夫，$P(|\\overline{X}_n-p|\\ge\\varepsilon)\\le\\frac{p(1-p)}{n\\varepsilon^2}\\le\\frac{1}{4n\\varepsilon^2}$。令 $\\varepsilon=0.01$，要求 $\\frac{1}{4n\\cdot10^{-4}}\\le0.05$，得 $n\\ge50000$。",
+    "explanation": ""
+  },
+  {
+    "id": 52,
+    "type": "essay",
+    "question": "设 $X_i$ 独立同分布，$E(X_i)=0$，$D(X_i)=\\sigma^2<\\infty$。证明：$\\frac{1}{n}\\sum_{i=1}^n X_i^2 \\xrightarrow{P} \\sigma^2$。",
+    "answer": "$E(X_i^2)=\\sigma^2$，由辛钦大数定律，$\\frac{1}{n}\\sum X_i^2\\xrightarrow{P}\\sigma^2$。",
+    "explanation": ""
+  },
+  {
+    "id": 53,
+    "type": "essay",
+    "question": "某保险公司的理赔金额服从均值为2000元，方差为 $10^6$ 元的分布。现有10000份独立保单，用中心极限定理求总理赔金额超过2.05×10^7元的概率。",
+    "answer": "$S\\sim N(2\\times10^7, 10^{10})$，$P(S>2.05\\times10^7)=P(Z>0.5)\\approx0.3085$。",
+    "explanation": ""
+  },
+  {
+    "id": 54,
+    "type": "essay",
+    "question": "某电子元件寿命服从指数分布 $e(\\theta=1000)$ 小时。随机抽取100个元件，求它们的平均寿命超过1100小时的概率（用中心极限定理）。",
+    "answer": "$\\overline{X}\\approx N(1000,100^2)$，$P(\\overline{X}>1100)=P(Z>1)\\approx0.1587$。",
+    "explanation": ""
+  },
+  {
+    "id": 55,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 独立同分布于 $U(0,1)$。令 $Y_n=n(1-\\max\\{X_1,\\ldots,X_n\\})$。证明 $Y_n$ 依分布收敛到指数分布（参数为1），并求极限分布。",
+    "answer": "$P(Y_n\\le y)=P(\\max\\ge1-y/n)=1-(1-y/n)^n\\to1-e^{-y}$，故 $Y_n\\xrightarrow{d}\\text{Exp}(1)$。",
+    "explanation": ""
+  },
+  {
+    "id": 56,
+    "type": "essay",
+    "question": "某校有1000名学生，每名学生独立地以概率0.8选某门课。用中心极限定理估算选课人数在780到820之间的概率。并用泊松近似（np=800）比较，说明为何此处泊松近似不合适。",
+    "answer": "$X\\sim B(1000,0.8)$，近似 $N(800,160)$，$P(780\\le X\\le820)\\approx0.886$。泊松要求 $p$ 小，此处 $p=0.8$ 大，泊松近似差。",
+    "explanation": ""
+  },
+  {
+    "id": 57,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 独立同分布，$P(X_i=1)=P(X_i=-1)=\\frac{1}{2}$。令 $S_n=\\sum_{i=1}^n X_i$。用中心极限定理求 $P(S_n\\ge 20)$ 当 $n=400$ 时的近似值。",
+    "answer": "$E(S_n)=0$，$D(S_n)=n=400$，$\\sigma=20$。由中心极限定理，$S_n\\approx N(0,400)$。则 $P(S_n\\ge 20)=P\\left(\\frac{S_n-0}{20}\\ge 1\\right)\\approx 1-\\Phi(1)\\approx 0.1587$。",
+    "explanation": ""
+  },
+  {
+    "id": 58,
+    "type": "essay",
+    "question": "某工厂生产的产品重量服从正态分布 $N(50,4)$。现独立抽取100件，用中心极限定理求样本均值 $\\overline{X}$ 落在49.5到50.5之间的概率，并与精确正态分布比较（已知 $\\overline{X}\\sim N(50,0.04)$）。",
+    "answer": "由中心极限定理，$\\overline{X}\\approx N(50,0.04)$，$\\sigma_{\\overline{X}}=0.2$。$P(49.5\\le \\overline{X}\\le 50.5)=P\\left(\\frac{49.5-50}{0.2}\\le Z\\le\\frac{50.5-50}{0.2}\\right)=P(-2.5\\le Z\\le 2.5)=2\\Phi(2.5)-1\\approx 0.9876$。由于 $X$ 本身正态，$\\overline{X}$ 精确正态，结果完全相同。",
+    "explanation": ""
+  },
+  {
+    "id": 59,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 独立同分布，方差存在。证明：$\\sqrt{n}(\\overline{X}_n-\\mu)$ 依分布收敛到 $N(0,\\sigma^2)$（中心极限定理的结论），并说明在实际中如何用此近似构造置信区间。",
+    "answer": "由中心极限定理，$\\sqrt{n}(\\overline{X}_n-\\mu)/\\sigma \\xrightarrow{d} N(0,1)$。实际中若 $\\sigma$ 未知，用样本标准差 $S$ 代替，得 $\\frac{\\overline{X}_n-\\mu}{S/\\sqrt{n}}\\approx N(0,1)$（大样本），从而 $\\mu$ 的近似 $1-\\alpha$ 置信区间为 $\\overline{X}_n \\pm z_{\\alpha/2}\\frac{S}{\\sqrt{n}}$。",
+    "explanation": ""
+  },
+  {
+    "id": 60,
+    "type": "essay",
+    "question": "设 $X_i$ 独立同分布于泊松分布 $P(\\lambda=1)$。用中心极限定理求 $P\\left(\\sum_{i=1}^{100} X_i \\ge 110\\right)$，并与切比雪夫不等式给出的上界比较。",
+    "answer": "$S=\\sum X_i$，$E(S)=100$，$D(S)=100$，$\\sigma=10$。$P(S\\ge 110)=P\\left(Z\\ge\\frac{110-100}{10}=1\\right)\\approx 1-\\Phi(1)=0.1587$。切比雪夫不等式：$P(S\\ge 110)\\le P(|S-100|\\ge10)\\le\\frac{D(S)}{10^2}=1$，无信息；单边切比雪夫（Cantelli）给出 $P(S-100\\ge10)\\le\\frac{D(S)}{D(S)+10^2}=0.5$，仍远大于0.1587。",
+    "explanation": ""
+  },
+  {
+    "id": 61,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 是来自 $N(\\mu,\\sigma^2)$ 的样本。证明 $\\frac{(n-1)S^2}{\\sigma^2}\\sim \\chi^2(n-1)$，其中 $S^2$ 为样本方差。",
+    "answer": "由 $\\sum_{i=1}^n \\left(\\frac{X_i-\\mu}{\\sigma}\\right)^2 \\sim \\chi^2(n)$，且 $\\frac{\\sqrt{n}(\\overline{X}-\\mu)}{\\sigma}\\sim N(0,1)$，其平方为 $\\chi^2(1)$，两者独立，相减得 $\\frac{(n-1)S^2}{\\sigma^2} = \\sum\\left(\\frac{X_i-\\mu}{\\sigma}\\right)^2 - \\left(\\frac{\\overline{X}-\\mu}{\\sigma/\\sqrt{n}}\\right)^2 \\sim \\chi^2(n-1)$。",
+    "explanation": ""
+  },
+  {
+    "id": 62,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 独立同分布于 $N(\\mu,\\sigma^2)$。求统计量 $\\frac{\\overline{X}-\\mu}{S/\\sqrt{n}}$ 的分布，并说明当 $n$ 很大时近似于什么分布。",
+    "answer": "$\\frac{\\overline{X}-\\mu}{S/\\sqrt{n}} = \\frac{(\\overline{X}-\\mu)/(\\sigma/\\sqrt{n})}{\\sqrt{(n-1)S^2/(\\sigma^2(n-1))}} = \\frac{Z}{\\sqrt{\\chi^2_{n-1}/(n-1)}} \\sim t(n-1)$。当 $n\\to\\infty$ 时，$t(n-1)\\to N(0,1)$。",
+    "explanation": ""
+  },
+  {
+    "id": 63,
+    "type": "essay",
+    "question": "设 $U\\sim \\chi^2(m)$，$V\\sim \\chi^2(n)$ 相互独立，证明 $F=\\frac{U/m}{V/n}\\sim F(m,n)$。并利用此证明 $F_{1-\\alpha}(m,n)=\\frac{1}{F_{\\alpha}(n,m)}$。",
+    "answer": "由定义，$F = \\frac{U/m}{V/n}$ 服从 $F(m,n)$。因为 $1/F = \\frac{V/n}{U/m} \\sim F(n,m)$，所以 $P(F > F_{1-\\alpha}(m,n)) = \\alpha$ 等价于 $P(1/F < 1/F_{1-\\alpha}(m,n)) = 1-\\alpha$，即 $1/F_{1-\\alpha}(m,n)$ 是 $F(n,m)$ 的 $\\alpha$ 上侧分位数，故 $F_{1-\\alpha}(m,n) = 1/F_{\\alpha}(n,m)$。",
+    "explanation": ""
+  },
+  {
+    "id": 64,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_{10}$ 来自 $N(0,1)$，求 $P\\left(\\sum_{i=1}^{10} X_i^2 > 15\\right)$（查表或近似）。",
+    "answer": "$\\sum X_i^2 \\sim \\chi^2(10)$。查表得 $\\chi^2_{0.1}(10)=15.987$，$\\chi^2_{0.15}(10)=13.442$，故 $P>0.1$。更精确：$P(\\chi^2(10)>15)\\approx 0.132$。近似公式：$\\sqrt{2\\chi^2}\\sim N(\\sqrt{19},1)$，$\\sqrt{30}\\approx5.477$，$\\sqrt{19}\\approx4.359$，$Z=1.118$，$P\\approx0.132$。",
+    "explanation": ""
+  },
+  {
+    "id": 65,
+    "type": "essay",
+    "question": "设 $T\\sim t(n)$，证明 $T^2\\sim F(1,n)$。",
+    "answer": "$T = \\frac{Z}{\\sqrt{V/n}}$，其中 $Z\\sim N(0,1)$，$V\\sim\\chi^2(n)$ 独立。则 $T^2 = \\frac{Z^2}{V/n} = \\frac{\\chi^2_1/1}{\\chi^2_n/n} \\sim F(1,n)$。",
+    "explanation": ""
+  },
+  {
+    "id": 66,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_m$ 来自 $N(\\mu_1,\\sigma^2)$，$Y_1,\\ldots,Y_n$ 来自 $N(\\mu_2,\\sigma^2)$，且两样本独立。构造一个统计量服从 $t(m+n-2)$，并写出其表达式。",
+    "answer": "构造 pooled 方差 $S_p^2 = \\frac{(m-1)S_X^2+(n-1)S_Y^2}{m+n-2}$，则 $\\frac{(\\overline{X}-\\overline{Y})-(\\mu_1-\\mu_2)}{S_p\\sqrt{1/m+1/n}} \\sim t(m+n-2)$。",
+    "explanation": ""
+  },
+  {
+    "id": 67,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 来自 $N(\\mu,\\sigma^2)$，考虑统计量 $\\frac{\\overline{X}-\\mu}{\\sigma/\\sqrt{n}}$ 与 $\\frac{\\overline{X}-\\mu}{S/\\sqrt{n}}$。说明为什么前者用于已知方差，后者用于未知方差，并指出各自服从的分布。",
+    "answer": "当 $\\sigma$ 已知时，$\\frac{\\overline{X}-\\mu}{\\sigma/\\sqrt{n}} \\sim N(0,1)$，可用于正态检验或置信区间。当 $\\sigma$ 未知时，用 $S$ 估计，得 $\\frac{\\overline{X}-\\mu}{S/\\sqrt{n}} \\sim t(n-1)$，适用于小样本。",
+    "explanation": ""
+  },
+  {
+    "id": 68,
+    "type": "essay",
+    "question": "利用 $\\chi^2$ 分布的上分位点定义，若 $n=20$，$\\alpha=0.05$，求 $\\chi^2_{0.025}(20)$ 和 $\\chi^2_{0.975}(20)$ 的值（可用近似公式）。",
+    "answer": "查表得 $\\chi^2_{0.975}(20)=9.591$，$\\chi^2_{0.025}(20)=34.170$。近似公式：$\\chi^2_{\\alpha}(n) \\approx \\frac{(z_{\\alpha}+\\sqrt{2n-1})^2}{2}$，$z_{0.025}=1.96$，$\\sqrt{39}=6.245$，$(1.96+6.245)^2/2=8.205^2/2=67.32/2=33.66$（接近34.17）；$z_{0.975}=-1.96$，和 $4.285$，平方 $18.36$，一半 $9.18$（接近9.591）。",
+    "explanation": ""
+  },
+  {
+    "id": 69,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_5$ 独立同分布于 $N(0,1)$，令 $Y=\\frac{X_1}{\\sqrt{(X_2^2+X_3^2+X_4^2+X_5^2)/4}}$。求 $Y$ 的分布，并计算 $P(Y>2.132)$。",
+    "answer": "$X_1\\sim N(0,1)$，$X_2^2+\\cdots+X_5^2\\sim\\chi^2(4)$，故 $Y=\\frac{X_1}{\\sqrt{\\chi^2_4/4}} \\sim t(4)$。$t_{0.05}(4)=2.132$，所以 $P(Y>2.132)=0.05$。",
+    "explanation": ""
+  },
+  {
+    "id": 70,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 是来自 $N(\\mu,\\sigma^2)$ 的样本，证明 $\\overline{X}$ 与 $S^2$ 相互独立（利用正交变换）。",
+    "answer": "构造正交矩阵 $A$，第一行全为 $1/\\sqrt{n}$，令 $Y=A X$，则 $Y_1=\\sqrt{n}\\overline{X}$，且 $Y_1,\\ldots,Y_n$ 独立同分布 $N(0,\\sigma^2)$ 当 $\\mu=0$ 时；对非零 $\\mu$ 类似。$S^2$ 只依赖于 $Y_2,\\ldots,Y_n$，故与 $Y_1$（即 $\\overline{X}$）独立。",
+    "explanation": ""
+  },
+  {
+    "id": 71,
+    "type": "essay",
+    "question": "设总体 $X$ 的密度函数为 $f(x;\\theta)=\\frac{2x}{\\theta^2}, 0<x<\\theta$，其中 $\\theta>0$ 未知。求 $\\theta$ 的矩估计量和极大似然估计量。",
+    "answer": "矩估计：$E(X)=\\int_0^\\theta x\\cdot\\frac{2x}{\\theta^2}dx = \\frac{2}{3}\\theta$，令 $\\frac{2}{3}\\theta=\\overline{X}$，得 $\\hat{\\theta}_M = \\frac{3}{2}\\overline{X}$。\n极大似然：$L(\\theta)=\\prod \\frac{2X_i}{\\theta^2}=2^n(\\prod X_i)/\\theta^{2n}$，定义域 $\\theta\\ge \\max X_i$，$L$ 关于 $\\theta$ 递减，故 $\\hat{\\theta}_{MLE}=\\max\\{X_i\\}$。",
+    "explanation": ""
+  },
+  {
+    "id": 72,
+    "type": "essay",
+    "question": "设总体 $X\\sim N(\\mu,\\sigma^2)$，参数 $\\mu,\\sigma^2$ 未知。证明样本均值 $\\overline{X}$ 和样本方差 $S^2$ 分别是 $\\mu$ 和 $\\sigma^2$ 的无偏估计。问 $\\frac{1}{n}\\sum_{i=1}^n (X_i-\\overline{X})^2$ 是否为 $\\sigma^2$ 的无偏估计？为什么？",
+    "answer": "$E(\\overline{X})=\\mu$，故无偏。$E(S^2)=\\sigma^2$，故无偏。而 $\\frac{1}{n}\\sum (X_i-\\overline{X})^2 = \\frac{n-1}{n}S^2$，期望为 $\\frac{n-1}{n}\\sigma^2 \\neq \\sigma^2$，故有偏。",
+    "explanation": ""
+  },
+  {
+    "id": 73,
+    "type": "essay",
+    "question": "设总体 $X$ 服从泊松分布 $P(\\lambda)$，求 $\\lambda$ 的矩估计和极大似然估计，并说明它们是否无偏。",
+    "answer": "矩估计：$E(X)=\\lambda$，令 $\\lambda=\\overline{X}$，得 $\\hat{\\lambda}_M=\\overline{X}$。\n极大似然：$L(\\lambda)=\\prod \\frac{\\lambda^{X_i}e^{-\\lambda}}{X_i!} = \\frac{\\lambda^{\\sum X_i}e^{-n\\lambda}}{\\prod X_i!}$，取对数求导得 $\\frac{\\sum X_i}{\\lambda}-n=0$，解得 $\\hat{\\lambda}_{MLE}=\\overline{X}$。$E(\\overline{X})=\\lambda$，故无偏。",
+    "explanation": ""
+  },
+  {
+    "id": 74,
+    "type": "essay",
+    "question": "设总体 $X$ 的密度函数为 $f(x;\\theta)=e^{-(x-\\theta)}, x>\\theta$，$\\theta$ 未知。求 $\\theta$ 的极大似然估计，并判断其无偏性。",
+    "answer": "似然函数 $L(\\theta)=\\prod e^{-(X_i-\\theta)}=e^{-\\sum X_i + n\\theta}$，定义域 $X_i\\ge\\theta$ 即 $\\theta\\le \\min X_i$。$L$ 随 $\\theta$ 增大而增大，故 $\\hat{\\theta}_{MLE}=\\min\\{X_i\\}$。其分布为 $\\min X_i \\sim \\theta + \\text{Exp}(n)$，$E(\\min X_i)=\\theta+\\frac{1}{n}$，故有偏。",
+    "explanation": ""
+  },
+  {
+    "id": 75,
+    "type": "essay",
+    "question": "设总体 $X\\sim U(0,\\theta)$，$\\theta>0$。求 $\\theta$ 的矩估计和极大似然估计。比较两者的均方误差（MSE）哪个更小？",
+    "answer": "矩估计 $\\hat{\\theta}_M=2\\overline{X}$，MSE$=\\frac{\\theta^2}{3n}$。\n极大似然 $\\hat{\\theta}_{MLE}=\\max X_i$，MSE$=\\frac{2\\theta^2}{(n+1)(n+2)}$。当 $n\\ge2$ 时，$MSE_{MLE} < MSE_{矩}$。",
+    "explanation": ""
+  },
+  {
+    "id": 76,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 来自总体 $X\\sim N(\\mu,1)$，考虑两个估计量：$\\hat{\\mu}_1=\\overline{X}$，$\\hat{\\mu}_2=\\frac{1}{2}(X_1+X_2)$。比较它们的无偏性和有效性。",
+    "answer": "两者均无偏。$D(\\hat{\\mu}_1)=\\frac{1}{n}$，$D(\\hat{\\mu}_2)=\\frac{1}{2}$。当 $n\\ge2$ 时，$\\frac{1}{n}\\le\\frac{1}{2}$，故 $\\hat{\\mu}_1$ 更有效。",
+    "explanation": ""
+  },
+  {
+    "id": 77,
+    "type": "essay",
+    "question": "设总体 $X$ 的密度函数为 $f(x;\\theta)=\\frac{1}{2\\theta}e^{-|x|/\\theta}, x\\in\\mathbb{R}$（拉普拉斯分布）。求 $\\theta$ 的矩估计和极大似然估计。",
+    "answer": "$E(X)=0$，$E(|X|)=\\theta$，矩估计令 $\\frac{1}{n}\\sum|X_i|=\\hat{\\theta}_M$。\n极大似然：$L(\\theta)=\\prod\\frac{1}{2\\theta}e^{-|X_i|/\\theta}=(2\\theta)^{-n}e^{-\\sum|X_i|/\\theta}$，取对数求导得 $-\\frac{n}{\\theta}+\\frac{\\sum|X_i|}{\\theta^2}=0$，解得 $\\hat{\\theta}_{MLE}=\\frac{1}{n}\\sum|X_i|$，与矩估计相同。",
+    "explanation": ""
+  },
+  {
+    "id": 78,
+    "type": "essay",
+    "question": "证明：若 $\\hat{\\theta}_n$ 是 $\\theta$ 的相合估计，且 $g(\\cdot)$ 连续，则 $g(\\hat{\\theta}_n)$ 是 $g(\\theta)$ 的相合估计。",
+    "answer": "对任意 $\\varepsilon>0$，由 $g$ 连续，存在 $\\delta>0$ 使 $|x-\\theta|<\\delta \\Rightarrow |g(x)-g(\\theta)|<\\varepsilon$。则 $P(|g(\\hat{\\theta}_n)-g(\\theta)|\\ge\\varepsilon) \\le P(|\\hat{\\theta}_n-\\theta|\\ge\\delta) \\to 0$，故 $g(\\hat{\\theta}_n)\\xrightarrow{P} g(\\theta)$。",
+    "explanation": ""
+  },
+  {
+    "id": 79,
+    "type": "essay",
+    "question": "设总体 $X$ 服从几何分布：$P(X=k)=(1-p)^{k-1}p, k=1,2,\\ldots$。求 $p$ 的矩估计和极大似然估计，并说明它们是否无偏。",
+    "answer": "$E(X)=1/p$，矩估计令 $1/p=\\overline{X}$，得 $\\hat{p}_M=1/\\overline{X}$。\n极大似然：$L(p)=p^n(1-p)^{\\sum X_i-n}$，求导得 $\\hat{p}_{MLE}=1/\\overline{X}$。由于 $E(1/\\overline{X})\\neq p$，有偏。",
+    "explanation": ""
+  },
+  {
+    "id": 80,
+    "type": "essay",
+    "question": "设总体 $X\\sim N(\\mu,\\sigma^2)$，参数 $\\mu$ 已知，$\\sigma^2$ 未知。求 $\\sigma^2$ 的极大似然估计，并判断其无偏性。若 $\\mu$ 未知，则极大似然估计有何变化？",
+    "answer": "当 $\\mu$ 已知，$L(\\sigma^2)=\\prod\\frac{1}{\\sqrt{2\\pi}\\sigma}e^{-(X_i-\\mu)^2/(2\\sigma^2)}$，求导得 $\\hat{\\sigma}^2=\\frac{1}{n}\\sum(X_i-\\mu)^2$，$E(\\hat{\\sigma}^2)=\\sigma^2$，无偏。\n当 $\\mu$ 未知，$\\hat{\\sigma}^2=\\frac{1}{n}\\sum(X_i-\\overline{X})^2$，期望 $\\frac{n-1}{n}\\sigma^2$，有偏。",
+    "explanation": ""
+  },
+  {
+    "id": 81,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 来自 $N(\\mu,4)$，样本均值 $\\overline{x}=5$，$n=25$。求 $\\mu$ 的95%置信区间。",
+    "answer": "$\\sigma=2$，$z_{0.025}=1.96$，区间为 $\\overline{x}\\pm z_{0.025}\\frac{\\sigma}{\\sqrt{n}} = 5 \\pm 1.96\\times\\frac{2}{5}=5\\pm0.784$，即 $[4.216,5.784]$。",
+    "explanation": ""
+  },
+  {
+    "id": 82,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 来自 $N(\\mu,\\sigma^2)$，$\\mu,\\sigma^2$ 未知。观测值：$n=16$，$\\overline{x}=10$，$s^2=9$。求 $\\mu$ 的90%置信区间和 $\\sigma^2$ 的90%置信区间。",
+    "answer": "$\\mu$ 的90% CI：$t_{0.05}(15)=1.753$，$10\\pm1.753\\times\\frac{3}{4}=10\\pm1.31475$，即 $[8.685,11.315]$。\n$\\sigma^2$ 的90% CI：$\\chi^2_{0.05}(15)=24.996$，$\\chi^2_{0.95}(15)=7.261$，区间 $\\left[\\frac{15\\times9}{24.996},\\frac{15\\times9}{7.261}\\right] = [5.40,18.59]$。",
+    "explanation": ""
+  },
+  {
+    "id": 83,
+    "type": "essay",
+    "question": "某厂声称其产品平均寿命不低于1000小时。现抽取20个产品，测得平均寿命980小时，样本标准差60小时。假设寿命服从正态分布，在显著性水平 $\\alpha=0.05$ 下，检验该厂声称是否可信？并计算检验的 $p$ 值。",
+    "answer": "$H_0:\\mu\\ge1000$，$H_1:\\mu<1000$。检验统计量 $t=\\frac{980-1000}{60/\\sqrt{20}}=-1.490$，$t_{0.05}(19)=-1.729$，由于 $-1.490 > -1.729$，不拒绝 $H_0$。$p$ 值 $=P(T_{19}<-1.490)\\approx0.076$。",
+    "explanation": ""
+  },
+  {
+    "id": 84,
+    "type": "essay",
+    "question": "设两个独立正态总体 $X\\sim N(\\mu_1,\\sigma^2)$，$Y\\sim N(\\mu_2,\\sigma^2)$，方差相等但未知。抽取样本：$n_X=10,\\overline{x}=50,s_X^2=4$；$n_Y=12,\\overline{y}=45,s_Y^2=3.6$。求 $\\mu_1-\\mu_2$ 的95%置信区间，并检验 $\\mu_1=\\mu_2$ 是否成立（$\\alpha=0.05$）。",
+    "answer": "$S_p^2=\\frac{9\\times4+11\\times3.6}{20}=3.78$，$S_p=1.944$，$t_{0.025}(20)=2.086$，区间：$(50-45)\\pm2.086\\times1.944\\times\\sqrt{1/10+1/12}=5\\pm1.735$，即 $[3.265,6.735]$。区间不含0，拒绝 $H_0$，认为 $\\mu_1\\neq\\mu_2$。",
+    "explanation": ""
+  },
+  {
+    "id": 85,
+    "type": "essay",
+    "question": "设总体 $X\\sim N(\\mu,\\sigma^2)$，已知 $\\sigma=2$，欲使 $\\mu$ 的95%置信区间长度不超过1，问至少需要多大样本量？",
+    "answer": "区间半宽 $z_{0.025}\\frac{\\sigma}{\\sqrt{n}}=1.96\\times\\frac{2}{\\sqrt{n}}\\le0.5$（全长≤1则半宽≤0.5），即 $\\frac{3.92}{\\sqrt{n}}\\le0.5$，$\\sqrt{n}\\ge7.84$，$n\\ge61.47$，取 $n=62$。",
+    "explanation": ""
+  },
+  {
+    "id": 86,
+    "type": "essay",
+    "question": "在假设检验中，若原假设 $H_0: \\mu=\\mu_0$，备择假设 $H_1: \\mu\\neq\\mu_0$，显著性水平 $\\alpha$。解释第一类错误和第二类错误的概率，并说明如何通过增大样本量同时减小两类错误。",
+    "answer": "第一类错误（拒真）概率 $\\alpha$，第二类错误（纳伪）概率 $\\beta$。增大样本量 $n$ 使检验统计量的方差减小，分布更集中，从而在保持 $\\alpha$ 不变时 $\\beta$ 减小；若固定 $\\alpha$，增大 $n$ 可同时减小 $\\beta$。",
+    "explanation": ""
+  },
+  {
+    "id": 87,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_n$ 来自 $N(\\mu,4)$，考虑 $H_0: \\mu=0$ vs $H_1: \\mu=1$。若拒绝域为 $\\overline{X}>0.5$，求 $n=25$ 时的第一类错误概率和第二类错误概率。",
+    "answer": "$\\overline{X}\\sim N(\\mu,4/25)=N(\\mu,0.16)$，$\\sigma_{\\overline{X}}=0.4$。\n$\\alpha=P(\\overline{X}>0.5|\\mu=0)=P(Z>0.5/0.4=1.25)=1-\\Phi(1.25)=0.1056$。\n$\\beta=P(\\overline{X}\\le0.5|\\mu=1)=P(Z\\le(0.5-1)/0.4=-1.25)=\\Phi(-1.25)=0.1056$。",
+    "explanation": ""
+  },
+  {
+    "id": 88,
+    "type": "essay",
+    "question": "某药物有效率为0.7，现改进后试验100例，有效75例。问在 $\\alpha=0.05$ 下，能否认为新药有效率高于0.7？用正态近似法。",
+    "answer": "$H_0:p=0.7$，$H_1:p>0.7$。检验统计量 $z=\\frac{0.75-0.7}{\\sqrt{0.7\\times0.3/100}}=\\frac{0.05}{0.0458}=1.091$，$p$ 值 $=1-\\Phi(1.091)=0.137>0.05$，不拒绝 $H_0$，不能认为有效率提高。",
+    "explanation": ""
+  },
+  {
+    "id": 89,
+    "type": "essay",
+    "question": "设 $X_1,\\ldots,X_m$ 来自 $N(\\mu_1,\\sigma_1^2)$，$Y_1,\\ldots,Y_n$ 来自 $N(\\mu_2,\\sigma_2^2)$，两样本独立。构造检验统计量用于检验 $H_0: \\sigma_1^2=\\sigma_2^2$，并说明其分布。",
+    "answer": "构造 $F = \\frac{S_X^2}{S_Y^2}$，其中 $S_X^2,S_Y^2$ 为样本方差。在 $H_0$ 下，$F \\sim F(m-1,n-1)$。拒绝域为 $F < F_{1-\\alpha/2}(m-1,n-1)$ 或 $F > F_{\\alpha/2}(m-1,n-1)$。",
+    "explanation": ""
+  },
+  {
+    "id": 90,
+    "type": "essay",
+    "question": "设总体 $X\\sim N(\\mu,\\sigma^2)$，$\\sigma^2$ 已知。对于检验 $H_0: \\mu\\le 0$ vs $H_1: \\mu>0$，求检验的拒绝域（水平 $\\alpha$），并推导当 $\\mu=1$ 时的功效函数。",
+    "answer": "检验统计量 $Z = \\frac{\\overline{X}}{\\sigma/\\sqrt{n}}$，拒绝域 $Z > z_{\\alpha}$，即 $\\overline{X} > z_{\\alpha}\\frac{\\sigma}{\\sqrt{n}}$。\n功效函数 $\\beta(\\mu)=P(\\text{拒绝} H_0|\\mu)=P\\left(\\overline{X}>z_{\\alpha}\\frac{\\sigma}{\\sqrt{n}}\\middle|\\mu\\right)=1-\\Phi\\left(z_{\\alpha} - \\frac{\\mu\\sqrt{n}}{\\sigma}\\right)$。当 $\\mu=1$ 时，$\\beta(1)=1-\\Phi\\left(z_{\\alpha} - \\frac{\\sqrt{n}}{\\sigma}\\right)$。",
+    "explanation": ""
+  }
+]}

@@ -317,6 +317,7 @@ function handleMermaidFallback(container) {
 // ============ 初始化 ============
 async function init() {
     loadRecords();
+    cleanOldRecords();
     // 为默认题库计算并附加哈希
     for (const [name, data] of Object.entries(QUESTION_SETS)) {
         if (!data._hash) {
@@ -555,13 +556,13 @@ function getRecordKey(setName, hash, index) {
     return `${setName}_${hash}_${index}`;
 }
 function getRecord(setName, hash, q) {
-    const setKey = setName + '_' + hash;
+    const setKey = `${setName}_${hash}`;
     const setData = records[setKey];
     if (!setData) return null;
     return setData[q._index] || null;
 }
 function setRecord(setName, hash, q, userAnswer, correct) {
-    const setKey = setName + '_' + hash;
+    const setKey = `${setName}_${hash}`;
     if (!records[setKey]) {
         records[setKey] = {};
     }
@@ -569,81 +570,30 @@ function setRecord(setName, hash, q, userAnswer, correct) {
     saveRecords();
 }
 function cleanOldRecords() {
-    // 1. 收集所有已加载的题库信息（默认 + 远程 + 上传）
-    const allSets = { ...QUESTION_SETS, ...loadedRemoteSets };
-    // 构建索引：外层键 -> { 题目列表, id->_index 映射 }
-    const setMap = {};
-    for (const [key, data] of Object.entries(allSets)) {
-        const name = data._name || key;
-        const hash = data._hash || computeQuestionsHash(data.questions);
-        const outerKey = `${name}_${hash}`;
-        // 确保题目已分配 _index
-        if (!data.questions[0] || data.questions[0]._index === undefined) {
-            assignIndices(data.questions);
-        }
-        const idToIndex = {};
-        data.questions.forEach(q => {
-            idToIndex[String(q.id)] = q._index;
-        });
-        setMap[outerKey] = {
-            questions: data.questions,
-            idToIndex: idToIndex
-        };
-    }
-
-    const toDelete = [];
     const toAdd = {};
-
-    // 2. 遍历所有缓存记录
+    // 遍历所有缓存记录
     for (const key in records) {
-        if (!records.hasOwnProperty(key)) continue;
-        const parts = key.split('_');
-        // 旧格式：三个部分（题库名_哈希_题号）
-        if (parts.length === 3) {
-            const setName = parts[0];
-            const hash = parts[1];
-            const id = parts[2];
-            const outerKey = `${setName}_${hash}`;
-
-            // 检查该题库是否存在
-            if (setMap[outerKey]) {
-                const idToIndex = setMap[outerKey].idToIndex;
-                const foundIndex = idToIndex[id];
-                if (foundIndex !== undefined) {
-                    // 迁移到新结构：外层键 -> 内层 _index -> 记录对象
-                    if (!toAdd[outerKey]) {
-                        toAdd[outerKey] = {};
-                    }
-                    toAdd[outerKey][foundIndex] = records[key];
-                    toDelete.push(key);
-                } else {
-                    // 题库存在，但该题号不存在（可能题库已修改），丢弃该记录
-                    toDelete.push(key);
-                }
-            } else {
-                // 题库已不存在，丢弃
-                toDelete.push(key);
-            }
+        if (!records.hasOwnProperty(key))
+            continue;
+        const [_, outerKey, foundIndex] = (key.match(/^(.*_[0-9a-f]{8})_([0-9]+)$/) || [null, null, null]);
+        if (outerKey && foundIndex) {
+            // 迁移到新结构
+            if (!toAdd[outerKey]) toAdd[outerKey] = {};
+            toAdd[outerKey][foundIndex] = records[key];
         }
-        // 新格式（两部分）保持不变
     }
 
-    // 3. 执行迁移：删除旧键，添加新键
-    for (const key of toDelete) {
-        delete records[key];
-    }
+    // 执行迁移
     for (const outerKey in toAdd) {
-        if (!records[outerKey]) {
-            records[outerKey] = {};
-        }
-        // 合并迁移的数据（若已有同 _index 的记录，则覆盖，但通常不会）
+        for (const innerKey in toAdd[outerKey])
+            if(records.hasOwnProperty(`${outerKey}_${innerKey}`))
+                delete records[`${outerKey}_${innerKey}`];
+        if (!records[outerKey]) records[outerKey] = {};
         Object.assign(records[outerKey], toAdd[outerKey]);
     }
-
-    // 4. 如果有任何变更，保存到 localStorage
-    if (toDelete.length > 0 || Object.keys(toAdd).length > 0) {
+    if (toAdd.length > 0 || Object.keys(toAdd).length > 0) {
         saveRecords();
-        console.log(`✅ 缓存迁移完成：迁移 ${Object.keys(toAdd).reduce((sum, k) => sum + Object.keys(toAdd[k]).length, 0)} 条记录，清理 ${toDelete.length} 条旧键`);
+        console.log(`✅ 缓存迁移完成：迁移 ${Object.keys(toAdd).reduce((sum, k) => sum + Object.keys(toAdd[k]).length, 0)} 条记录`);
     } else {
         console.log('ℹ️ 缓存格式已是最新，无需迁移');
     }
@@ -742,15 +692,16 @@ function renderManagePage() {
             nameSpan.className = 'cache-name';
             nameSpan.textContent = groupKey;
 
-            const countSpan = document.createElement('span');
-            countSpan.className = 'cache-count';
-            countSpan.textContent = `${count} 题`;
-
             // 操作按钮容器
             const actionsDiv = document.createElement('div');
             actionsDiv.style.display = 'flex';
             actionsDiv.style.gap = '0.5rem';
             actionsDiv.style.alignItems = 'center';
+
+            const countSpan = document.createElement('span');
+            countSpan.className = 'cache-count';
+            countSpan.textContent = `${count} 题`;
+            actionsDiv.appendChild(countSpan);
 
             // 下载按钮
             const downloadBtn = document.createElement('button');
@@ -775,7 +726,6 @@ function renderManagePage() {
             actionsDiv.appendChild(delBtn);
 
             div.appendChild(nameSpan);
-            div.appendChild(countSpan);
             div.appendChild(actionsDiv);
             manageCacheList.appendChild(div);
         });
@@ -786,15 +736,22 @@ function renderManagePage() {
 function getCacheGrouped() {
     const groups = {};
     for (const key in records) {
-        groups[key] = Object.keys(records[key]).length;
+        if (!records.hasOwnProperty(key)) continue;
+        const parts = key.split('_');
+        if (parts.length === 2) {
+            const count = Object.keys(records[key]).length;
+            if (count > 0) groups[key] = count;
+        }
     }
     return groups;
 }
 
 // 清除某个题库（按 groupKey）的所有缓存
 function clearCacheForSet(groupKey) {
-    delete records[groupKey];
-    saveRecords();
+    if (records[groupKey]) {
+        delete records[groupKey];
+        saveRecords();
+    }
     if (pageQuiz.classList.contains('active')) {
         showQuestion(currentIndex);
         pageQuestions.forEach((q, idx) => updateListItemMark(idx));
@@ -1470,6 +1427,5 @@ function restart() {
 
 // 初始化时清理旧格式缓存
 document.addEventListener('DOMContentLoaded', () => {
-    cleanOldRecords();
     init();
 });
