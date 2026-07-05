@@ -176,8 +176,10 @@
             
             // 点击菜单按钮切换导航显示
             mobileMenu.addEventListener('click', function(e) {
-                e.stopPropagation(); // 防止事件冒泡
-                navLinks.classList.toggle('active');
+                if (window.innerWidth <= 900) {
+                    e.stopPropagation(); // 防止事件冒泡
+                    navLinks.classList.toggle('active');
+                }
             });
             
             // 点击导航链接后关闭移动菜单（在移动端）

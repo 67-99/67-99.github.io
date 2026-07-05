@@ -403,19 +403,6 @@ function initNavigation() {
     });
 }
 
-// 移动端菜单
-document.querySelector('.mobile-menu').addEventListener('click', () => {
-    document.querySelector('.nav-links').classList.toggle('active');
-});
-
-document.querySelector('.mobile-nav-toggle').addEventListener('click', () => {
-    const sidebar = document.querySelector('.sidebar');
-    const overlay = document.querySelector('.sidebar-overlay');
-    sidebar.classList.toggle('active');
-    if (overlay) {
-        overlay.classList.toggle('active');
-    }
-});
 
 document.addEventListener('click', (e) => {
     const sidebar = document.querySelector('.sidebar');
@@ -430,6 +417,20 @@ document.addEventListener('click', (e) => {
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
+    // 移动端菜单
+    const navContainer = document.querySelector('.nav-container');
+    if(navContainer){
+        const mobileNav = document.createElement('div');
+        mobileNav.className = 'mobile-nav-toggle';
+        mobileNav.textContent = '导航'; // 或者用图标
+        mobileNav.addEventListener('click', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar?.classList.toggle('active');
+            overlay?.classList.toggle('active');
+        });
+        navContainer.appendChild(mobileNav);
+    }
     const overlay = document.createElement('div');
     overlay.className = 'sidebar-overlay';
     document.body.appendChild(overlay);

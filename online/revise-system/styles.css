@@ -94,7 +94,7 @@ nav * {
         flex-direction: column;
         background: #11998e;
         position: absolute;
-        top: 60px;
+        top: 100%;
         left: 0;
         width: 100%;
         padding: 1rem;

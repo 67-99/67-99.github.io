@@ -7,6 +7,8 @@
     <title>html模板</title>
     <!-- 引入样式文件 -->
     <link rel="stylesheet" href="../styles.css">
+    <!-- 引入网页基础库JavaScript -->
+    <script src="../../base.js"></script>
     <!-- 引入mermaid -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
     <!-- 引入marked.js用于解析Markdown -->
@@ -15,23 +17,7 @@
 <body>
     <!-- 导航栏 -->
     <nav>
-        <div class="nav-container">
-            <div class="logo">67-99</div>
-            <ul class="nav-links">
-                <li><a href="../../index.html">首页</a></li>
-                <li class="dropdown">
-                    <a href="../index.html">项目</a>
-                    <ul class="dropdown-menu">
-                        <li><a href="../index.html#online">在线项目</a></li>
-                        <li><a href="../index.html#offline">离线项目</a></li>
-                    </ul>
-                </li>
-                <li><a href="https://67-99.github.io/shade/index.html">画廊</a></li>
-            </ul>
-            <div class="mobile-menu">☰</div>
-            <!-- 添加移动端导航切换按钮 -->
-            <div class="mobile-nav-toggle">导航</div>
-        </div>
+        <div class="nav-container"></div>
     </nav>
     <!-- 主内容区 -->
     <div class="main-container">

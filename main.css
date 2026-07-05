@@ -12,7 +12,6 @@ body {
 }
 /* 移动端菜单样式 */
 .mobile-menu {
-    display: none;
     font-size: 1.4rem;
     cursor: pointer;
     padding: 5px;

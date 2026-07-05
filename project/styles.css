@@ -88,13 +88,20 @@ nav * {
     background-color: #f5f5f5;
     opacity: 1;
 }
+.mobile-nav-toggle {
+    display: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    font-weight: 500;
+    margin-left: 15px;
+}
 @media (max-width: 768px) {
     .nav-links {
         display: none;
         flex-direction: column;
         background: #11998e;
         position: absolute;
-        top: 60px;
+        top: 100%;
         left: 0;
         width: 100%;
         padding: 1rem;
@@ -107,6 +114,9 @@ nav * {
         padding: 0.5rem 1rem;
     }
     .mobile-menu {
+        display: block;
+    }
+    .mobile-nav-toggle {
         display: block;
     }
 }
@@ -608,14 +618,6 @@ nav * {
     max-width: 100%;
 }
 
-/* 移动端导航切换按钮 */
-.mobile-nav-toggle {
-    display: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    font-weight: 500;
-    margin-left: 15px;
-}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
@@ -634,9 +636,6 @@ nav * {
     }
     .web-component-frame {
         min-height: 300px;
-    }
-    .mobile-nav-toggle {
-        display: block;
     }
     .sidebar {
         display: none;
