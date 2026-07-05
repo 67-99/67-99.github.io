@@ -1,63 +1,6 @@
 import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.min.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.mjs';
 
-/**
- * 检查资源是否存在
- * @param {string} url - 要检查的资源URL
- * @param {number} timeout - 超时时间（毫秒），默认3000ms
- * @returns {Promise<boolean>} - 资源是否存在
- */
-async function checkResourceExists(url, timeout = 3000){
-    if(!url)
-        return false;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-    if(url.startsWith('http://') || url.startsWith('https://')) {
-        // 外部链接：进行简化检查（避免跨域限制）
-        try {
-            // 对于外部资源，使用no-cors模式避免CORS限制
-            // 注意：no-cors模式下无法读取响应状态
-            await fetch(url, {method: 'HEAD', mode: 'no-cors', signal: controller.signal, cache: 'no-store'});
-            clearTimeout(timeoutId);
-            // no-cors模式下，只要请求能发出（网络可达）就认为存在
-            // 注意：这无法区分404和200，但能判断网络可达性
-            return true;
-        } catch (error) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                console.warn(`外部资源检查超时: ${url}`);
-                return false;
-            }
-            console.warn(`外部资源检查失败: ${url}`, error);
-            return false;
-        }
-    }
-    // 内部资源：使用HEAD方法（只获取头部，不下载内容）
-    try {
-        // 使用HEAD方法，只获取响应头，不下载内容主体
-        const response = await fetch(url, {method: 'HEAD', signal: controller.signal, cache: 'no-store', headers: {
-                                    'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache'}});
-        clearTimeout(timeoutId);
-        // 对于内部资源，我们可以精确判断状态码
-        // 200-299: 资源存在且正常
-        // 304: 资源存在且未修改（缓存有效）
-        // 401/403: 资源存在但无权访问（也算存在）
-        // 404: 资源不存在
-        // 其他4xx/5xx: 视为不存在
-        return response.ok || response.status === 304 || 
-               response.status === 401 || response.status === 403;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        // 根据不同错误类型处理
-        if (error.name === 'AbortError') {
-            console.warn(`资源检查超时: ${url}`);
-            return false; // 超时视为不可用
-        }
-        console.warn(`资源检查失败: ${url}`, error);
-        return false;
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     // 全局变量
     /** @type {Array<{startDate: Date, endDate: Date} & Object.<string, string>>} */
@@ -589,41 +532,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
-    // 移动端菜单
-    const mobileMenu = document.querySelector('.mobile-menu');
-    const navLinks = document.querySelector('.nav-links');
-    
-    if (mobileMenu) {
-        mobileMenu.addEventListener('click', function() {
-            navLinks.classList.toggle('active');
-            
-            if (navLinks.classList.contains('active')) {
-                navLinks.style.display = 'block';
-                navLinks.style.position = 'absolute';
-                navLinks.style.top = '100%';
-                navLinks.style.left = '0';
-                navLinks.style.right = '0';
-                navLinks.style.backgroundColor = 'var(--bg-card)';
-                navLinks.style.flexDirection = 'column';
-                navLinks.style.padding = '20px';
-                navLinks.style.boxShadow = '0 10px 20px rgba(0,0,0,0.3)';
-                
-                const dropdowns = navLinks.querySelectorAll('.dropdown-menu');
-                dropdowns.forEach(dropdown => {
-                    dropdown.style.position = 'static';
-                    dropdown.style.opacity = '1';
-                    dropdown.style.visibility = 'visible';
-                    dropdown.style.transform = 'none';
-                    dropdown.style.boxShadow = 'none';
-                    dropdown.style.borderTop = 'none';
-                    dropdown.style.paddingLeft = '20px';
-                });
-            } else {
-                navLinks.style.display = 'none';
-            }
-        });
-    }
     
     // 窗口大小改变时重新计算位置
     window.addEventListener('resize', () => {

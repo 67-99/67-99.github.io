@@ -21,6 +21,9 @@ nav {
     z-index: 100;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
+nav * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 .nav-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -51,14 +54,13 @@ nav {
 .nav-links a:hover {
     opacity: 0.8;
 }
-
-/* 下拉菜单样式 */
 .dropdown-menu {
     position: absolute;
     top: 100%;
     left: 0;
     background: white;
     min-width: 180px;
+    z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     border-radius: 4px;
     list-style: none;
@@ -85,6 +87,28 @@ nav {
 .dropdown-menu a:hover {
     background-color: #f5f5f5;
     opacity: 1;
+}
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        background: #11998e;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        width: 100%;
+        padding: 1rem;
+    }
+    .nav-links.active {
+        display: flex;
+    }
+    .dropdown-menu a {
+        font-size: 0.88rem;
+        padding: 0.5rem 1rem;
+    }
+    .mobile-menu {
+        display: block;
+    }
 }
 
 /* 主内容区布局 */
@@ -604,27 +628,6 @@ nav {
     }
     .content {
         padding: 25px;
-    }
-    .mobile-menu {
-        font-size: 1.4rem;
-        font-weight: 600;
-        display: block;
-    }
-    .nav-links {
-        display: none;
-        position: absolute;
-        top: 78px;
-        left: 0;
-        right: 0;
-        background-color: #2c3e50;
-        flex-direction: column;
-        padding: 20px;
-    }
-    .nav-links.active {
-        display: flex;
-    }
-    .nav-links li {
-        margin: 10px 0;
     }
     .image-gallery {
         grid-template-columns: 1fr;

@@ -42,9 +42,6 @@ nav {
 .nav-links {
     display: flex;
     list-style: none;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
 }
 .nav-links.active {
     display: flex !important;
@@ -66,7 +63,6 @@ nav {
 .nav-links.active li {
     margin: 0;
     text-align: left;
-    padding-left: 2rem;
 }
 .nav-links a {
     color: white;
@@ -97,6 +93,7 @@ nav {
     left: 0;
     background: white;
     min-width: 180px;
+    z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     border-radius: 4px;
     list-style: none;
@@ -361,9 +358,6 @@ nav {
     }
     .profile {
         position: static;
-    }
-    .nav-links.active {
-        top: 78px;
     }
     .nav-links {
         display: none;

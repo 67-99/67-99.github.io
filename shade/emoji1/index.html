@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>表情包1</title>
+    <script src="../../base.js"></script>
     <link rel="stylesheet" href="../main.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,21 +12,7 @@
 <body>
     <!-- 导航栏 -->
     <nav>
-        <div class="nav-container">
-            <div class="logo">67-99</div>
-            <ul class="nav-links">
-                <li><a href="../../index.html">首页</a></li>
-                <li class="dropdown">
-                    <a href="https://67-99.github.io/project/index.html">项目</a>
-                    <ul class="dropdown-menu">
-                        <li><a href="https://67-99.github.io/project/index.html#online">在线项目</a></li>
-                        <li><a href="https://67-99.github.io/project/index.html#offline">离线项目</a></li>
-                    </ul>
-                </li>
-                <li><a href="../index.html">画廊</a></li>
-            </ul>
-            <div class="mobile-menu">☰</div>
-        </div>
+        <div class="nav-container"></div>
     </nav>
 
     <main class="emoji-gallery-container">
@@ -47,70 +34,6 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 移动菜单切换功能
-            const mobileMenuBtn = document.querySelector('.mobile-menu');
-            const navLinks = document.querySelector('.nav-links');
-            
-            if (mobileMenuBtn) {
-                mobileMenuBtn.addEventListener('click', function() {
-                    navLinks.style.display = navLinks.style.display === 'flex' ? 'none' : 'flex';
-                    
-                    if (navLinks.style.display === 'flex') {
-                        navLinks.style.flexDirection = 'column';
-                        navLinks.style.position = 'absolute';
-                        navLinks.style.top = '100%';
-                        navLinks.style.left = '0';
-                        navLinks.style.width = '100%';
-                        navLinks.style.backgroundColor = '#242424';
-                        navLinks.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
-                        navLinks.style.padding = '20px 0';
-                        
-                        // 调整下拉菜单位置
-                        const dropdowns = document.querySelectorAll('.dropdown');
-                        dropdowns.forEach(dropdown => {
-                            const menu = dropdown.querySelector('.dropdown-menu');
-                            if (menu) {
-                                menu.style.position = 'static';
-                                menu.style.boxShadow = 'none';
-                                menu.style.opacity = '1';
-                                menu.style.visibility = 'visible';
-                                menu.style.transform = 'none';
-                                menu.style.paddingLeft = '20px';
-                            }
-                        });
-                    }
-                });
-            }
-            
-            // 窗口大小调整时重置导航
-            window.addEventListener('resize', function() {
-                if (window.innerWidth > 768) {
-                    navLinks.style.display = '';
-                    navLinks.style.flexDirection = '';
-                    navLinks.style.position = '';
-                    navLinks.style.top = '';
-                    navLinks.style.left = '';
-                    navLinks.style.width = '';
-                    navLinks.style.backgroundColor = '';
-                    navLinks.style.boxShadow = '';
-                    navLinks.style.padding = '';
-                    
-                    // 重置下拉菜单位置
-                    const dropdowns = document.querySelectorAll('.dropdown');
-                    dropdowns.forEach(dropdown => {
-                        const menu = dropdown.querySelector('.dropdown-menu');
-                        if (menu) {
-                            menu.style.position = '';
-                            menu.style.boxShadow = '';
-                            menu.style.opacity = '';
-                            menu.style.visibility = '';
-                            menu.style.transform = '';
-                            menu.style.paddingLeft = '';
-                        }
-                    });
-                }
-            });
-            
             // 表情包数据
             const emojiData = [
                 { name: "OK", desc: "", img: "pic/OK.png" },  //, tags: ["OK", "没问题"]

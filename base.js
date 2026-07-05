@@ -87,6 +87,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     [...navs].forEach(element => {
         element.innerHTML = navHTML;
     });
+
+    // 移动端菜单切换
+    const mobileMenu = document.querySelector('.mobile-menu');
+    if (mobileMenu) {
+        mobileMenu.addEventListener('click', function(e) {
+            e.stopPropagation(); // 防止冒泡干扰
+            const navLinks = document.querySelector('.nav-links');
+            if (navLinks) {
+                navLinks.classList.toggle('active');
+            }
+        });
+    }
     setFavicon("https://67-99.github.io/icon/Shade/web-icon.png");
 });
 
