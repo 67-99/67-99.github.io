@@ -1,0 +1,9 @@
+[
+    {"id": "calendar","title": "复习系统","type": "html","src": "https://67-99.github.io/online/revise-system/index.html","sandbox": "allow-scripts allow-same-origin allow-forms"},
+    {"id": "purpose","title": "设计初衷","type": "markdown","src": "purpose.md"},
+    {"id":"download","title":"资源下载","type":"downloads",
+    "files":[
+        {"name":"题库格式skill","src":"resource/question.md"},
+        {"name":"pyQt6桌面版刷题程序","src":"resource/main.py"}]
+    }
+]

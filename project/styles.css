@@ -640,7 +640,7 @@ nav * {
     .sidebar {
         display: none;
         position: fixed;
-        top: 60px;
+        top: 78px;
         left: 0;
         width: 80%;
         max-width: 300px;

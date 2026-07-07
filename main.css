@@ -336,6 +336,30 @@ nav {
     flex-grow: 1;
     margin-bottom: 1rem;
 }
+.work-item-row {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.work-item-row:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+.work-item-row .work-content {
+    padding: 0;
+}
+.work-item-row .work-content h3 {
+    margin: 0 0 4px 0;
+}
+.work-item-row .work-content p {
+    margin: 0;
+}
 .work-link {
     display: inline-block;
     background: #6a11cb;
@@ -346,6 +370,9 @@ nav {
     font-weight: 500;
     transition: background 0.3s;
     align-self: flex-start;
+}
+.work-item-row .work-link {
+    align-self: center;
 }
 .work-link:hover {
     background: #2575fc;
@@ -370,6 +397,17 @@ nav {
 @media (max-width: 600px) {
     .work-grid {
         grid-template-columns: 1fr;
+    }
+    .work-item-row {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1rem;
+    }
+    .work-item-row .work-content{
+        margin-bottom: 1rem;
+    }
+    .work-item-row .work-link {
+        align-self: auto;
     }
 }
 /* 弹出卡片的响应式调整 */
