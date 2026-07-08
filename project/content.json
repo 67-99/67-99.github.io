@@ -8,6 +8,11 @@
                 "name": "classroom-check"
             },
             {
+                "title": "复习系统",
+                "description": "这是一个为刷题打造的复习系统。<br><i>注:目前只有答题功能，未来可能拓展</i>",
+                "name": "revise-system"
+            },
+            {
                 "title": "情绪日历",
                 "description": "这是一个可以记录并查询情绪/状态的网页日历。<br><i>注:有🪜与无🪜会显示两种不同的内容</i></p>",
                 "name": "state-calendar"
