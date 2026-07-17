@@ -9,6 +9,106 @@ body {
     color: #333;
     line-height: 1.6;
 }
+/* 导航栏样式 */
+nav {
+    background: linear-gradient(135deg, #006600 0%, #11998e 100%);
+    color: white;
+    padding: 1rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+nav * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+.nav-links {
+    display: flex;
+    list-style: none;
+}
+.nav-links li {
+    margin-left: 2rem;
+    position: relative;
+}
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.3s;
+    padding: 0.5rem 0;
+    display: block;
+}
+.nav-links a:hover {
+    opacity: 0.8;
+}
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    min-width: 180px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    list-style: none;
+    padding: 0.5rem 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+.dropdown:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.dropdown-menu li {
+    margin: 0;
+}
+.dropdown-menu a {
+    color: #333;
+    padding: 0.75rem 1.5rem;
+    display: block;
+    transition: background-color 0.2s;
+}
+.dropdown-menu a:hover {
+    background-color: #f5f5f5;
+    opacity: 1;
+}
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        background: #11998e;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        padding: 1rem;
+    }
+    .nav-links.active {
+        display: flex;
+    }
+    .dropdown-menu a {
+        font-size: 0.88rem;
+        padding: 0.5rem 1rem;
+    }
+    .mobile-menu {
+        display: block;
+    }
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
