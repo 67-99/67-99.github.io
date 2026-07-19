@@ -66,6 +66,18 @@ function setFavicon(src) {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
+    // ---------- 检测是否在 iframe 中 ----------
+    const isInIframe = window !== window.top;
+    if (isInIframe) {
+        // 如果是在 iframe 中，隐藏导航栏
+        const nav = document.querySelector('nav');
+        if (nav) {
+            nav.style.display = 'none';
+        }
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) sidebar.style.display = 'none';
+    }
+
     // ---------- DOM 元素 ----------
     const navs = document.getElementsByClassName('nav-container');
     const navHTML = `
