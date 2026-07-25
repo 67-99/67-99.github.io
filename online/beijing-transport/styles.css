@@ -117,6 +117,14 @@ nav * {
     height: calc(100vh - 78px);
     transition: height 0.3s;
 }
+/* 定位标记脉冲动画 */
+@keyframes pulse {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(1.2); opacity: 0; }
+}
+.location-marker i {
+    animation: pulse 1.5s infinite;
+}
 /* 底部可拖动面板 */
 .drawer {
     position: fixed;

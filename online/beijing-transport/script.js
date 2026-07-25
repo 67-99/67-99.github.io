@@ -182,6 +182,105 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // ===================== 定位相关 =====================
+    var locationMarker = null;      // 当前位置标记
+    var locationCircle = null;      // 精度圈
+    var lastLocation = null;
+    var watchId = null;
+
+    // 定位成功回调
+    function onLocationFound(latlng, accuracy) {
+        if (!locationMarker) {
+            // 首次定位：创建标记和精度圈
+            locationMarker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'location-marker',
+                    html: '<i class="fas fa-location-dot" style="font-size:28px;color:#ff4d4f;text-shadow:0 0 4px rgba(255,255,255,0.8);"></i>',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                })
+            }).addTo(map);
+
+            locationCircle = L.circle(latlng, {
+                radius: accuracy || 50,
+                color: '#4d8aff',
+                fillColor: '#4d8aff',
+                fillOpacity: 0.15,
+                weight: 1,
+                dashArray: '5,5'
+            }).addTo(map);
+
+            // 首次定位后，缩放至当前位置（级别15）
+            map.setView(latlng, 15);
+        } else {
+            // 更新标记位置和精度圈
+            locationMarker.setLatLng(latlng);
+            if (locationCircle) {
+                locationCircle.setLatLng(latlng);
+                if (accuracy) {
+                    locationCircle.setRadius(accuracy);
+                }
+            }
+        }
+        lastLocation = latlng;
+    }
+
+    // 定位失败回调
+    function onLocationError(error) {
+        console.warn('定位失败:', error.message);
+        // 可在地图上显示提示
+        var popup = L.popup({ closeOnClick: false })
+            .setLatLng(map.getCenter())
+            .setContent('无法获取当前位置，请检查GPS或网络权限')
+            .openOn(map);
+        // 3秒后自动关闭
+        setTimeout(function() {
+            map.closePopup(popup);
+        }, 3000);
+    }
+
+    // 启动定位
+    function startLocationTracking() {
+        if (!navigator.geolocation) {
+            console.warn('浏览器不支持地理定位');
+            return;
+        }
+
+        // watchPosition 选项：
+        // enableHighAccuracy: true 使用GPS（移动端更准）
+        // timeout: 10000 10秒超时
+        // maximumAge: 30000 允许使用30秒内的缓存位置，即每30秒强制刷新一次
+        var options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 30000   // 关键：每30秒更新一次
+        };
+
+        watchId = navigator.geolocation.watchPosition(
+            function(pos) {
+                var latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                var accuracy = pos.coords.accuracy;
+                onLocationFound(latlng, accuracy);
+            },
+            onLocationError,
+            options
+        );
+    }
+
+    // 停止定位（可选，例如页面卸载时）
+    function stopLocationTracking() {
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+    }
+
+    // 页面关闭时停止定位（可选）
+    window.addEventListener('beforeunload', function() {
+        stopLocationTracking();
+    });
+
     // ---- 启动 ----
     loadAllLines();
+    startLocationTracking();  // 启动定位
 });
