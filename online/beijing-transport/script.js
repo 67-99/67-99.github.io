@@ -2,8 +2,7 @@
 // 工具函数
 // ===========================
 function isIOS() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
 // ===========================
@@ -11,25 +10,174 @@ function isIOS() {
 // ===========================
 let map;
 let lineLayer;
-const lineData = {};        // { id: { name, bounds, group, layers, color } }
+let currentTileLayer = null; // 当前底图图层
+let isSatellite = true; // 当前是否为卫星图
+
+const lineData = {}; // { id: { name, bounds, group, layers, color } }
 let locationMarker = null;
 let locationCircle = null;
 let watchId = null;
 let firstTrack = true;
 
+// ---- Debug 相关 ----
+let debugLayer = null;          // 使用 canvas 渲染的图层组
+let debugVisible = false;
+let canvasRenderer = null;      // 共享 canvas 渲染器
+
 // ===========================
 // 地图初始化
 // ===========================
+function createTileLayer(satellite) {
+    const style = satellite ? 6 : 7;
+    return L.tileLayer(`https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&style=${style}&ltype=2`);
+}
+
 function initMap() {
     map = L.map('map').setView([39.9, 116.4], 10);
-    const satellite = true;
-    L.tileLayer(
-        `https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&style=${satellite ? 6 : 7}&ltype=2`
-    ).addTo(map);
+
+    currentTileLayer = createTileLayer(true);
+    currentTileLayer.addTo(map);
+
     map.attributionControl.setPrefix('');
     map.attributionControl.addAttribution('&copy; <a href="https://www.amap.com/">高德地图</a>');
 
     lineLayer = L.layerGroup().addTo(map);
+
+    // 创建 canvas 渲染器（用于 debug 节点，提升性能）
+    canvasRenderer = L.canvas({ padding: 0.5 });
+    debugLayer = L.layerGroup().addTo(map); // 先添加到地图，但默认隐藏（通过控制 visible）
+    map.removeLayer(debugLayer);  // 默认不显示 debug
+    map.on('moveend', function() {
+        if(debugVisible)
+            updateDebugNodes();
+    });
+}
+
+// ===========================
+// 地图类型切换
+// ===========================
+function toggleMapType() {
+    isSatellite = !isSatellite;
+    if(currentTileLayer)
+        map.removeLayer(currentTileLayer);
+    currentTileLayer = createTileLayer(isSatellite);
+    currentTileLayer.addTo(map);
+
+    const btn = document.getElementById('map-type-btn');
+    const icon = btn.querySelector('i');
+    const span = btn.querySelector('span');
+    if (isSatellite) {
+        icon.className = 'fas fa-satellite';
+        span.textContent = '卫星';
+        btn.classList.add('active-type');
+    } else {
+        icon.className = 'fas fa-map';
+        span.textContent = '路网';
+        btn.classList.remove('active-type');
+    }
+}
+
+// ===========================
+// Debug 功能
+// ===========================
+// 缓存所有节点数据（用于视口裁剪）
+let debugNodesData = [];
+
+function buildDebugNodes() {
+    debugNodesData = [];  // 清空缓存
+    debugLayer.clearLayers();
+    const lineIds = Object.keys(lineData);
+    if(lineIds.length === 0)
+        return;
+
+    for(const [id, info] of Object.entries(lineData)) {
+        const color = info.color || '#808080';
+        const segments = info.segments;
+        segments.forEach(([priority, pts], segIdx) => {
+            if (!pts || pts.length < 2)
+                return; // 跳过无效段
+            // 遍历该段内的每个点
+            pts.forEach((latlng, pointIdx) => {
+                debugNodesData.push({
+                    latlng: latlng,
+                    lineId: id,
+                    segmentIdx: segIdx,    // 段索引
+                    pointIdx: pointIdx,    // 点索引
+                    color: color
+                });
+            });
+        });
+    }
+    // 首次构建时，根据当前视口添加可见节点
+    updateDebugNodes();
+}
+
+function updateDebugNodes() {
+    if (!debugVisible || !map) return;
+    // 清空已有节点（不破坏缓存数据）
+    debugLayer.clearLayers();
+    const bounds = map.getBounds();
+    const MAX_VISIBLE = Math.min(Math.max(400 - 20 * map.getZoom(), 50), 200); // 上限
+    let visibleNodes = [];
+    for(const node of debugNodesData)
+        if(bounds.contains(node.latlng))
+            visibleNodes.push(node);
+    // 如果超过上限，均匀采样
+    let displayNodes = visibleNodes;
+    if(visibleNodes.length > MAX_VISIBLE){
+        const step = Math.ceil(visibleNodes.length / MAX_VISIBLE);
+        const sampled = [];
+        for(let i = 0; i < visibleNodes.length; i += step)
+            sampled.push(visibleNodes[i]);
+        displayNodes = sampled;
+    }
+
+    for (const node of displayNodes) {
+        if (bounds.contains(node.latlng)) {
+            const circle = L.circleMarker(node.latlng, {
+                radius: 5,
+                color: node.color,
+                weight: 2,
+                fillColor: '#ffffff',
+                fillOpacity: 0.95,
+                renderer: canvasRenderer
+            });
+            const label = `${node.lineId}-${node.segmentIdx}-${node.pointIdx}`;
+            const tooltip = L.tooltip({
+                permanent: true,
+                direction: 'center',
+                className: 'debug-tooltip',
+                offset: map.getZoom() > 12? [1.6 * map.getZoom(), -map.getZoom()]: [0, 0]
+            }).setContent(label);
+            circle.bindTooltip(tooltip);
+            debugLayer.addLayer(circle);
+        }
+    }
+}
+
+function toggleDebug() {
+    debugVisible = !debugVisible;
+    const btn = document.getElementById('debug-btn');
+
+    if (debugVisible) {
+        if(debugNodesData.length === 0)
+            buildDebugNodes();  // 首次构建缓存
+        else
+            updateDebugNodes();  // 已有缓存，直接刷新
+        if(!map.hasLayer(debugLayer))
+            debugLayer.addTo(map);
+        btn.classList.add('debug-active');
+    } else {  // 隐藏
+        if(map.hasLayer(debugLayer))
+            map.removeLayer(debugLayer);
+        btn.classList.remove('debug-active');
+    }
+}
+
+// 当线路数据更新时，如果 debug 已开启，刷新节点
+function refreshDebugIfNeeded(){
+    if(debugVisible)
+        buildDebugNodes();  // 重建缓存，内部会调用 updateDebugNodes
 }
 
 // ===========================
@@ -77,7 +225,8 @@ function loadLineFile(id) {
                 bounds: bounds,
                 group: group,
                 layers: layers,
-                color: color
+                color: color,
+                segments: segments
             };
 
             lineLayer.addLayer(group);
@@ -93,11 +242,18 @@ function loadAllLines() {
             return res.json();
         })
         .then(ids => Promise.all(ids.map(id => loadLineFile(id))))
-        .then(() => populateDrawer())
+        .then(() => {
+            populateDrawer();
+            // 如果 debug 已开启，刷新节点
+            refreshDebugIfNeeded();
+        })
         .catch(() => {
             console.warn('未找到 lines，使用默认线路');
             const ids = ['M1', 'M1E', 'M2'];
-            Promise.all(ids.map(id => loadLineFile(id))).then(populateDrawer);
+            Promise.all(ids.map(id => loadLineFile(id))).then(() => {
+                populateDrawer();
+                refreshDebugIfNeeded();
+            });
         });
 }
 
@@ -182,7 +338,7 @@ function onLocationFound(latlng, accuracy) {
         locationMarker = L.marker(latlng, {
             icon: L.divIcon({
                 className: 'location-marker',
-                html: '<i class="fas fa-location-dot" style="font-size:28px;color:#ff4d4f;text-shadow:0 0 4px rgba(255,255,255,0.8);"></i>',
+                html: '<i class="fas fa-location-dot"></i>',
                 iconSize: [28, 28],
                 iconAnchor: [14, 14]
             })
@@ -197,7 +353,7 @@ function onLocationFound(latlng, accuracy) {
             dashArray: '5,5'
         }).addTo(map);
 
-        map.setView(latlng, 15);
+        map.setView(latlng, 14);
     } else {
         locationMarker.setLatLng(latlng);
         if (locationCircle) {
@@ -282,6 +438,12 @@ document.addEventListener('DOMContentLoaded', function() {
     initMap();
     initDrawerDrag();
     loadAllLines();
+
+    // ---- 浮动按钮事件 ----
+    document.getElementById('map-type-btn').addEventListener('click', toggleMapType);
+    document.getElementById('map-type-btn').classList.add('active-type'); // 初始卫星
+
+    document.getElementById('debug-btn').addEventListener('click', toggleDebug);
 
     // 定位按钮
     document.getElementById('locate-btn').addEventListener('click', function() {

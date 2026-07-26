@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>北京公交地图</title>
     <!-- 基础样式 -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css" />
     <!-- Font Awesome 图标库 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Leaflet 核心 CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- 引入 Leaflet 核心 JS -->
@@ -19,8 +19,19 @@
     <nav>
         <div class="nav-container"></div>
     </nav>
+
     <main class="content" id="content-area">
         <div id="map"></div>
+        <div class="float-buttons" id="floatButtons">
+            <button id="map-type-btn" class="float-btn" title="切换卫星/路网">
+                <i class="fas fa-satellite"></i>
+                <span>卫星</span>
+            </button>
+            <button id="debug-btn" class="float-btn" title="显示/隐藏节点">
+                <i class="fas fa-bug"></i>
+                <span>Debug</span>
+            </button>
+        </div>
         <button id="locate-btn" class="locate-btn">
             <i class="fas fa-location-arrow"></i>
         </button>
@@ -36,3 +47,4 @@
 
     <script src="script.js"></script>
 </body>
+</html>
