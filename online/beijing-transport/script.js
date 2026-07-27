@@ -4,6 +4,39 @@
 function isIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
+// WGS84 转 GCJ-02 (火星坐标系)
+function wgs84ToGcj02(wgsLat, wgsLon) {
+    const a = 6378245.0;
+    const ee = 0.00669342162296594323;
+    const pi = 3.14159265358979324;
+    function transformLat(x, y) {
+        let ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+        ret += (20.0 * Math.sin(6.0 * x * pi) + 20.0 * Math.sin(2.0 * x * pi)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(y * pi) + 40.0 * Math.sin(y / 3.0 * pi)) * 2.0 / 3.0;
+        ret += (160.0 * Math.sin(y / 12.0 * pi) + 320.0 * Math.sin(y * pi / 30.0)) * 2.0 / 3.0;
+        return ret;
+    }
+    function transformLon(x, y) {
+        let ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+        ret += (20.0 * Math.sin(6.0 * x * pi) + 20.0 * Math.sin(2.0 * x * pi)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(x * pi) + 40.0 * Math.sin(x / 3.0 * pi)) * 2.0 / 3.0;
+        ret += (150.0 * Math.sin(x / 12.0 * pi) + 300.0 * Math.sin(x / 30.0 * pi)) * 2.0 / 3.0;
+        return ret;
+    }
+    if(wgsLon < 72.004 || wgsLon > 137.8347 || wgsLat < 0.8293 || wgsLat > 55.8271)
+        return { lat: wgsLat, lng: wgsLon };  // 判断是否在中国境外，境外不转换
+    let dLat = transformLat(wgsLon - 105.0, wgsLat - 35.0);
+    let dLon = transformLon(wgsLon - 105.0, wgsLat - 35.0);
+    const radLat = wgsLat / 180.0 * pi;
+    let magic = Math.sin(radLat);
+    magic = 1 - ee * magic * magic;
+    const sqrtMagic = Math.sqrt(magic);
+    dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * pi);
+    dLon = (dLon * 180.0) / (a / sqrtMagic * Math.cos(radLat) * pi);
+    const gcjLat = wgsLat + dLat;
+    const gcjLon = wgsLon + dLon;
+    return { lat: gcjLat, lng: gcjLon };
+}
 
 // ===========================
 // 全局状态
@@ -23,6 +56,7 @@ let firstTrack = true;
 let debugLayer = null;          // 使用 canvas 渲染的图层组
 let debugVisible = false;
 let canvasRenderer = null;      // 共享 canvas 渲染器
+let debugScaleControl = null; // 用于 debug 信息控件
 
 // ===========================
 // 地图初始化
@@ -51,6 +85,104 @@ function initMap() {
         if(debugVisible)
             updateDebugNodes();
     });
+    // ===========================
+    // 自定义比例尺控件
+    // ===========================
+    L.Control.LonLatScale = L.Control.Scale.extend({
+        options: {
+            position: 'bottomright',
+            maxWidth: 150,
+            metric: true,
+            imperial: false
+        },
+        onAdd: function(map) {
+            var container = L.DomUtil.create('div', 'leaflet-control-lonlat-scale');
+            this._container = container;
+            this._map = map;
+            this._update();
+            map.on('moveend zoomend', this._update, this);
+            return container;
+        },
+        _update: function() {
+            var map = this._map;
+            if (!map)
+                return;
+            var center = map.getCenter();
+            var lat = center.lat;
+            var cosLat = Math.cos(lat * Math.PI / 180);
+            // 获取当前视口经度跨度
+            var bounds = map.getBounds();
+            var sw = bounds.getSouthWest();
+            var ne = bounds.getNorthEast();
+            var pixelWidth = map.getSize().x;
+            var lngDelta = ne.lng - sw.lng;
+            if (lngDelta <= 0) return;
+            var lngPerPixel = lngDelta / pixelWidth;
+            // 预定义间隔（1e-n, 2e-n, 5e-n）
+            var scales = [
+                0.00001, 0.00002, 0.00005,
+                0.0001,  0.0002,  0.0005,
+                0.001,   0.002,   0.005,
+                0.01,    0.02,    0.05,
+                0.1,     0.2,     0.5,
+                1,       2,       5,
+                10,      20,      50,
+                100,     200,     500
+            ];
+            // 选择一个间隔，使其像素宽度在 minPx~maxPx 之间，最接近 targetPx
+            var targetPx = 50;
+            var minPx = 30;
+            var maxPx = 100;
+            var chosen = scales[0];
+            for (var i = 0; i < scales.length; i++) {
+                var px = scales[i] / lngPerPixel;
+                if (px >= minPx && px <= maxPx) {
+                    chosen = scales[i];
+                    break;
+                }
+                if (px > maxPx) {
+                    // 如果当前已经超过 maxPx，则取前一个（如果前一个存在且更接近）
+                    if (i > 0) {
+                        var prevPx = scales[i-1] / lngPerPixel;
+                        if(Math.abs(prevPx - targetPx) <= Math.abs(px - targetPx))
+                            chosen = scales[i-1];
+                        else
+                            chosen = scales[i];
+                    }
+                    else {
+                        chosen = scales[i];
+                    }
+                    break;
+                }
+                // 如果是最后一个，使用最后一个
+                if (i === scales.length - 1) {
+                    chosen = scales[i];
+                }
+            }
+            // 计算该间隔对应的像素宽度与 实际距离（经度方向）
+            var pxWidth = chosen / lngPerPixel;
+            var lngDist = 111320 * cosLat * chosen; // 米
+            // 构建 DOM
+            var container = this._container;
+            if (!container) return;
+            container.innerHTML = '';
+            var wrapper = L.DomUtil.create('div', 'leaflet-control-scale-wrapper', container);
+            var inner = L.DomUtil.create('div', 'leaflet-control-scale-line', wrapper);
+            var left = L.DomUtil.create('div', 'leaflet-control-scale-left', inner);
+            var right = L.DomUtil.create('div', 'leaflet-control-scale-right', inner);
+            var label = L.DomUtil.create('div', 'leaflet-control-scale-label', wrapper);
+            inner.style.width = pxWidth + 'px';
+            label.style.width = pxWidth + 'px';
+            var degreeStr = chosen.toFixed(6).replace(/\.?0+$/, '') + '°';
+            var distStr = lngDist >= 1000 ? (lngDist/1000).toFixed(1) + ' km' : lngDist.toFixed(1) + ' m';
+            label.innerHTML = degreeStr;
+        }
+    });
+    // 添加Debug比例尺
+    var lonlatScale = new L.Control.LonLatScale({ position: 'bottomright', maxWidth: 150 });
+    lonlatScale.addTo(map);
+    lonlatScale._container.style.display = 'none';
+    window._lonlatScale = lonlatScale;
 }
 
 // ===========================
@@ -62,7 +194,7 @@ function toggleMapType() {
         map.removeLayer(currentTileLayer);
     currentTileLayer = createTileLayer(isSatellite);
     currentTileLayer.addTo(map);
-
+    // 更新按钮样式
     const btn = document.getElementById('map-type-btn');
     const icon = btn.querySelector('i');
     const span = btn.querySelector('span');
@@ -75,6 +207,14 @@ function toggleMapType() {
         span.textContent = '路网';
         btn.classList.remove('active-type');
     }
+    // 控制经纬度比例尺背景显示
+    const mapContainer = map.getContainer();
+    if(isSatellite)
+        mapContainer.classList.remove('road-mode');
+    else
+        mapContainer.classList.add('road-mode');
+    console.log(isSatellite, mapContainer.classList);
+    window._lonlatScale._update(); // 更新数值
 }
 
 // ===========================
@@ -158,7 +298,6 @@ function updateDebugNodes() {
 function toggleDebug() {
     debugVisible = !debugVisible;
     const btn = document.getElementById('debug-btn');
-
     if (debugVisible) {
         if(debugNodesData.length === 0)
             buildDebugNodes();  // 首次构建缓存
@@ -166,10 +305,16 @@ function toggleDebug() {
             updateDebugNodes();  // 已有缓存，直接刷新
         if(!map.hasLayer(debugLayer))
             debugLayer.addTo(map);
+        if (window._lonlatScale) {
+            window._lonlatScale._container.style.display = 'block';
+            window._lonlatScale._update(); // 立即更新数值
+        }
         btn.classList.add('debug-active');
     } else {  // 隐藏
         if(map.hasLayer(debugLayer))
             map.removeLayer(debugLayer);
+        if (window._lonlatScale)
+            window._lonlatScale._container.style.display = 'none';
         btn.classList.remove('debug-active');
     }
 }
@@ -334,8 +479,12 @@ function initDrawerDrag() {
 // 定位功能
 // ===========================
 function onLocationFound(latlng, accuracy) {
+    // 转换坐标
+    const gcj = wgs84ToGcj02(latlng.lat, latlng.lng);
+    const gcjLatLng = L.latLng(gcj.lat, gcj.lng);
+
     if (!locationMarker) {
-        locationMarker = L.marker(latlng, {
+        locationMarker = L.marker(gcjLatLng, {
             icon: L.divIcon({
                 className: 'location-marker',
                 html: '<i class="fas fa-location-dot"></i>',
@@ -344,7 +493,7 @@ function onLocationFound(latlng, accuracy) {
             })
         }).addTo(map);
 
-        locationCircle = L.circle(latlng, {
+        locationCircle = L.circle(gcjLatLng, {
             radius: accuracy || 50,
             color: '#4d8aff',
             fillColor: '#4d8aff',
@@ -353,11 +502,11 @@ function onLocationFound(latlng, accuracy) {
             dashArray: '5,5'
         }).addTo(map);
 
-        map.setView(latlng, 14);
+        map.setView(gcjLatLng, 14);
     } else {
-        locationMarker.setLatLng(latlng);
+        locationMarker.setLatLng(gcjLatLng);
         if (locationCircle) {
-            locationCircle.setLatLng(latlng);
+            locationCircle.setLatLng(gcjLatLng);
             if (accuracy) locationCircle.setRadius(accuracy);
         }
     }

@@ -111,7 +111,7 @@ nav * {
         display: block;
     }
 }
-/* ===== 主内容区域（flex 列布局） ===== */
+/* ===== 主内容区域 ===== */
 .content {
     display: flex;
     flex-direction: column;
@@ -124,6 +124,76 @@ nav * {
     height: auto;
     min-height: 0;
     width: 100%;
+}
+.locate-btn {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 9px 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.locate-btn:active {
+    background: rgba(230, 230, 230, 0.95);
+    transform: scale(0.95);
+}
+/* ===== Debug 控件 ===== */
+.leaflet-control-container .leaflet-control-lonlat-scale {
+    margin: 4px 0;
+    padding: 12px 8px 4px;
+    border-radius: 4px;
+    background: #fffc;
+    box-shadow: #0003 0px 0px 6px;
+}
+.road-mode .leaflet-control-container .leaflet-control-lonlat-scale {
+    margin: 0;
+    padding: 8px 8px 0;
+    background: transparent;
+    box-shadow: none;
+}
+.leaflet-control-scale-line {
+    position: relative;
+    background-color: transparent;
+}
+.leaflet-control-scale-label {
+    position: relative;
+    left: 1px;
+    text-align: center;
+    font-size: 10px;
+    color: #333;
+}
+/* 定位标记 */
+.leaflet-marker-icon.location-marker {
+    width: 28px !important;
+    height: 28px !important;
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #4d8aff;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 10px rgba(77, 138, 255, 0.6);
+    color: white;
+    font-size: 16px;
+    line-height: 1;
+    transform-origin: center center;
+    pointer-events: auto;
+}
+.location-marker i {
+    font-size: 16px;
+    line-height: 1;
+    display: block;
 }
 /* ===== 浮动按钮组（右上角） ===== */
 .float-buttons {
@@ -165,7 +235,6 @@ nav * {
 .float-btn i {
     font-size: 14px;
 }
-/* 地图切换激活态（卫星模式高亮） */
 .float-btn.active-type {
     background: #11998e;
     border-color: #11998e;
@@ -174,7 +243,6 @@ nav * {
 .float-btn.active-type:hover {
     background: #0e7d74;
 }
-/* Debug 激活态 */
 .float-btn.debug-active {
     background: #d73a49;
     border-color: #d73a49;
@@ -182,32 +250,6 @@ nav * {
 }
 .float-btn.debug-active:hover {
     background: #b92534;
-}
-.debug-node-marker {
-    display: none;
-}
-/* 定位按钮 */
-.locate-btn {
-    position: absolute;
-    bottom: 15px;
-    left: 15px;
-    z-index: 1000;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    padding: 9px 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent; /* 移动端点击高亮去除 */
-}
-.locate-btn:active {
-    background: rgba(230, 230, 230, 0.95);
-    transform: scale(0.95);
 }
 /* ===== 底部可拖动面板 ===== */
 .drawer {
