@@ -173,27 +173,12 @@ nav * {
     color: #333;
 }
 /* 定位标记 */
-.leaflet-marker-icon.location-marker {
-    width: 28px !important;
-    height: 28px !important;
-    margin: 0 !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #4d8aff;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 0 10px rgba(77, 138, 255, 0.6);
-    color: white;
-    font-size: 16px;
-    line-height: 1;
-    transform-origin: center center;
-    pointer-events: auto;
-}
 .location-marker i {
-    font-size: 16px;
+    font-size: 32px;
     line-height: 1;
     display: block;
+    color: red;
+    opacity: 0.75;
 }
 /* ===== 浮动按钮组（右上角） ===== */
 .float-buttons {

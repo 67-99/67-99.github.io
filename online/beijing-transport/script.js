@@ -488,8 +488,7 @@ function onLocationFound(latlng, accuracy) {
             icon: L.divIcon({
                 className: 'location-marker',
                 html: '<i class="fas fa-location-dot"></i>',
-                iconSize: [28, 28],
-                iconAnchor: [14, 14]
+                iconAnchor: [12, 30]
             })
         }).addTo(map);
 
