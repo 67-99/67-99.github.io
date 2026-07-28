@@ -21,6 +21,10 @@ if __name__ == "__main__":
                 idx, prior = param
                 data["points"][idx][0] = prior
                 print(f"{name}[{idx}]层级变换为{prior}")
+            elif op == "pop":  # pop, idx, i
+                idx, i = param
+                data["points"][idx][1].pop(i)
+                print(f"{name}[{idx}]移除节点{i}")
             elif op == "append":  # append, idx, [lat, lon]
                 idx, point = param
                 lat, lon = point
@@ -49,7 +53,19 @@ if __name__ == "__main__":
                         data["points"][idx][1][i][0] += lat
                         data["points"][idx][1][i][1] += lon
                     print(f"{name}[{idx}][{start}: {end}]平移{shift}")
-            elif op == "split":  # insert, [[idx1, idx2, ...], [name1, name2, ...], ...]
+            elif op == "split": # split, [[idx1, [start, end]], ...], ([prior1, ...])
+                layers = []
+                priors = param[1] if len(param) > 1 else []
+                for i, split in enumerate(param[0]):
+                    idx, pos = split
+                    if len(pos) == 1:
+                        points = data["points"][idx][1][pos]
+                    else:
+                        start, end = pos
+                        points = data["points"][idx][1][start: end]
+                    layers.append((prior[i] if len(priors) > i else data["points"][idx][0], points))
+                data["points"] = layers
+            elif op == "separate":  # separate, [[idx1, idx2, ...], [name1, name2, ...], ...]
                 point_groups = {}
                 for idx, splits in enumerate(param):
                     seps, names = splits
