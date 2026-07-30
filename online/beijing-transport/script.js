@@ -4,6 +4,7 @@
 function isIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
+
 // WGS84 转 GCJ-02 (火星坐标系)
 function wgs84ToGcj02(wgsLat, wgsLon) {
     const a = 6378245.0;
@@ -41,10 +42,13 @@ function wgs84ToGcj02(wgsLat, wgsLon) {
 // ===========================
 // 全局状态
 // ===========================
+const UNIT = 0.0001;
+
 let map;
 let lineLayer;
-let currentTileLayer = null; // 当前底图图层
-let isSatellite = true; // 当前是否为卫星图
+let stationLayer = null;      // 存放所有配线图（站台矩形 + 站名）
+let currentTileLayer = null;  // 当前底图图层
+let isSatellite = true;       // 当前是否为卫星图
 
 const lineData = {}; // { id: { name, bounds, group, layers, color } }
 let locationMarker = null;
@@ -53,10 +57,10 @@ let watchId = null;
 let firstTrack = true;
 
 // ---- Debug 相关 ----
-let debugLayer = null;          // 使用 canvas 渲染的图层组
+let debugLayer = null;         // 使用 canvas 渲染的图层组
 let debugVisible = false;
-let canvasRenderer = null;      // 共享 canvas 渲染器
-let debugScaleControl = null; // 用于 debug 信息控件
+let canvasRenderer = null;     // 共享 canvas 渲染器
+let debugScaleControl = null;  // 用于 debug 信息控件
 
 // ===========================
 // 地图初始化
@@ -178,11 +182,26 @@ function initMap() {
             label.innerHTML = degreeStr;
         }
     });
+    map.on('zoomend', updateStationVisibility);
     // 添加Debug比例尺
     var lonlatScale = new L.Control.LonLatScale({ position: 'bottomright', maxWidth: 150 });
     lonlatScale.addTo(map);
     lonlatScale._container.style.display = 'none';
     window._lonlatScale = lonlatScale;
+    // 添加Debug右键显示坐标
+    map.on('contextmenu', function(e) {
+        if(debugVisible){
+            // 阻止浏览器默认右键菜单
+            if (e.originalEvent)
+                e.originalEvent.preventDefault();
+            const latlng = e.latlng;
+            const content = `(${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)})`;
+            L.popup({ closeButton: true })
+                .setLatLng(latlng)
+                .setContent(content)
+                .openOn(map);
+            }
+    });
 }
 
 // ===========================
@@ -317,6 +336,12 @@ function toggleDebug() {
             window._lonlatScale._container.style.display = 'none';
         btn.classList.remove('debug-active');
     }
+    // 关闭所有打开的popup
+    map.eachLayer(layer => {
+        if (layer instanceof L.Popup) {
+            map.removeLayer(layer);
+        }
+    });
 }
 
 // 当线路数据更新时，如果 debug 已开启，刷新节点
@@ -371,13 +396,261 @@ function loadLineFile(id) {
                 group: group,
                 layers: layers,
                 color: color,
-                segments: segments
+                segments: segments,
+                stations: data.stations || []
             };
 
             lineLayer.addLayer(group);
             return id;
         })
         .catch(err => console.error(err));
+}
+
+function updateStationVisibility() {
+    if (!stationLayer)
+        return;
+    if (map.getZoom() > 12) {
+        // 显示配线图，隐藏线路
+        if (!map.hasLayer(stationLayer)) map.addLayer(stationLayer);
+        if (map.hasLayer(lineLayer)) map.removeLayer(lineLayer);
+    } else {
+        // 显示线路，隐藏配线图
+        if (map.hasLayer(stationLayer)) map.removeLayer(stationLayer);
+        if (!map.hasLayer(lineLayer)) map.addLayer(lineLayer);
+    }
+}
+
+function buildStationLayer() {
+    if (stationLayer) {
+        if (map.hasLayer(stationLayer)) map.removeLayer(stationLayer);
+        stationLayer.clearLayers();
+    } else {
+        stationLayer = L.layerGroup();
+    }
+
+    const UNIT = 0.0001;
+    const platformLengthMeters = 10 * UNIT * 111320; // 站台长 ~111m
+    const platformWidthMeters = 2 * UNIT * 111320;   // 站台宽 ~22m
+    const trackOffsetMeters = 1.5 * UNIT * 111320;   // 轨道偏移 ~16.7m
+    const halfLen = platformLengthMeters / 2;
+    const halfWid = platformWidthMeters / 2;
+    const endLineLength = 6;                         // 端点横线长度（米）
+
+    const crs = L.CRS.EPSG3857;
+
+    function project(latlng) {
+        return crs.project(L.latLng(latlng));
+    }
+    function unproject(point) {
+        return crs.unproject(point);
+    }
+
+    function offsetPointsMeters(points, offsetMeters) {
+        const n = points.length;
+        if (n < 2) return points.slice();
+        const result = [];
+        for (let i = 0; i < n; i++) {
+            const p = points[i];
+            const pt = project(p);
+            let dx, dy;
+            if (i === 0) {
+                const p1 = project(points[1]);
+                dx = p1.x - pt.x;
+                dy = p1.y - pt.y;
+            } else if (i === n - 1) {
+                const p0 = project(points[n - 2]);
+                dx = pt.x - p0.x;
+                dy = pt.y - p0.y;
+            } else {
+                const pPrev = project(points[i - 1]);
+                const pNext = project(points[i + 1]);
+                dx = pNext.x - pPrev.x;
+                dy = pNext.y - pPrev.y;
+            }
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 1e-10) {
+                if (i > 0 && result.length > 0) {
+                    const prevPt = project(points[i - 1]);
+                    dx = pt.x - prevPt.x;
+                    dy = pt.y - prevPt.y;
+                    const l = Math.sqrt(dx * dx + dy * dy);
+                    if (l > 1e-10) { dx /= l; dy /= l; } else { dx = 1; dy = 0; }
+                } else {
+                    dx = 1; dy = 0;
+                }
+            } else {
+                dx /= len; dy /= len;
+            }
+            const nx = -dy;
+            const ny = dx;
+            const newX = pt.x + offsetMeters * nx;
+            const newY = pt.y + offsetMeters * ny;
+            const newLatLng = unproject({ x: newX, y: newY });
+            result.push([newLatLng.lat, newLatLng.lng]);
+        }
+        return result;
+    }
+
+    for (const [id, info] of Object.entries(lineData)) {
+        const stations = info.stations || [];
+        const segments = info.segments || [];
+        const color = info.color || '#808080';
+        if (!segments.length) continue;
+
+        segments.forEach(([priority, pts]) => {
+            if (pts.length < 2) return;
+
+            const upPts = offsetPointsMeters(pts, trackOffsetMeters);
+            const downPts = offsetPointsMeters(pts, -trackOffsetMeters);
+
+            // 上行轨道
+            const upLine = L.polyline(upPts, {
+                color: color,
+                weight: 3,
+                opacity: 0.8,
+                interactive: false
+            });
+            stationLayer.addLayer(upLine);
+
+            // 下行轨道
+            const downLine = L.polyline(downPts, {
+                color: color,
+                weight: 3,
+                opacity: 0.8,
+                interactive: false
+            });
+            stationLayer.addLayer(downLine);
+
+            // ---- 端点横线（垂直于轨道） ----
+            function addEndLine(ptLatLng, dirLatLng, offsetMeters, lengthMeters) {
+                const pt = project(ptLatLng);
+                const dirPt = project(dirLatLng);
+                let dx = dirPt.x - pt.x;
+                let dy = dirPt.y - pt.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len < 1e-10) return;
+                dx /= len;
+                dy /= len;
+                const nx = -dy;  // 法向量（垂直于轨道）
+                const ny = dx;
+                // 横线中心在偏移后的端点位置
+                const centerX = pt.x + offsetMeters * nx;
+                const centerY = pt.y + offsetMeters * ny;
+                const half = lengthMeters / 2;
+                // 横线两端沿法向量方向延伸
+                const startX = centerX - half * nx;
+                const startY = centerY - half * ny;
+                const endX = centerX + half * nx;
+                const endY = centerY + half * ny;
+                const startLatLng = unproject({ x: startX, y: startY });
+                const endLatLng = unproject({ x: endX, y: endY });
+                const line = L.polyline(
+                    [
+                        [startLatLng.lat, startLatLng.lng],
+                        [endLatLng.lat, endLatLng.lng]
+                    ],
+                    {
+                        color: color,
+                        weight: 2,
+                        opacity: 1,
+                        interactive: false
+                    }
+                );
+                stationLayer.addLayer(line);
+            }
+
+            const addEnds = (idx) => {
+                const pt = pts[idx];
+                const dir = idx === 0 ? pts[1] : pts[pts.length - 2];
+                addEndLine(pt, dir, trackOffsetMeters, endLineLength);
+                addEndLine(pt, dir, -trackOffsetMeters, endLineLength);
+            };
+            addEnds(0);
+            addEnds(pts.length - 1);
+        });
+
+        // ---- 站台垂足计算 ----
+        const segPoints = [];
+        segments.forEach(([priority, pts]) => {
+            for (let i = 0; i < pts.length - 1; i++) {
+                segPoints.push({ a: pts[i], b: pts[i + 1] });
+            }
+        });
+        if (segPoints.length === 0) continue;
+
+        for (const st of stations) {
+            const sl = st.sl;
+            if (!sl || sl.length < 2) continue;
+
+            let bestDist2 = Infinity;
+            let bestProj = null;
+            let bestDir = null;
+
+            for (const seg of segPoints) {
+                const a = seg.a;
+                const b = seg.b;
+                const dx = b[0] - a[0];
+                const dy = b[1] - a[1];
+                const len2 = dx * dx + dy * dy;
+                if (len2 === 0) continue;
+                let t = ((sl[0] - a[0]) * dx + (sl[1] - a[1]) * dy) / len2;
+                t = Math.max(0, Math.min(1, t));
+                const projX = a[0] + t * dx;
+                const projY = a[1] + t * dy;
+                const d2 = (sl[0] - projX) ** 2 + (sl[1] - projY) ** 2;
+                if (d2 < bestDist2) {
+                    bestDist2 = d2;
+                    bestProj = [projX, projY];
+                    const len = Math.sqrt(len2);
+                    bestDir = [dx / len, dy / len];
+                }
+            }
+
+            if (!bestProj || !bestDir) continue;
+
+            const centerLatLng = L.latLng(bestProj[0], bestProj[1]);
+            const centerPt = project(centerLatLng);
+
+            const dirPt = project(L.latLng(centerLatLng.lat + bestDir[0], centerLatLng.lng + bestDir[1]));
+            let dx = dirPt.x - centerPt.x;
+            let dy = dirPt.y - centerPt.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 1e-10) continue;
+            dx /= len;
+            dy /= len;
+            const nx = -dy;
+            const ny = dx;
+
+            const corners = [
+                { x: centerPt.x + halfLen * dx + halfWid * nx, y: centerPt.y + halfLen * dy + halfWid * ny },
+                { x: centerPt.x + halfLen * dx - halfWid * nx, y: centerPt.y + halfLen * dy - halfWid * ny },
+                { x: centerPt.x - halfLen * dx - halfWid * nx, y: centerPt.y - halfLen * dy - halfWid * ny },
+                { x: centerPt.x - halfLen * dx + halfWid * nx, y: centerPt.y - halfLen * dy + halfWid * ny }
+            ];
+            const latlngs = corners.map(p => unproject(p));
+
+            const rect = L.polygon(latlngs, {
+                color: color,
+                weight: 1,
+                fillColor: color,
+                fillOpacity: 0.25,
+                interactive: false
+            });
+            stationLayer.addLayer(rect);
+
+            const labelIcon = L.divIcon({
+                className: 'station-label',
+                html: `<span class="station-label-text">${st.n || ''}</span>`,
+                iconSize: [0, 0],
+                iconAnchor: [0, 0]
+            });
+            const labelMarker = L.marker(centerLatLng, {
+                icon: labelIcon,
+                interactive: false
+            });
+            stationLayer.addLayer(labelMarker);
+        }
+    }
 }
 
 function loadAllLines() {
@@ -389,8 +662,9 @@ function loadAllLines() {
         .then(ids => Promise.all(ids.map(id => loadLineFile(id))))
         .then(() => {
             populateDrawer();
-            // 如果 debug 已开启，刷新节点
-            refreshDebugIfNeeded();
+            buildStationLayer();        // 生成配线图
+            updateStationVisibility();  // 根据当前缩放决定是否显示
+            refreshDebugIfNeeded();     // 如果 debug 已开启，刷新节点
         })
         .catch(() => {
             console.warn('未找到 lines，使用默认线路');
