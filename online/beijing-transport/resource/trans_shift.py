@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 
 def getFilePath(*path: list[str] | str):
     return os.path.join(os.path.dirname(__file__), *path)
@@ -76,15 +77,18 @@ if __name__ == "__main__":
                         point_groups.setdefault(name, []).append((data["points"][idx][0], data["points"][idx][1][last_sep: sep + 1]))
                         last_sep = sep
                 for name_, points in point_groups.items():
-                    output = {k: v for k, v in data.items() if k in {"name", "color"}}
+                    output = {k: v for k, v in data.items() if k in {"name", "color", "stations"}}
                     output["id"] = name_
                     output["points"] = points
                     with open(getFilePath("lines", f"{name_}.json"), 'w', encoding='utf-8') as f:
-                        json.dump(output, f, indent=1)
+                        json.dump(output, f, indent=4)
                     print(f"{name}分离出{len(points)}组共长{sum(len(p[1]) for p in points)}的文件{name_}")
                 break
         else:
             if "path" in data:
                 data.pop("path")
             with open(getFilePath("lines", f"{name}.json"), 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=1)
+                json.dump(data, f, indent=4)
+    files = [name for name in os.listdir(getFilePath("temp")) if os.path.splitext(name)[0] not in shift_data]
+    for file in files:
+        shutil.copy(getFilePath("temp", file), getFilePath("lines", file))
