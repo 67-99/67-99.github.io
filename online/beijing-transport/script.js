@@ -24,8 +24,10 @@ function wgs84ToGcj02(wgsLat, wgsLon) {
         ret += (150.0 * Math.sin(x / 12.0 * pi) + 300.0 * Math.sin(x / 30.0 * pi)) * 2.0 / 3.0;
         return ret;
     }
+    /*
     if(wgsLon < 72.004 || wgsLon > 137.8347 || wgsLat < 0.8293 || wgsLat > 55.8271)
         return { lat: wgsLat, lng: wgsLon };  // 判断是否在中国境外，境外不转换
+    */
     let dLat = transformLat(wgsLon - 105.0, wgsLat - 35.0);
     let dLon = transformLon(wgsLon - 105.0, wgsLat - 35.0);
     const radLat = wgsLat / 180.0 * pi;
@@ -39,180 +41,55 @@ function wgs84ToGcj02(wgsLat, wgsLon) {
     return { lat: gcjLat, lng: gcjLon };
 }
 
+/**
+ * 显示提示
+ * @param {string} message 提示文本
+ * @param {int|float} duration 消失时间
+ */
+function showToast(message, duration = 0) {
+    const popup = L.popup({ closeOnClick: false })
+        .setLatLng(map.getCenter())
+        .setContent(message)
+        .openOn(map);
+    if(duration > 0)
+        setTimeout(() => map.closePopup(popup), duration);
+}
+
 // ===========================
 // 全局状态
 // ===========================
-const UNIT = 0.0001;
+const UNIT = 0.0001;  // 配线图单位宽度 (°)
 
-let map;
-let lineLayer;
-let stationLayer = null;      // 存放所有配线图（站台矩形 + 站名）
-let currentTileLayer = null;  // 当前底图图层
-let isSatellite = true;       // 当前是否为卫星图
+let map;                 // 全局地图，各脚本共享
+let lineLayer;           // 在大视图下的地铁图
+let trackLayer = null;   // 在小视图下的配线图
+let tileLayer = null;    // 地图底图图层
+let isSatellite = true;  // 当前是否为卫星图
 
-const lineData = {}; // { id: { name, bounds, group, layers, color } }
-let locationMarker = null;
-let locationCircle = null;
-let watchId = null;
-let firstTrack = true;
-
-// ---- Debug 相关 ----
-let debugLayer = null;         // 使用 canvas 渲染的图层组
-let debugVisible = false;
-let canvasRenderer = null;     // 共享 canvas 渲染器
-let debugScaleControl = null;  // 用于 debug 信息控件
+const lineData = {};        // 线路信息
+let locationMarker = null;  // 定位标志
+let locationCircle = null;  // 定位范围
+let watchId = null;         // 定位追踪watcher
 
 // ===========================
 // 地图初始化
 // ===========================
+/**
+ * 创建底图
+ * @param {boolean} satellite 是否为卫星图
+ * @returns leaflet图层
+ */
 function createTileLayer(satellite) {
     const style = satellite ? 6 : 7;
     return L.tileLayer(`https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&style=${style}&ltype=2`);
 }
 
-function initMap() {
-    map = L.map('map').setView([39.9, 116.4], 10);
-
-    currentTileLayer = createTileLayer(true);
-    currentTileLayer.addTo(map);
-
-    map.attributionControl.setPrefix('');
-    map.attributionControl.addAttribution('&copy; <a href="https://www.amap.com/">高德地图</a>');
-
-    lineLayer = L.layerGroup().addTo(map);
-
-    // 创建 canvas 渲染器（用于 debug 节点，提升性能）
-    canvasRenderer = L.canvas({ padding: 0.5 });
-    debugLayer = L.layerGroup().addTo(map); // 先添加到地图，但默认隐藏（通过控制 visible）
-    map.removeLayer(debugLayer);  // 默认不显示 debug
-    map.on('moveend', function() {
-        if(debugVisible)
-            updateDebugNodes();
-    });
-    // ===========================
-    // 自定义比例尺控件
-    // ===========================
-    L.Control.LonLatScale = L.Control.Scale.extend({
-        options: {
-            position: 'bottomright',
-            maxWidth: 150,
-            metric: true,
-            imperial: false
-        },
-        onAdd: function(map) {
-            var container = L.DomUtil.create('div', 'leaflet-control-lonlat-scale');
-            this._container = container;
-            this._map = map;
-            this._update();
-            map.on('moveend zoomend', this._update, this);
-            return container;
-        },
-        _update: function() {
-            var map = this._map;
-            if (!map)
-                return;
-            var center = map.getCenter();
-            var lat = center.lat;
-            var cosLat = Math.cos(lat * Math.PI / 180);
-            // 获取当前视口经度跨度
-            var bounds = map.getBounds();
-            var sw = bounds.getSouthWest();
-            var ne = bounds.getNorthEast();
-            var pixelWidth = map.getSize().x;
-            var lngDelta = ne.lng - sw.lng;
-            if (lngDelta <= 0) return;
-            var lngPerPixel = lngDelta / pixelWidth;
-            // 预定义间隔（1e-n, 2e-n, 5e-n）
-            var scales = [
-                0.00001, 0.00002, 0.00005,
-                0.0001,  0.0002,  0.0005,
-                0.001,   0.002,   0.005,
-                0.01,    0.02,    0.05,
-                0.1,     0.2,     0.5,
-                1,       2,       5,
-                10,      20,      50,
-                100,     200,     500
-            ];
-            // 选择一个间隔，使其像素宽度在 minPx~maxPx 之间，最接近 targetPx
-            var targetPx = 50;
-            var minPx = 30;
-            var maxPx = 100;
-            var chosen = scales[0];
-            for (var i = 0; i < scales.length; i++) {
-                var px = scales[i] / lngPerPixel;
-                if (px >= minPx && px <= maxPx) {
-                    chosen = scales[i];
-                    break;
-                }
-                if (px > maxPx) {
-                    // 如果当前已经超过 maxPx，则取前一个（如果前一个存在且更接近）
-                    if (i > 0) {
-                        var prevPx = scales[i-1] / lngPerPixel;
-                        if(Math.abs(prevPx - targetPx) <= Math.abs(px - targetPx))
-                            chosen = scales[i-1];
-                        else
-                            chosen = scales[i];
-                    }
-                    else {
-                        chosen = scales[i];
-                    }
-                    break;
-                }
-                // 如果是最后一个，使用最后一个
-                if (i === scales.length - 1) {
-                    chosen = scales[i];
-                }
-            }
-            // 计算该间隔对应的像素宽度与 实际距离（经度方向）
-            var pxWidth = chosen / lngPerPixel;
-            var lngDist = 111320 * cosLat * chosen; // 米
-            // 构建 DOM
-            var container = this._container;
-            if (!container) return;
-            container.innerHTML = '';
-            var wrapper = L.DomUtil.create('div', 'leaflet-control-scale-wrapper', container);
-            var inner = L.DomUtil.create('div', 'leaflet-control-scale-line', wrapper);
-            var left = L.DomUtil.create('div', 'leaflet-control-scale-left', inner);
-            var right = L.DomUtil.create('div', 'leaflet-control-scale-right', inner);
-            var label = L.DomUtil.create('div', 'leaflet-control-scale-label', wrapper);
-            inner.style.width = pxWidth + 'px';
-            label.style.width = pxWidth + 'px';
-            var degreeStr = chosen.toFixed(6).replace(/\.?0+$/, '') + '°';
-            var distStr = lngDist >= 1000 ? (lngDist/1000).toFixed(1) + ' km' : lngDist.toFixed(1) + ' m';
-            label.innerHTML = degreeStr;
-        }
-    });
-    map.on('zoomend', updateStationVisibility);
-    // 添加Debug比例尺
-    var lonlatScale = new L.Control.LonLatScale({ position: 'bottomright', maxWidth: 150 });
-    lonlatScale.addTo(map);
-    lonlatScale._container.style.display = 'none';
-    window._lonlatScale = lonlatScale;
-    // 添加Debug右键显示坐标
-    map.on('contextmenu', function(e) {
-        if(debugVisible){
-            // 阻止浏览器默认右键菜单
-            if (e.originalEvent)
-                e.originalEvent.preventDefault();
-            const latlng = e.latlng;
-            const content = `(${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)})`;
-            L.popup({ closeButton: true })
-                .setLatLng(latlng)
-                .setContent(content)
-                .openOn(map);
-            }
-    });
-}
-
-// ===========================
-// 地图类型切换
-// ===========================
+/** 地图类型切换 */
 function toggleMapType() {
     isSatellite = !isSatellite;
-    if(currentTileLayer)
-        map.removeLayer(currentTileLayer);
-    currentTileLayer = createTileLayer(isSatellite);
-    currentTileLayer.addTo(map);
+    if(tileLayer)
+        map.removeLayer(tileLayer);
+    tileLayer = createTileLayer(isSatellite).addTo(map);
     // 更新按钮样式
     const btn = document.getElementById('map-type-btn');
     const icon = btn.querySelector('i');
@@ -232,132 +109,268 @@ function toggleMapType() {
         mapContainer.classList.remove('road-mode');
     else
         mapContainer.classList.add('road-mode');
-    console.log(isSatellite, mapContainer.classList);
-    window._lonlatScale._update(); // 更新数值
-}
-
-// ===========================
-// Debug 功能
-// ===========================
-// 缓存所有节点数据（用于视口裁剪）
-let debugNodesData = [];
-
-function buildDebugNodes() {
-    debugNodesData = [];  // 清空缓存
-    debugLayer.clearLayers();
-    const lineIds = Object.keys(lineData);
-    if(lineIds.length === 0)
-        return;
-
-    for(const [id, info] of Object.entries(lineData)) {
-        const color = info.color || '#808080';
-        const segments = info.segments;
-        segments.forEach(([priority, pts], segIdx) => {
-            if (!pts || pts.length < 2)
-                return; // 跳过无效段
-            // 遍历该段内的每个点
-            pts.forEach((latlng, pointIdx) => {
-                debugNodesData.push({
-                    latlng: latlng,
-                    lineId: id,
-                    segmentIdx: segIdx,    // 段索引
-                    pointIdx: pointIdx,    // 点索引
-                    color: color
-                });
-            });
-        });
-    }
-    // 首次构建时，根据当前视口添加可见节点
-    updateDebugNodes();
-}
-
-function updateDebugNodes() {
-    if (!debugVisible || !map) return;
-    // 清空已有节点（不破坏缓存数据）
-    debugLayer.clearLayers();
-    const bounds = map.getBounds();
-    const MAX_VISIBLE = Math.min(Math.max(400 - 20 * map.getZoom(), 50), 200); // 上限
-    let visibleNodes = [];
-    for(const node of debugNodesData)
-        if(bounds.contains(node.latlng))
-            visibleNodes.push(node);
-    // 如果超过上限，均匀采样
-    let displayNodes = visibleNodes;
-    if(visibleNodes.length > MAX_VISIBLE){
-        const step = Math.ceil(visibleNodes.length / MAX_VISIBLE);
-        const sampled = [];
-        for(let i = 0; i < visibleNodes.length; i += step)
-            sampled.push(visibleNodes[i]);
-        displayNodes = sampled;
-    }
-
-    for (const node of displayNodes) {
-        if (bounds.contains(node.latlng)) {
-            const circle = L.circleMarker(node.latlng, {
-                radius: 5,
-                color: node.color,
-                weight: 2,
-                fillColor: '#ffffff',
-                fillOpacity: 0.95,
-                renderer: canvasRenderer
-            });
-            const label = `${node.lineId}-${node.segmentIdx}-${node.pointIdx}`;
-            const tooltip = L.tooltip({
-                permanent: true,
-                direction: 'center',
-                className: 'debug-tooltip',
-                offset: map.getZoom() > 12? [1.6 * map.getZoom(), -map.getZoom()]: [0, 0]
-            }).setContent(label);
-            circle.bindTooltip(tooltip);
-            debugLayer.addLayer(circle);
-        }
-    }
-}
-
-function toggleDebug() {
-    debugVisible = !debugVisible;
-    const btn = document.getElementById('debug-btn');
-    if (debugVisible) {
-        if(debugNodesData.length === 0)
-            buildDebugNodes();  // 首次构建缓存
-        else
-            updateDebugNodes();  // 已有缓存，直接刷新
-        if(!map.hasLayer(debugLayer))
-            debugLayer.addTo(map);
-        if (window._lonlatScale) {
-            window._lonlatScale._container.style.display = 'block';
-            window._lonlatScale._update(); // 立即更新数值
-        }
-        btn.classList.add('debug-active');
-    } else {  // 隐藏
-        if(map.hasLayer(debugLayer))
-            map.removeLayer(debugLayer);
-        if (window._lonlatScale)
-            window._lonlatScale._container.style.display = 'none';
-        btn.classList.remove('debug-active');
-    }
-    // 关闭所有打开的popup
-    map.eachLayer(layer => {
-        if (layer instanceof L.Popup) {
-            map.removeLayer(layer);
-        }
-    });
-}
-
-// 当线路数据更新时，如果 debug 已开启，刷新节点
-function refreshDebugIfNeeded(){
     if(debugVisible)
-        buildDebugNodes();  // 重建缓存，内部会调用 updateDebugNodes
+        window._lonlatScale._update(); // 更新debug比例尺
 }
 
 // ===========================
 // 线路加载
 // ===========================
-function loadLineFile(id) {
+/** 更新线路图/配线图显示 */
+function updateLineVisibility() {
+    if(!trackLayer)
+        return;
+    if (map.getZoom() > 12) {
+        // 显示配线图，隐藏线路
+        if (!map.hasLayer(trackLayer)) map.addLayer(trackLayer);
+        if (map.hasLayer(lineLayer)) map.removeLayer(lineLayer);
+    } else {
+        // 显示线路，隐藏配线图
+        if (map.hasLayer(trackLayer)) map.removeLayer(trackLayer);
+        if (!map.hasLayer(lineLayer)) map.addLayer(lineLayer);
+    }
+}
+
+/** 添加线路图/配线图图层 */
+function buildtrackLayer() {
+    if (trackLayer) {
+        if (map.hasLayer(trackLayer)) map.removeLayer(trackLayer);
+        trackLayer.clearLayers();
+    } else {
+        trackLayer = L.layerGroup();
+    }
+    // 默认参数
+    const platformLengthMeters = 12 * UNIT * 111320; // 站台长 ~134m
+    const platformWidthMeters = 2 * UNIT * 111320;   // 站台宽 ~22m
+    const trackOffsetMeters = 1.5 * UNIT * 111320;
+    const halfLen = platformLengthMeters / 2;
+    const halfWid = platformWidthMeters / 2;
+    const endLineLength = 6;  // 端点横线长度（米）
+    const crs = L.CRS.EPSG3857;
+    /**
+     * 将经纬度转换为投影平面坐标
+     * @param {*} latlng leaflet经纬度
+     * @returns 投影平面坐标
+     */
+    function project(latlng) {
+        return crs.project(L.latLng(latlng));
+    }
+    /**
+     * 将投影平面坐标转换为经纬度
+     * @param {*} point 投影平面坐标
+     * @returns leaflet经纬度
+     */
+    function unproject(point) {
+        return crs.unproject(point);
+    }
+    /**
+     * 计算偏移折线
+     * @param {*} points 偏移前折线
+     * @param {*} offsetMeters 偏移值
+     * @returns 偏移后的折线
+     */
+    function offsetPointsMeters(points, offsetMeters) {
+        if(offsetMeters === 0)
+            return points.slice();
+        const n = points.length;
+        if(n < 2)
+            return points.slice();
+        const projectedPoints = []
+        points.forEach(point => {
+            projectedPoints.push(project(point));
+        });
+        projectedPoints.unshift(projectedPoints[0]);
+        projectedPoints.push(projectedPoints[projectedPoints.length - 1]);
+        const result = [];
+        for (let i = 1; i <= n; i++) {
+            let dx = projectedPoints[i + 1].x - projectedPoints[i - 1].x;
+            let dy = projectedPoints[i + 1].y - projectedPoints[i - 1].y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 1e-10) {
+                if (i > 0 && result.length > 0) {
+                    dx = projectedPoints[i].x - projectedPoints[i - 1].x;
+                    dy = projectedPoints[i].y - projectedPoints[i - 1].y;
+                    const l = Math.sqrt(dx * dx + dy * dy);
+                    if (l > 1e-10) { dx /= l; dy /= l; } else { dx = 1; dy = 0; }
+                } else {
+                    dx = 1; dy = 0;
+                }
+            } else {
+                dx /= len; dy /= len;
+            }
+            const newX = projectedPoints[i].x - offsetMeters * dy;
+            const newY = projectedPoints[i].y + offsetMeters * dx;
+            const newLatLng = unproject({ x: newX, y: newY });
+            result.push([newLatLng.lat, newLatLng.lng]);
+        }
+        return result;
+    }
+
+    for (const [id, info] of Object.entries(lineData)) {
+        const stations = info.stations || [];
+        const segments = info.segments || [];
+        const color = info.color || '#808080';
+        if (!segments.length) continue;
+        // 绘制轨道
+        segments.forEach(([priority, pts]) => {
+            if(pts.length < 2)
+                return;
+            // 上/下行轨道
+            const upPts = offsetPointsMeters(pts, trackOffsetMeters);
+            const downPts = offsetPointsMeters(pts, -trackOffsetMeters);
+            const upLine = L.polyline(upPts, {
+                color: color,
+                weight: 3,
+                opacity: 0.8,
+                interactive: false
+            });
+            const downLine = L.polyline(downPts, {
+                color: color,
+                weight: 3,
+                opacity: 0.8,
+                interactive: false
+            });
+            trackLayer.addLayer(upLine);
+            trackLayer.addLayer(downLine);
+            /**
+             * 绘制端点横线（垂直于轨道）
+             * @param {*} ptLatLng 
+             * @param {*} dirLatLng 
+             * @param {*} offsetMeters 
+             * @param {*} lengthMeters 
+             * @returns 
+             */
+            function addEndLine(ptLatLng, dirLatLng, offsetMeters, lengthMeters) {
+                const pt = project(ptLatLng);
+                const dirPt = project(dirLatLng);
+                let dx = dirPt.x - pt.x;
+                let dy = dirPt.y - pt.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len < 1e-10) return;
+                dx /= len;
+                dy /= len;
+                const nx = -dy;  // 法向量（垂直于轨道）
+                const ny = dx;
+                // 横线中心在偏移后的端点位置
+                const centerX = pt.x + offsetMeters * nx;
+                const centerY = pt.y + offsetMeters * ny;
+                const half = lengthMeters / 2;
+                // 横线两端沿法向量方向延伸
+                const startX = centerX - half * nx;
+                const startY = centerY - half * ny;
+                const endX = centerX + half * nx;
+                const endY = centerY + half * ny;
+                const startLatLng = unproject({ x: startX, y: startY });
+                const endLatLng = unproject({ x: endX, y: endY });
+                const line = L.polyline(
+                    [
+                        [startLatLng.lat, startLatLng.lng],
+                        [endLatLng.lat, endLatLng.lng]
+                    ],
+                    {
+                        color: color,
+                        weight: 2,
+                        opacity: 1,
+                        interactive: false
+                    }
+                );
+                trackLayer.addLayer(line);
+            }
+            // 添加轨道端点
+            addEndLine(pts[0], pts[1], trackOffsetMeters, endLineLength);
+            addEndLine(pts[0], pts[1], -trackOffsetMeters, endLineLength);
+            addEndLine(pts[pts.length - 1], pts[pts.length - 2], trackOffsetMeters, endLineLength);
+            addEndLine(pts[pts.length - 1], pts[pts.length - 2], -trackOffsetMeters, endLineLength);
+        });
+        // ---- 绘制站台 ----
+        const segPoints = [];
+        segments.forEach(([priority, pts]) => {
+            for(let i = 0; i < pts.length - 1; i++)
+                segPoints.push({ a: pts[i], b: pts[i + 1] });
+        });
+        if (segPoints.length === 0) continue;
+        for (const st of stations) {
+            const sl = st.sl;
+            if (!sl || sl.length < 2) continue;
+            // 寻找最佳位置
+            let bestDist2 = Infinity;
+            let bestProj = null;
+            let bestDir = null;
+            for (const seg of segPoints) {
+                const a = seg.a;
+                const b = seg.b;
+                const dx = b[0] - a[0];
+                const dy = b[1] - a[1];
+                const len2 = dx * dx + dy * dy;
+                if (len2 === 0) continue;
+                let t = ((sl[0] - a[0]) * dx + (sl[1] - a[1]) * dy) / len2;
+                t = Math.max(0, Math.min(1, t));
+                const projX = a[0] + t * dx;
+                const projY = a[1] + t * dy;
+                const d2 = (sl[0] - projX) ** 2 + (sl[1] - projY) ** 2;
+                if (d2 < bestDist2) {
+                    bestDist2 = d2;
+                    bestProj = [projX, projY];
+                    const len = Math.sqrt(len2);
+                    bestDir = [dx / len, dy / len];
+                }
+            }
+            if (!bestProj || !bestDir) continue;
+            // 计算站台形状
+            const centerLatLng = L.latLng(bestProj[0], bestProj[1]);
+            st._labelPos = centerLatLng;
+            const centerPt = project(centerLatLng);
+            const dirPt = project(L.latLng(centerLatLng.lat + bestDir[0], centerLatLng.lng + bestDir[1]));
+            let dx = dirPt.x - centerPt.x;
+            let dy = dirPt.y - centerPt.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 1e-10) continue;
+            dx /= len;
+            dy /= len;
+            const nx = -dy;
+            const ny = dx;
+            // 绘制站台
+            const corners = [
+                { x: centerPt.x + halfLen * dx + halfWid * nx, y: centerPt.y + halfLen * dy + halfWid * ny },
+                { x: centerPt.x + halfLen * dx - halfWid * nx, y: centerPt.y + halfLen * dy - halfWid * ny },
+                { x: centerPt.x - halfLen * dx - halfWid * nx, y: centerPt.y - halfLen * dy - halfWid * ny },
+                { x: centerPt.x - halfLen * dx + halfWid * nx, y: centerPt.y - halfLen * dy + halfWid * ny }
+            ];
+            const latlngs = corners.map(p => unproject(p));
+            const rect = L.polygon(latlngs, {
+                color: color,
+                weight: 1,
+                fillColor: color,
+                fillOpacity: 0.25,
+                interactive: false
+            });
+            trackLayer.addLayer(rect);
+            const labelIcon = L.divIcon({
+                className: 'station-label',
+                html: `<span class="station-label-text">${st.n || ''}</span>`,
+                iconSize: [0, 0],
+                iconAnchor: [0, 0]
+            });
+            const labelMarker = L.marker(centerLatLng, {
+                icon: labelIcon,
+                interactive: false
+            });
+            trackLayer.addLayer(labelMarker);
+        }
+    }
+}
+
+/**
+ * 单条线路加载
+ * @param {string} id 线路编号（对应加载json名称）
+ * @returns 获取的json结果
+ */
+async function loadLineFile(id){
     const url = `./resource/lines/${id}.json`;
     return fetch(url)
         .then(res => {
-            if (!res.ok) throw new Error(`加载 ${id} 失败 (${res.status})`);
+            if(!res.ok)
+                throw new Error(`加载 ${id} 失败 (${res.status})`);
             return res.json();
         })
         .then(data => {
@@ -406,304 +419,34 @@ function loadLineFile(id) {
         .catch(err => console.error(err));
 }
 
-function updateStationVisibility() {
-    if (!stationLayer)
-        return;
-    if (map.getZoom() > 12) {
-        // 显示配线图，隐藏线路
-        if (!map.hasLayer(stationLayer)) map.addLayer(stationLayer);
-        if (map.hasLayer(lineLayer)) map.removeLayer(lineLayer);
-    } else {
-        // 显示线路，隐藏配线图
-        if (map.hasLayer(stationLayer)) map.removeLayer(stationLayer);
-        if (!map.hasLayer(lineLayer)) map.addLayer(lineLayer);
-    }
-}
-
-function buildStationLayer() {
-    if (stationLayer) {
-        if (map.hasLayer(stationLayer)) map.removeLayer(stationLayer);
-        stationLayer.clearLayers();
-    } else {
-        stationLayer = L.layerGroup();
-    }
-
-    const UNIT = 0.0001;
-    const platformLengthMeters = 10 * UNIT * 111320; // 站台长 ~111m
-    const platformWidthMeters = 2 * UNIT * 111320;   // 站台宽 ~22m
-    const trackOffsetMeters = 1.5 * UNIT * 111320;   // 轨道偏移 ~16.7m
-    const halfLen = platformLengthMeters / 2;
-    const halfWid = platformWidthMeters / 2;
-    const endLineLength = 6;                         // 端点横线长度（米）
-
-    const crs = L.CRS.EPSG3857;
-
-    function project(latlng) {
-        return crs.project(L.latLng(latlng));
-    }
-    function unproject(point) {
-        return crs.unproject(point);
-    }
-
-    function offsetPointsMeters(points, offsetMeters) {
-        const n = points.length;
-        if (n < 2) return points.slice();
-        const result = [];
-        for (let i = 0; i < n; i++) {
-            const p = points[i];
-            const pt = project(p);
-            let dx, dy;
-            if (i === 0) {
-                const p1 = project(points[1]);
-                dx = p1.x - pt.x;
-                dy = p1.y - pt.y;
-            } else if (i === n - 1) {
-                const p0 = project(points[n - 2]);
-                dx = pt.x - p0.x;
-                dy = pt.y - p0.y;
-            } else {
-                const pPrev = project(points[i - 1]);
-                const pNext = project(points[i + 1]);
-                dx = pNext.x - pPrev.x;
-                dy = pNext.y - pPrev.y;
-            }
-            const len = Math.sqrt(dx * dx + dy * dy);
-            if (len < 1e-10) {
-                if (i > 0 && result.length > 0) {
-                    const prevPt = project(points[i - 1]);
-                    dx = pt.x - prevPt.x;
-                    dy = pt.y - prevPt.y;
-                    const l = Math.sqrt(dx * dx + dy * dy);
-                    if (l > 1e-10) { dx /= l; dy /= l; } else { dx = 1; dy = 0; }
-                } else {
-                    dx = 1; dy = 0;
-                }
-            } else {
-                dx /= len; dy /= len;
-            }
-            const nx = -dy;
-            const ny = dx;
-            const newX = pt.x + offsetMeters * nx;
-            const newY = pt.y + offsetMeters * ny;
-            const newLatLng = unproject({ x: newX, y: newY });
-            result.push([newLatLng.lat, newLatLng.lng]);
-        }
-        return result;
-    }
-
-    for (const [id, info] of Object.entries(lineData)) {
-        const stations = info.stations || [];
-        const segments = info.segments || [];
-        const color = info.color || '#808080';
-        if (!segments.length) continue;
-
-        segments.forEach(([priority, pts]) => {
-            if (pts.length < 2) return;
-
-            const upPts = offsetPointsMeters(pts, trackOffsetMeters);
-            const downPts = offsetPointsMeters(pts, -trackOffsetMeters);
-
-            // 上行轨道
-            const upLine = L.polyline(upPts, {
-                color: color,
-                weight: 3,
-                opacity: 0.8,
-                interactive: false
-            });
-            stationLayer.addLayer(upLine);
-
-            // 下行轨道
-            const downLine = L.polyline(downPts, {
-                color: color,
-                weight: 3,
-                opacity: 0.8,
-                interactive: false
-            });
-            stationLayer.addLayer(downLine);
-
-            // ---- 端点横线（垂直于轨道） ----
-            function addEndLine(ptLatLng, dirLatLng, offsetMeters, lengthMeters) {
-                const pt = project(ptLatLng);
-                const dirPt = project(dirLatLng);
-                let dx = dirPt.x - pt.x;
-                let dy = dirPt.y - pt.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                if (len < 1e-10) return;
-                dx /= len;
-                dy /= len;
-                const nx = -dy;  // 法向量（垂直于轨道）
-                const ny = dx;
-                // 横线中心在偏移后的端点位置
-                const centerX = pt.x + offsetMeters * nx;
-                const centerY = pt.y + offsetMeters * ny;
-                const half = lengthMeters / 2;
-                // 横线两端沿法向量方向延伸
-                const startX = centerX - half * nx;
-                const startY = centerY - half * ny;
-                const endX = centerX + half * nx;
-                const endY = centerY + half * ny;
-                const startLatLng = unproject({ x: startX, y: startY });
-                const endLatLng = unproject({ x: endX, y: endY });
-                const line = L.polyline(
-                    [
-                        [startLatLng.lat, startLatLng.lng],
-                        [endLatLng.lat, endLatLng.lng]
-                    ],
-                    {
-                        color: color,
-                        weight: 2,
-                        opacity: 1,
-                        interactive: false
-                    }
-                );
-                stationLayer.addLayer(line);
-            }
-
-            const addEnds = (idx) => {
-                const pt = pts[idx];
-                const dir = idx === 0 ? pts[1] : pts[pts.length - 2];
-                addEndLine(pt, dir, trackOffsetMeters, endLineLength);
-                addEndLine(pt, dir, -trackOffsetMeters, endLineLength);
-            };
-            addEnds(0);
-            addEnds(pts.length - 1);
-        });
-
-        // ---- 站台垂足计算 ----
-        const segPoints = [];
-        segments.forEach(([priority, pts]) => {
-            for (let i = 0; i < pts.length - 1; i++) {
-                segPoints.push({ a: pts[i], b: pts[i + 1] });
-            }
-        });
-        if (segPoints.length === 0) continue;
-
-        for (const st of stations) {
-            const sl = st.sl;
-            if (!sl || sl.length < 2) continue;
-
-            let bestDist2 = Infinity;
-            let bestProj = null;
-            let bestDir = null;
-
-            for (const seg of segPoints) {
-                const a = seg.a;
-                const b = seg.b;
-                const dx = b[0] - a[0];
-                const dy = b[1] - a[1];
-                const len2 = dx * dx + dy * dy;
-                if (len2 === 0) continue;
-                let t = ((sl[0] - a[0]) * dx + (sl[1] - a[1]) * dy) / len2;
-                t = Math.max(0, Math.min(1, t));
-                const projX = a[0] + t * dx;
-                const projY = a[1] + t * dy;
-                const d2 = (sl[0] - projX) ** 2 + (sl[1] - projY) ** 2;
-                if (d2 < bestDist2) {
-                    bestDist2 = d2;
-                    bestProj = [projX, projY];
-                    const len = Math.sqrt(len2);
-                    bestDir = [dx / len, dy / len];
-                }
-            }
-
-            if (!bestProj || !bestDir) continue;
-
-            const centerLatLng = L.latLng(bestProj[0], bestProj[1]);
-            const centerPt = project(centerLatLng);
-
-            const dirPt = project(L.latLng(centerLatLng.lat + bestDir[0], centerLatLng.lng + bestDir[1]));
-            let dx = dirPt.x - centerPt.x;
-            let dy = dirPt.y - centerPt.y;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            if (len < 1e-10) continue;
-            dx /= len;
-            dy /= len;
-            const nx = -dy;
-            const ny = dx;
-
-            const corners = [
-                { x: centerPt.x + halfLen * dx + halfWid * nx, y: centerPt.y + halfLen * dy + halfWid * ny },
-                { x: centerPt.x + halfLen * dx - halfWid * nx, y: centerPt.y + halfLen * dy - halfWid * ny },
-                { x: centerPt.x - halfLen * dx - halfWid * nx, y: centerPt.y - halfLen * dy - halfWid * ny },
-                { x: centerPt.x - halfLen * dx + halfWid * nx, y: centerPt.y - halfLen * dy + halfWid * ny }
-            ];
-            const latlngs = corners.map(p => unproject(p));
-
-            const rect = L.polygon(latlngs, {
-                color: color,
-                weight: 1,
-                fillColor: color,
-                fillOpacity: 0.25,
-                interactive: false
-            });
-            stationLayer.addLayer(rect);
-
-            const labelIcon = L.divIcon({
-                className: 'station-label',
-                html: `<span class="station-label-text">${st.n || ''}</span>`,
-                iconSize: [0, 0],
-                iconAnchor: [0, 0]
-            });
-            const labelMarker = L.marker(centerLatLng, {
-                icon: labelIcon,
-                interactive: false
-            });
-            stationLayer.addLayer(labelMarker);
-        }
-    }
-}
-
+/** 加载全部线路 */
 function loadAllLines() {
     fetch('./resource/lines/lines.json')
         .then(res => {
-            if (!res.ok) throw new Error('lines 不存在');
+            if(!res.ok)
+                throw new Error('lines 不存在');
             return res.json();
         })
         .then(ids => Promise.all(ids.map(id => loadLineFile(id))))
         .then(() => {
-            populateDrawer();
-            buildStationLayer();        // 生成配线图
-            updateStationVisibility();  // 根据当前缩放决定是否显示
-            refreshDebugIfNeeded();     // 如果 debug 已开启，刷新节点
+            buildtrackLayer();       // 生成配线图
+            updateLineVisibility();  // 根据当前缩放决定是否显示
+            if(debugVisible)  // 如果 debug 已开启，刷新节点
+                refreshDebug();
         })
-        .catch(() => {
-            console.warn('未找到 lines，使用默认线路');
-            const ids = ['M1', 'M1E', 'M2'];
+        .catch((e) => {
+            console.warn('未找到 lines，使用默认线路', e);
+            const ids = ['M1', 'M2'];
             Promise.all(ids.map(id => loadLineFile(id))).then(() => {
-                populateDrawer();
-                refreshDebugIfNeeded();
+                if(debugVisible)
+                    refreshDebug();
             });
         });
 }
 
 // ===========================
-// 抽屉面板
+// 抽屉面板（预留，暂不使用）
 // ===========================
-function populateDrawer() {
-    const ul = document.getElementById('lineList');
-    ul.innerHTML = '';
-    for (const [id, info] of Object.entries(lineData)) {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${info.name}</span><span class="badge">${id}</span>`;
-        li.addEventListener('click', function() {
-            if (info.bounds && info.bounds.isValid()) {
-                map.fitBounds(info.bounds, { padding: [30, 30] });
-            }
-            // 高亮
-            info.layers.forEach(layer => {
-                layer.setStyle({ color: '#ff7800', weight: 6 });
-            });
-            // 恢复原色
-            setTimeout(() => {
-                info.layers.forEach(layer => {
-                    layer.setStyle({ color: info.color, weight: 4 });
-                });
-            }, 1000);
-        });
-        ul.appendChild(li);
-    }
-}
-
 function initDrawerDrag() {
     const drawer = document.getElementById('drawer');
     const handle = document.getElementById('drawerHandle');
@@ -752,11 +495,16 @@ function initDrawerDrag() {
 // ===========================
 // 定位功能
 // ===========================
+/**
+ * 显示/更新定位
+ * @param {*} latlng leaflet经纬度
+ * @param {*} accuracy leaflet精准度
+ */
 function onLocationFound(latlng, accuracy) {
     // 转换坐标
     const gcj = wgs84ToGcj02(latlng.lat, latlng.lng);
     const gcjLatLng = L.latLng(gcj.lat, gcj.lng);
-
+    // 添加/更新标签
     if (!locationMarker) {
         locationMarker = L.marker(gcjLatLng, {
             icon: L.divIcon({
@@ -765,7 +513,6 @@ function onLocationFound(latlng, accuracy) {
                 iconAnchor: [12, 30]
             })
         }).addTo(map);
-
         locationCircle = L.circle(gcjLatLng, {
             radius: accuracy || 50,
             color: '#4d8aff',
@@ -774,78 +521,65 @@ function onLocationFound(latlng, accuracy) {
             weight: 1,
             dashArray: '5,5'
         }).addTo(map);
-
-        map.setView(gcjLatLng, 14);
     } else {
         locationMarker.setLatLng(gcjLatLng);
-        if (locationCircle) {
+        if(locationCircle){
             locationCircle.setLatLng(gcjLatLng);
-            if (accuracy) locationCircle.setRadius(accuracy);
+            if(accuracy)
+                locationCircle.setRadius(accuracy);
         }
     }
+    map.setView(gcjLatLng, 14);
 }
 
-function showToast(message, duration = 3000) {
-    const popup = L.popup({ closeOnClick: false })
-        .setLatLng(map.getCenter())
-        .setContent(message)
-        .openOn(map);
-    setTimeout(() => map.closePopup(popup), duration);
-}
-
+/** 开始位置检测 */
 function startLocationTracking() {
     if (!navigator.geolocation) {
-        showToast('浏览器不支持地理定位');
+        showToast('浏览器不支持地理定位', 3000);
         return;
     }
-
+    // 高精度/低精度参数
     const options = {
         enableHighAccuracy: true,
         timeout: 6000,
         maximumAge: 30000
     };
-
+    const lowOptions = {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 60000
+    };
+    // 尝试获取位置
     watchId = navigator.geolocation.watchPosition(
         (pos) => {
             const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
             onLocationFound(latlng, pos.coords.accuracy);
-            firstTrack = false;
         },
         (error) => {
             // 高精度失败则降级
             if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
                 console.warn('高精度定位失败，尝试低精度...');
                 if (watchId) navigator.geolocation.clearWatch(watchId);
-                const lowOptions = {
-                    enableHighAccuracy: false,
-                    timeout: 10000,
-                    maximumAge: 60000
-                };
                 watchId = navigator.geolocation.watchPosition(
                     (pos) => {
                         const latlng = L.latLng(pos.coords.latitude, pos.coords.longitude);
                         onLocationFound(latlng, pos.coords.accuracy);
-                        firstTrack = false;
                     },
                     (err) => {
                         console.warn('定位失败:', err.message);
-                        showToast('无法获取当前位置，请检查GPS或网络权限');
-                        firstTrack = false;
+                        showToast('无法获取当前位置，请检查GPS或网络权限', 3000);
                     },
                     lowOptions
                 );
-            } else {
-                if (firstTrack && isIOS())
-                    showToast('IOS端请手动加载位置');
-                else
-                    showToast('定位权限被拒绝，请在设置中允许');
-                firstTrack = false;
             }
+            else
+                showToast('定位权限被拒绝，请在设置中允许', 3000);
         },
         options
     );
 }
 
+/** 停止位置检测 */
 function stopLocationTracking() {
     if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
@@ -854,34 +588,46 @@ function stopLocationTracking() {
 }
 
 // ===========================
-// 启动入口
+// 启动入口与启动函数
 // ===========================
+function initMap() {
+    map = L.map('map').setView([39.9, 116.4], 10);
+    tileLayer = createTileLayer(true).addTo(map);
+    lineLayer = L.layerGroup().addTo(map);
+    // 设置copyright
+    map.attributionControl.setPrefix('');
+    map.attributionControl.addAttribution('&copy; <a href="https://www.amap.com/">高德地图</a>');
+    map.on('zoomend', updateLineVisibility);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
+    if(typeof initDebug === 'function')
+        initDebug();
     initDrawerDrag();
     loadAllLines();
-
     // ---- 浮动按钮事件 ----
     document.getElementById('map-type-btn').addEventListener('click', toggleMapType);
     document.getElementById('map-type-btn').classList.add('active-type'); // 初始卫星
-
-    document.getElementById('debug-btn').addEventListener('click', toggleDebug);
-
+    // 设置debug按钮
+    const debugBtn = document.getElementById('debug-btn');
+    if (typeof toggleDebug === 'function') {
+        // debug.js 已成功加载，显示按钮并绑定事件
+        debugBtn.style.display = '';
+        debugBtn.addEventListener('click', toggleDebug);
+    } else {
+        // debug.js 未加载或加载失败，隐藏按钮
+        debugBtn.style.display = 'none';
+    }
     // 定位按钮
     document.getElementById('locate-btn').addEventListener('click', function() {
-        if (!navigator.geolocation) {
-            showToast('浏览器不支持地理定位');
-            return;
-        }
         if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
             watchId = null;
         }
         startLocationTracking();
     });
-
     startLocationTracking();
-
     // 页面卸载时停止定位
     window.addEventListener('beforeunload', stopLocationTracking);
 });
