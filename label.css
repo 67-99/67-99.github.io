@@ -1,0 +1,35 @@
+/* AI标签样式 */
+.ai-label {
+    display: inline-block;
+    margin: 2px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    border-width: 2px;
+    border-style: solid;
+    line-height: 1.5;
+    text-align: center;
+    white-space: nowrap;
+}
+.ai-label-full {
+    background-color: #8B0000;
+    border-color: #FFA07A;
+    color: #ffffff;
+}
+.ai-label-heavy {
+    background-color: #CC5500;
+    border-color: #FFB07C;
+    color: #ffffff;
+}
+.ai-label-light {
+    background-color: #B8860B;
+    border-color: #FFD700;
+    color: #ffffff;
+}
+.ai-label-none {
+    background-color: #4F4F4F;
+    border-color: #C0C0C0;
+    color: #ffffff;
+}

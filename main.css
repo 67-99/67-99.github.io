@@ -336,6 +336,15 @@ nav {
     flex-grow: 1;
     margin-bottom: 1rem;
 }
+.work-content-title {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.work-content .work-content-title h3 {
+    margin-bottom: 0;
+    margin-right: 4px;
+}
 .work-item-row {
     grid-column: 1 / -1;
     display: flex;

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>项目主页</title>
     <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="../label.css">
 </head>
 <body>
     <!-- 导航栏 -->
@@ -87,9 +88,39 @@
                         const workContent = document.createElement('div');
                         workContent.className = 'work-content';
                         
+                        const workTitleDiv = document.createElement('div');
+                        workTitleDiv.className = 'work-content-title';
                         const workTitle = document.createElement('h3');
                         workTitle.textContent = project.title;
-                        workContent.appendChild(workTitle);
+                        workTitleDiv.appendChild(workTitle);
+                        if(project.ai)  // 添加AI标签（若有）
+                            project.ai.forEach((item) => {
+                                const aiLabel = document.createElement("span");
+                                aiLabel.classList.add("ai-label");
+                                switch(item){
+                                    case 0:
+                                        aiLabel.classList.add("ai-label-none");
+                                        aiLabel.textContent = "无AI";
+                                        break;
+                                    case 1:
+                                        aiLabel.classList.add("ai-label-light");
+                                        aiLabel.textContent = "轻AI";
+                                        break;
+                                    case 2:
+                                        aiLabel.classList.add("ai-label-heavy");
+                                        aiLabel.textContent = "重AI";
+                                        break;
+                                    case 3:
+                                        aiLabel.classList.add("ai-label-full");
+                                        aiLabel.textContent = "全AI";
+                                        break;
+                                    default:
+                                        aiLabel.classList.add("ai-label-none");
+                                        aiLabel.textContent = "未知";
+                                }
+                                workTitleDiv.appendChild(aiLabel);
+                            });
+                        workContent.appendChild(workTitleDiv);
                         
                         const workDescription = document.createElement('p');
                         workDescription.innerHTML = project.description;

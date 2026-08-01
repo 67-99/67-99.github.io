@@ -5,17 +5,20 @@
             {
                 "title": "教室查询小程序",
                 "description": "一个可以根据课表文件显示教室占用情况的程序。<br><i>注：文件格式参考中南课表</i>",
-                "name": "classroom-check"
+                "name": "classroom-check",
+                "ai": [1]
             },
             {
                 "title": "复习系统",
                 "description": "这是一个为刷题打造的复习系统。<br><i>注:目前只有答题功能，未来可能拓展</i>",
-                "name": "revise-system"
+                "name": "revise-system",
+                "ai": [3]
             },
             {
                 "title": "情绪日历",
                 "description": "这是一个可以记录并查询情绪/状态的网页日历。<br><i>注:有🪜与无🪜会显示两种不同的内容</i></p>",
-                "name": "state-calendar"
+                "name": "state-calendar",
+                "ai": [3]
             }
         ]
     },
@@ -25,17 +28,20 @@
             {
                 "title": "路牌生成器",
                 "description": "一个可以生成国标路牌的模拟程序。<br><i>注：国标字体为拟合生成</i>",
-                "name": "sign-generator"
+                "name": "sign-generator",
+                "ai": [1, 2]
             },
             {
                 "title": "InnOSeed黑客松B题",
                 "description": "一个由InnOSeed组织，旨在24内完成demo的项目。",
-                "name": "innoseed-B"
+                "name": "innoseed-B",
+                "ai": [0]
             },
             {
                 "title": "自制“电脑”",
                 "description": "一个自制的微处理器，基础来源于turing complete。",
-                "name": "cpu"
+                "name": "cpu",
+                "ai": [0]
             }
         ]
     }
