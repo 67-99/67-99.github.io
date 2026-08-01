@@ -211,6 +211,109 @@ function buildtrackLayer() {
         const segments = info.segments || [];
         const color = info.color || '#808080';
         if (!segments.length) continue;
+        // ---- 绘制站台 ----
+        for (const st of stations) {
+            const sl = st.sl;
+            if (!sl || sl.length < 2) continue;
+            // 寻找最佳位置
+            let bestDist2 = Infinity;
+            let bestProj = null;
+            let bestDir = null;
+            let expand = null;
+            segments.forEach(([priority, pts], idx) => {
+                for (let i = 0; i < pts.length - 1; i++) {
+                    const a = pts[i];
+                    const b = pts[i + 1];
+                    const dx = b[0] - a[0];
+                    const dy = b[1] - a[1];
+                    const len2 = dx * dx + dy * dy;
+                    if (len2 === 0) continue;
+                    const t = ((sl[0] - a[0]) * dx + (sl[1] - a[1]) * dy) / len2;
+                    // 真正的垂足（可能在线段外）
+                    const projX = a[0] + t * dx;
+                    const projY = a[1] + t * dy;
+                    // 根据 t 确定线段上的最近点
+                    let nearestX, nearestY;
+                    if (t < 0) {
+                        nearestX = a[0];
+                        nearestY = a[1];
+                    } else if (t > 1) {
+                        nearestX = b[0];
+                        nearestY = b[1];
+                    } else {
+                        nearestX = projX;
+                        nearestY = projY;
+                    }
+                    const d2 = (sl[0] - nearestX) ** 2 + (sl[1] - nearestY) ** 2;
+                    if (d2 < bestDist2) {
+                        bestDist2 = d2;
+                        bestProj = [projX, projY];
+                        const len = Math.sqrt(len2);
+                        bestDir = [dx / len, dy / len];
+                        if(t < 0 || t > 1)
+                            expand = [idx, i, t > 1];
+                        else
+                            expand = null;
+                    }
+                }
+            });
+            if(!bestProj || !bestDir)
+                continue;
+            if (expand) {
+                const [segIdx, i, isAfterB] = expand;
+                let newX = bestProj[0];
+                let newY = bestProj[1];
+                if (isAfterB) {
+                    newX += 6 * UNIT * bestDir[0];
+                    newY += 6 * UNIT * bestDir[1];
+                    segments[segIdx][1].splice(i + 2, 0, [newX, newY]);
+                } else {
+                    newX -= 6 * UNIT * bestDir[0];
+                    newY -= 6 * UNIT * bestDir[1];
+                    segments[segIdx][1].splice(i, 0, [newX, newY]);
+                }
+            }
+            // 计算站台形状
+            const centerLatLng = L.latLng(bestProj[0], bestProj[1]);
+            st._labelPos = centerLatLng;
+            const centerPt = project(centerLatLng);
+            const dirPt = project(L.latLng(centerLatLng.lat + bestDir[0], centerLatLng.lng + bestDir[1]));
+            let dx = dirPt.x - centerPt.x;
+            let dy = dirPt.y - centerPt.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 1e-10) continue;
+            dx /= len;
+            dy /= len;
+            const nx = -dy;
+            const ny = dx;
+            // 绘制站台
+            const corners = [
+                { x: centerPt.x + halfLen * dx + halfWid * nx, y: centerPt.y + halfLen * dy + halfWid * ny },
+                { x: centerPt.x + halfLen * dx - halfWid * nx, y: centerPt.y + halfLen * dy - halfWid * ny },
+                { x: centerPt.x - halfLen * dx - halfWid * nx, y: centerPt.y - halfLen * dy - halfWid * ny },
+                { x: centerPt.x - halfLen * dx + halfWid * nx, y: centerPt.y - halfLen * dy + halfWid * ny }
+            ];
+            const latlngs = corners.map(p => unproject(p));
+            const rect = L.polygon(latlngs, {
+                color: color,
+                weight: 1,
+                fillColor: color,
+                fillOpacity: 0.25,
+                interactive: false
+            });
+            trackLayer.addLayer(rect);
+            const labelIcon = L.divIcon({
+                className: 'station-label',
+                html: `<span class="station-label-text">${st.n || ''}</span>`,
+                iconSize: [0, 0],
+                iconAnchor: [0, 0]
+            });
+            const labelMarker = L.marker(centerLatLng, {
+                icon: labelIcon,
+                interactive: false
+            });
+            trackLayer.addLayer(labelMarker);
+        }
         // 绘制轨道
         segments.forEach(([priority, pts]) => {
             if(pts.length < 2)
@@ -282,81 +385,6 @@ function buildtrackLayer() {
             addEndLine(pts[pts.length - 1], pts[pts.length - 2], trackOffsetMeters, endLineLength);
             addEndLine(pts[pts.length - 1], pts[pts.length - 2], -trackOffsetMeters, endLineLength);
         });
-        // ---- 绘制站台 ----
-        const segPoints = [];
-        segments.forEach(([priority, pts]) => {
-            for(let i = 0; i < pts.length - 1; i++)
-                segPoints.push({ a: pts[i], b: pts[i + 1] });
-        });
-        if (segPoints.length === 0) continue;
-        for (const st of stations) {
-            const sl = st.sl;
-            if (!sl || sl.length < 2) continue;
-            // 寻找最佳位置
-            let bestDist2 = Infinity;
-            let bestProj = null;
-            let bestDir = null;
-            for (const seg of segPoints) {
-                const a = seg.a;
-                const b = seg.b;
-                const dx = b[0] - a[0];
-                const dy = b[1] - a[1];
-                const len2 = dx * dx + dy * dy;
-                if (len2 === 0) continue;
-                let t = ((sl[0] - a[0]) * dx + (sl[1] - a[1]) * dy) / len2;
-                t = Math.max(0, Math.min(1, t));
-                const projX = a[0] + t * dx;
-                const projY = a[1] + t * dy;
-                const d2 = (sl[0] - projX) ** 2 + (sl[1] - projY) ** 2;
-                if (d2 < bestDist2) {
-                    bestDist2 = d2;
-                    bestProj = [projX, projY];
-                    const len = Math.sqrt(len2);
-                    bestDir = [dx / len, dy / len];
-                }
-            }
-            if (!bestProj || !bestDir) continue;
-            // 计算站台形状
-            const centerLatLng = L.latLng(bestProj[0], bestProj[1]);
-            st._labelPos = centerLatLng;
-            const centerPt = project(centerLatLng);
-            const dirPt = project(L.latLng(centerLatLng.lat + bestDir[0], centerLatLng.lng + bestDir[1]));
-            let dx = dirPt.x - centerPt.x;
-            let dy = dirPt.y - centerPt.y;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            if (len < 1e-10) continue;
-            dx /= len;
-            dy /= len;
-            const nx = -dy;
-            const ny = dx;
-            // 绘制站台
-            const corners = [
-                { x: centerPt.x + halfLen * dx + halfWid * nx, y: centerPt.y + halfLen * dy + halfWid * ny },
-                { x: centerPt.x + halfLen * dx - halfWid * nx, y: centerPt.y + halfLen * dy - halfWid * ny },
-                { x: centerPt.x - halfLen * dx - halfWid * nx, y: centerPt.y - halfLen * dy - halfWid * ny },
-                { x: centerPt.x - halfLen * dx + halfWid * nx, y: centerPt.y - halfLen * dy + halfWid * ny }
-            ];
-            const latlngs = corners.map(p => unproject(p));
-            const rect = L.polygon(latlngs, {
-                color: color,
-                weight: 1,
-                fillColor: color,
-                fillOpacity: 0.25,
-                interactive: false
-            });
-            trackLayer.addLayer(rect);
-            const labelIcon = L.divIcon({
-                className: 'station-label',
-                html: `<span class="station-label-text">${st.n || ''}</span>`,
-                iconSize: [0, 0],
-                iconAnchor: [0, 0]
-            });
-            const labelMarker = L.marker(centerLatLng, {
-                icon: labelIcon,
-                interactive: false
-            });
-            trackLayer.addLayer(labelMarker);
-        }
     }
 }
 
@@ -601,6 +629,14 @@ function initMap() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // 天气获取，详见https://www.sojson.com/api/weather.html
+    // fetch("http://t.weather.itboy.net/api/weather/city/101010100")
+    //     .then(res => {
+    //         if(!res.ok)
+    //             throw new Error(`加载 ${id} 失败 (${res.status})`);
+    //         return res.json();
+    //     })
+    //     .then(data => console.log(data));
     initMap();
     if(typeof initDebug === 'function')
         initDebug();
