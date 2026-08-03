@@ -13,7 +13,7 @@ if __name__ == "__main__":
             getFilePath("lines", f"{name}.json") if os.path.exists(getFilePath("lines", f"{name}.json")) else None
         )
         if not path:
-            print("缺少线路", name)
+            print("[W]", "缺少线路", name)
             continue
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -37,6 +37,24 @@ if __name__ == "__main__":
                 idx, i = pos
                 data["points"][idx][1].insert(i, [lat, lon])
                 print(f"{name}[{idx}]在{i}插入{point}")
+            elif op == "set": # set, index/name, value
+                key, value = param
+                if isinstance(key, str):
+                    for item in data.get("stations", []):
+                        if item.get("n", "") == key:
+                            if isinstance(value, dict):
+                                for k, v in value.items():
+                                    item[k] = v
+                                print(f"设置{name}{key}站为{value}")
+                            elif isinstance(value, list):
+                                item["sl"] = value
+                                print(f"设置{name}{key}站位置于{value}")
+                            break
+                    else:
+                        print("[W]", f"{name}中未找到车站{key}")
+                elif isinstance(key, list|tuple):
+                    idx, i = key
+                    data["points"][idx][1][i] = value
             elif op == "shift":  # shift, [idx, [start, end]], Δ[lat, lon]
                 pos, shift = param
                 lat, lon = shift
