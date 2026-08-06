@@ -205,6 +205,35 @@ function buildtrackLayer() {
         }
         return result;
     }
+    /**
+     * 在图层组中添加一条带白色半透明底衬的折线
+     * @param {Array} latlngs - 经纬度数组 [[lat,lng], ...]
+     * @param {string} color - 主线条颜色
+     * @param {number} weight - 主线条粗细
+     * @param {number} opacity - 主线条透明度
+     * @param {number} bgWeight - 底衬线条粗细（通常比主线条大）
+     * @param {number} bgOpacity - 底衬透明度（白色）
+     */
+    function addLineWithBg(latlngs, color, weight = 3, opacity = 0.9, bgWeight = UNIT * 111320, bgOpacity = 0.5) {
+        // 先绘制白色半透明底衬
+        const bgLine = L.polyline(latlngs, {
+            color: 'rgba(255,255,255,' + bgOpacity + ')',
+            weight: bgWeight,
+            opacity: 1,
+            interactive: false,
+            smoothFactor: 1
+        });
+        trackLayer.addLayer(bgLine);
+        // 再绘制主线条
+        const mainLine = L.polyline(latlngs, {
+            color: color,
+            weight: weight,
+            opacity: opacity,
+            interactive: false,
+            smoothFactor: 1
+        });
+        trackLayer.addLayer(mainLine);
+    }
 
     for (const [id, info] of Object.entries(lineData)) {
         const stations = info.stations || [];
@@ -321,20 +350,8 @@ function buildtrackLayer() {
             // 上/下行轨道
             const upPts = offsetPointsMeters(pts, trackOffsetMeters);
             const downPts = offsetPointsMeters(pts, -trackOffsetMeters);
-            const upLine = L.polyline(upPts, {
-                color: color,
-                weight: 3,
-                opacity: 0.8,
-                interactive: false
-            });
-            const downLine = L.polyline(downPts, {
-                color: color,
-                weight: 3,
-                opacity: 0.8,
-                interactive: false
-            });
-            trackLayer.addLayer(upLine);
-            trackLayer.addLayer(downLine);
+            addLineWithBg(upPts, color)
+            addLineWithBg(downPts, color)
             /**
              * 绘制端点横线（垂直于轨道）
              * @param {*} ptLatLng 
@@ -394,7 +411,7 @@ function buildtrackLayer() {
  * @returns 获取的json结果
  */
 async function loadLineFile(id){
-    const url = `./resource/lines/${id}.json`;
+    const url = `./resource/baseline/${id}.json`;
     return fetch(url)
         .then(res => {
             if(!res.ok)
@@ -448,11 +465,11 @@ async function loadLineFile(id){
 }
 
 /** 加载全部线路 */
-function loadAllLines() {
-    fetch('./resource/lines/lines.json')
+function loadAllbaseline() {
+    fetch('./resource/baseline/lines.json')
         .then(res => {
             if(!res.ok)
-                throw new Error('lines 不存在');
+                throw new Error('baseline 不存在');
             return res.json();
         })
         .then(ids => Promise.all(ids.map(id => loadLineFile(id))))
@@ -463,7 +480,7 @@ function loadAllLines() {
                 refreshDebug();
         })
         .catch((e) => {
-            console.warn('未找到 lines，使用默认线路', e);
+            console.warn('未找到 baseline，使用默认线路', e);
             const ids = ['M1', 'M2'];
             Promise.all(ids.map(id => loadLineFile(id))).then(() => {
                 if(debugVisible)
@@ -641,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if(typeof initDebug === 'function')
         initDebug();
     initDrawerDrag();
-    loadAllLines();
+    loadAllbaseline();
     // ---- 浮动按钮事件 ----
     document.getElementById('map-type-btn').addEventListener('click', toggleMapType);
     document.getElementById('map-type-btn').classList.add('active-type'); // 初始卫星

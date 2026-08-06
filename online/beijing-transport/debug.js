@@ -268,13 +268,30 @@ function initDebug() {
     // 右键显示坐标
     map.on('contextmenu', function(e) {
         if (debugVisible) {
-            if (e.originalEvent) e.originalEvent.preventDefault();
+            if(e.originalEvent)
+                e.originalEvent.preventDefault();
             const latlng = e.latlng;
-            const content = `(${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)})`;
+            const content = `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
             L.popup({ closeButton: true })
                 .setLatLng(latlng)
-                .setContent(content)
+                .setContent(`(${content})`)
                 .openOn(map);
+            if(navigator.clipboard && navigator.clipboard.writeText)
+                navigator.clipboard.writeText(content);
+            else{  // 降级方案：兼容旧浏览器
+                const textarea = document.createElement('textarea');
+                textarea.value = content;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = 0;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('降级复制失败:', err);
+                }
+                document.body.removeChild(textarea);
+            }
         }
     });
 }

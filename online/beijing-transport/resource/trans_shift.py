@@ -8,6 +8,8 @@ def getFilePath(*path: list[str] | str):
 if __name__ == "__main__":
     with open(getFilePath('shift.json'), 'r', encoding='utf-8') as f:
         shift_data = json.load(f)
+    if not os.path.exists(getFilePath("baseline")):
+        os.mkdir(getFilePath("baseline"))
     for name, commands in shift_data.items():
         path = getFilePath("temp", f"{name}.json") if os.path.exists(getFilePath("temp", f"{name}.json")) else (
             getFilePath("lines", f"{name}.json") if os.path.exists(getFilePath("lines", f"{name}.json")) else None
@@ -77,12 +79,15 @@ if __name__ == "__main__":
                 priors = param[1] if len(param) > 1 else []
                 for i, split in enumerate(param[0]):
                     idx, pos = split
-                    if len(pos) == 1:
-                        points = data["points"][idx][1][pos]
+                    if len(pos) == 0:
+                        priors.insert(i, data["points"][idx][0])
+                        points = data["points"][idx][1]
+                    elif len(pos) == 1:
+                        points = data["points"][idx][1][pos[0]:]
                     else:
                         start, end = pos
                         points = data["points"][idx][1][start: end]
-                    layers.append((prior[i] if len(priors) > i else data["points"][idx][0], points))
+                    layers.append((priors[i] if len(priors) > i else data["points"][idx][0], points))
                 data["points"] = layers
             elif op == "separate":  # separate, [[idx1, idx2, ...], [name1, name2, ...], ...]
                 point_groups = {}
@@ -98,15 +103,15 @@ if __name__ == "__main__":
                     output = {k: v for k, v in data.items() if k in {"name", "color", "stations"}}
                     output["id"] = name_
                     output["points"] = points
-                    with open(getFilePath("lines", f"{name_}.json"), 'w', encoding='utf-8') as f:
+                    with open(getFilePath("baseline", f"{name_}.json"), 'w', encoding='utf-8') as f:
                         json.dump(output, f, indent=4)
                     print(f"{name}分离出{len(points)}组共长{sum(len(p[1]) for p in points)}的文件{name_}")
                 break
         else:
             if "path" in data:
                 data.pop("path")
-            with open(getFilePath("lines", f"{name}.json"), 'w', encoding='utf-8') as f:
+            with open(getFilePath("baseline", f"{name}.json"), 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4)
     files = [name for name in os.listdir(getFilePath("temp")) if os.path.splitext(name)[0] not in shift_data]
     for file in files:
-        shutil.copy(getFilePath("temp", file), getFilePath("lines", file))
+        shutil.copy(getFilePath("temp", file), getFilePath("baseline", file))
