@@ -70,6 +70,7 @@ const lineData = {};        // 线路信息
 let locationMarker = null;  // 定位标志
 let locationCircle = null;  // 定位范围
 let watchId = null;         // 定位追踪watcher
+let focusOnLocation = true; // 定位聚焦
 
 // ===========================
 // 地图初始化
@@ -235,173 +236,215 @@ function buildtrackLayer() {
         trackLayer.addLayer(mainLine);
     }
 
+    // ---------- 收集绘制任务 ----------
+    const drawTasks = [];
     for (const [id, info] of Object.entries(lineData)) {
-        const stations = info.stations || [];
-        const segments = info.segments || [];
         const color = info.color || '#808080';
-        if (!segments.length) continue;
-        // ---- 绘制站台 ----
-        for (const st of stations) {
-            const sl = st.sl;
-            if (!sl || sl.length < 2) continue;
-            // 寻找最佳位置
-            let bestDist2 = Infinity;
-            let bestProj = null;
-            let bestDir = null;
-            let expand = null;
-            segments.forEach(([priority, pts], idx) => {
-                for (let i = 0; i < pts.length - 1; i++) {
-                    const a = pts[i];
-                    const b = pts[i + 1];
-                    const dx = b[0] - a[0];
-                    const dy = b[1] - a[1];
-                    const len2 = dx * dx + dy * dy;
-                    if (len2 === 0) continue;
-                    const t = ((sl[0] - a[0]) * dx + (sl[1] - a[1]) * dy) / len2;
-                    // 真正的垂足（可能在线段外）
-                    const projX = a[0] + t * dx;
-                    const projY = a[1] + t * dy;
-                    // 根据 t 确定线段上的最近点
-                    let nearestX, nearestY;
-                    if (t < 0) {
-                        nearestX = a[0];
-                        nearestY = a[1];
-                    } else if (t > 1) {
-                        nearestX = b[0];
-                        nearestY = b[1];
-                    } else {
-                        nearestX = projX;
-                        nearestY = projY;
-                    }
-                    const d2 = (sl[0] - nearestX) ** 2 + (sl[1] - nearestY) ** 2;
-                    if (d2 < bestDist2) {
-                        bestDist2 = d2;
-                        bestProj = [projX, projY];
-                        const len = Math.sqrt(len2);
-                        bestDir = [dx / len, dy / len];
-                        if(t < 0 || t > 1)
-                            expand = [idx, i, t > 1];
-                        else
-                            expand = null;
-                    }
+        console.log(info.hasTrack);
+        if (info.hasTrack) {
+            // 主轨道上下行分段
+            (info.trackMain[0] || []).forEach(seg => {
+                if (seg.points.length >= 2) {
+                    drawTasks.push({
+                        type: 'line',
+                        priority: seg.priority,
+                        points: seg.points,
+                        color: color
+                    });
                 }
             });
-            if(!bestProj || !bestDir)
-                continue;
-            if (expand) {
-                const [segIdx, i, isAfterB] = expand;
-                let newX = bestProj[0];
-                let newY = bestProj[1];
-                if (isAfterB) {
-                    newX += 6 * UNIT * bestDir[0];
-                    newY += 6 * UNIT * bestDir[1];
-                    segments[segIdx][1].splice(i + 2, 0, [newX, newY]);
-                } else {
-                    newX -= 6 * UNIT * bestDir[0];
-                    newY -= 6 * UNIT * bestDir[1];
-                    segments[segIdx][1].splice(i, 0, [newX, newY]);
+            (info.trackMain[1] || []).forEach(seg => {
+                if (seg.points.length >= 2) {
+                    drawTasks.push({
+                        type: 'line',
+                        priority: seg.priority,
+                        points: seg.points,
+                        color: color
+                    });
                 }
+            });
+            // 站台
+            (info.trackStations || []).forEach(st => {
+                if (st.rect && st.rect.length === 4) {
+                    drawTasks.push({
+                        type: 'stationRect',
+                        priority: st.priority || 0,
+                        rect: st.rect,
+                        color: color
+                    });
+                }
+                if (st.center) {
+                    drawTasks.push({
+                        type: 'stationLabel',
+                        priority: st.priority || 0,
+                        center: st.center,
+                        name: st.n || ''
+                    });
+                }
+            });
+        } else {
+            const stations = info.stations || [];
+            const segments = info.segments || [];
+            if (!segments.length) continue;
+            // ---- 计算站台并收集任务 ----
+            for (const st of stations) {
+                const sl = st.sl;
+                if (!sl || sl.length < 2) continue;
+                // 寻找最佳位置
+                let bestDist2 = Infinity;
+                let bestProj = null;
+                let bestDir = null;
+                let expand = null;
+                let bestPriority = null;
+                segments.forEach(([priority, pts], idx) => {
+                    for (let i = 0; i < pts.length - 1; i++) {
+                        const a = pts[i];
+                        const b = pts[i + 1];
+                        const dx = b[0] - a[0];
+                        const dy = b[1] - a[1];
+                        const len2 = dx * dx + dy * dy;
+                        if (len2 === 0) continue;
+                        const t = ((sl[0] - a[0]) * dx + (sl[1] - a[1]) * dy) / len2;
+                        // 真正的垂足（可能在线段外）
+                        const projX = a[0] + t * dx;
+                        const projY = a[1] + t * dy;
+                        // 根据 t 确定线段上的最近点
+                        let nearestX, nearestY;
+                        if (t < 0) {
+                            nearestX = a[0];
+                            nearestY = a[1];
+                        } else if (t > 1) {
+                            nearestX = b[0];
+                            nearestY = b[1];
+                        } else {
+                            nearestX = projX;
+                            nearestY = projY;
+                        }
+                        const d2 = (sl[0] - nearestX) ** 2 + (sl[1] - nearestY) ** 2;
+                        if (d2 < bestDist2) {
+                            bestDist2 = d2;
+                            bestProj = [projX, projY];
+                            const len = Math.sqrt(len2);
+                            bestDir = [dx / len, dy / len];
+                            bestPriority = priority;
+                            if(t < 0 || t > 1)
+                                expand = [idx, i, t > 1];
+                            else
+                                expand = null;
+                        }
+                    }
+                });
+                if(!bestProj || !bestDir)
+                    continue;
+                // 若投影点在线段外，则在相应端点外扩一个点
+                if (expand) {
+                    const [segIdx, i, isAfterB] = expand;
+                    let newX = bestProj[0];
+                    let newY = bestProj[1];
+                    if (isAfterB) {
+                        newX += 6 * UNIT * bestDir[0];
+                        newY += 6 * UNIT * bestDir[1];
+                        segments[segIdx][1].splice(i + 2, 0, [newX, newY]);
+                    } else {
+                        newX -= 6 * UNIT * bestDir[0];
+                        newY -= 6 * UNIT * bestDir[1];
+                        segments[segIdx][1].splice(i, 0, [newX, newY]);
+                    }
+                }
+                // 计算站台矩形
+                const centerLatLng = L.latLng(bestProj[0], bestProj[1]);
+                st._labelPos = centerLatLng;
+                const centerPt = project(centerLatLng);
+                const dirPt = project(L.latLng(centerLatLng.lat + bestDir[0], centerLatLng.lng + bestDir[1]));
+                let dx = dirPt.x - centerPt.x;
+                let dy = dirPt.y - centerPt.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len < 1e-10) continue;
+                dx /= len;
+                dy /= len;
+                const nx = -dy;
+                const ny = dx;
+                // 绘制站台
+                const corners = [
+                    { x: centerPt.x + halfLen * dx + halfWid * nx, y: centerPt.y + halfLen * dy + halfWid * ny },
+                    { x: centerPt.x + halfLen * dx - halfWid * nx, y: centerPt.y + halfLen * dy - halfWid * ny },
+                    { x: centerPt.x - halfLen * dx - halfWid * nx, y: centerPt.y - halfLen * dy - halfWid * ny },
+                    { x: centerPt.x - halfLen * dx + halfWid * nx, y: centerPt.y - halfLen * dy + halfWid * ny }
+                ];
+                const latlngs = corners.map(p => unproject(p));
+                // 收集站台任务
+                drawTasks.push({
+                    type: 'stationRect',
+                    priority: bestPriority || 0,
+                    rect: latlngs,
+                    color: color
+                });
+                drawTasks.push({
+                    type: 'stationLabel',
+                    priority: bestPriority || 0,
+                    center: [bestProj[0], bestProj[1]],
+                    name: st.n || ''
+                });
             }
-            // 计算站台形状
-            const centerLatLng = L.latLng(bestProj[0], bestProj[1]);
-            st._labelPos = centerLatLng;
-            const centerPt = project(centerLatLng);
-            const dirPt = project(L.latLng(centerLatLng.lat + bestDir[0], centerLatLng.lng + bestDir[1]));
-            let dx = dirPt.x - centerPt.x;
-            let dy = dirPt.y - centerPt.y;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            if (len < 1e-10) continue;
-            dx /= len;
-            dy /= len;
-            const nx = -dy;
-            const ny = dx;
-            // 绘制站台
-            const corners = [
-                { x: centerPt.x + halfLen * dx + halfWid * nx, y: centerPt.y + halfLen * dy + halfWid * ny },
-                { x: centerPt.x + halfLen * dx - halfWid * nx, y: centerPt.y + halfLen * dy - halfWid * ny },
-                { x: centerPt.x - halfLen * dx - halfWid * nx, y: centerPt.y - halfLen * dy - halfWid * ny },
-                { x: centerPt.x - halfLen * dx + halfWid * nx, y: centerPt.y - halfLen * dy + halfWid * ny }
-            ];
-            const latlngs = corners.map(p => unproject(p));
-            const rect = L.polygon(latlngs, {
-                color: color,
+            // 收集轨道任务 ----
+            segments.forEach(([priority, pts]) => {
+                if (pts.length < 2) return;
+                const upPts = offsetPointsMeters(pts, trackOffsetMeters);
+                const downPts = offsetPointsMeters(pts, -trackOffsetMeters);
+                drawTasks.push({ type: 'line', priority: priority, points: upPts, color: color });
+                drawTasks.push({ type: 'line', priority: priority, points: downPts, color: color });
+            });
+        }
+    }
+    // 按priority升序排序后绘制
+    drawTasks.sort((a, b) => a.priority - b.priority);
+    for (const task of drawTasks) {
+        if (task.type === 'line') {
+            addLineWithBg(task.points, task.color);
+        } else if (task.type === 'stationRect') {
+            L.polygon(task.rect, {
+                color: task.color,
                 weight: 1,
-                fillColor: color,
+                fillColor: task.color,
                 fillOpacity: 0.25,
                 interactive: false
-            });
-            trackLayer.addLayer(rect);
+            }).addTo(trackLayer);
+        } else if (task.type === 'stationLabel') {
             const labelIcon = L.divIcon({
                 className: 'station-label',
-                html: `<span class="station-label-text">${st.n || ''}</span>`,
+                html: `<span class="station-label-text">${task.name}</span>`,
                 iconSize: [0, 0],
                 iconAnchor: [0, 0]
             });
-            const labelMarker = L.marker(centerLatLng, {
+            L.marker(task.center, {
                 icon: labelIcon,
                 interactive: false
-            });
-            trackLayer.addLayer(labelMarker);
+            }).addTo(trackLayer);
         }
-        // 绘制轨道
-        segments.forEach(([priority, pts]) => {
-            if(pts.length < 2)
-                return;
-            // 上/下行轨道
-            const upPts = offsetPointsMeters(pts, trackOffsetMeters);
-            const downPts = offsetPointsMeters(pts, -trackOffsetMeters);
-            addLineWithBg(upPts, color)
-            addLineWithBg(downPts, color)
-            /**
-             * 绘制端点横线（垂直于轨道）
-             * @param {*} ptLatLng 
-             * @param {*} dirLatLng 
-             * @param {*} offsetMeters 
-             * @param {*} lengthMeters 
-             * @returns 
-             */
-            function addEndLine(ptLatLng, dirLatLng, offsetMeters, lengthMeters) {
-                const pt = project(ptLatLng);
-                const dirPt = project(dirLatLng);
-                let dx = dirPt.x - pt.x;
-                let dy = dirPt.y - pt.y;
-                const len = Math.sqrt(dx * dx + dy * dy);
-                if (len < 1e-10) return;
-                dx /= len;
-                dy /= len;
-                const nx = -dy;  // 法向量（垂直于轨道）
-                const ny = dx;
-                // 横线中心在偏移后的端点位置
-                const centerX = pt.x + offsetMeters * nx;
-                const centerY = pt.y + offsetMeters * ny;
-                const half = lengthMeters / 2;
-                // 横线两端沿法向量方向延伸
-                const startX = centerX - half * nx;
-                const startY = centerY - half * ny;
-                const endX = centerX + half * nx;
-                const endY = centerY + half * ny;
-                const startLatLng = unproject({ x: startX, y: startY });
-                const endLatLng = unproject({ x: endX, y: endY });
-                const line = L.polyline(
-                    [
-                        [startLatLng.lat, startLatLng.lng],
-                        [endLatLng.lat, endLatLng.lng]
-                    ],
-                    {
-                        color: color,
-                        weight: 2,
-                        opacity: 1,
-                        interactive: false
-                    }
-                );
-                trackLayer.addLayer(line);
-            }
-            // 添加轨道端点
-            addEndLine(pts[0], pts[1], trackOffsetMeters, endLineLength);
-            addEndLine(pts[0], pts[1], -trackOffsetMeters, endLineLength);
-            addEndLine(pts[pts.length - 1], pts[pts.length - 2], trackOffsetMeters, endLineLength);
-            addEndLine(pts[pts.length - 1], pts[pts.length - 2], -trackOffsetMeters, endLineLength);
-        });
+    }
+}
+
+/**
+ * 单条配线加载
+ * @param {string} id 线路编号（对应加载json名称）
+ * @returns 获取的json结果
+ */
+async function loadTrackFile(id) {
+    const url = `./resource/track/${id}.json`;
+    try {
+        const res = await fetch(url);
+        if(!res.ok)
+            throw new Error('Track not found');
+        const data = await res.json();
+        if(!lineData[id])
+            lineData[id] = { name: id, color: '#808080' };
+        lineData[id].trackMain = data.main;          // [[上行分段], [下行分段]]
+        lineData[id].trackStations = data.stations;  // 含 rect、center
+        lineData[id].hasTrack = true;
+        if (data.color) lineData[id].color = data.color;
+        return id;
+    } catch(e) {
+        return null;
     }
 }
 
@@ -455,7 +498,8 @@ async function loadLineFile(id){
                 layers: layers,
                 color: color,
                 segments: segments,
-                stations: data.stations || []
+                stations: data.stations || [],
+                hasTrack: false
             };
 
             lineLayer.addLayer(group);
@@ -472,11 +516,12 @@ function loadAllbaseline() {
                 throw new Error('baseline 不存在');
             return res.json();
         })
-        .then(ids => Promise.all(ids.map(id => loadLineFile(id))))
+        .then(ids => Promise.all(ids.map(id => loadLineFile(id))).then(() => ids))
+        .then(ids => Promise.all(ids.map(id => loadTrackFile(id))))
         .then(() => {
             buildtrackLayer();       // 生成配线图
             updateLineVisibility();  // 根据当前缩放决定是否显示
-            if(debugVisible)  // 如果 debug 已开启，刷新节点
+            if(debugVisible)
                 refreshDebug();
         })
         .catch((e) => {
@@ -574,7 +619,10 @@ function onLocationFound(latlng, accuracy) {
                 locationCircle.setRadius(accuracy);
         }
     }
-    map.setView(gcjLatLng, 14);
+    if (focusOnLocation) {
+        map.setView(gcjLatLng, 14);
+        focusOnLocation = false; // 后续更新不再自动聚焦
+    }
 }
 
 /** 开始位置检测 */
@@ -678,6 +726,7 @@ document.addEventListener('DOMContentLoaded', function() {
             navigator.geolocation.clearWatch(watchId);
             watchId = null;
         }
+        focusOnLocation = true;
         startLocationTracking();
     });
     startLocationTracking();

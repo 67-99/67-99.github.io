@@ -48,30 +48,61 @@ function buildDebugStations() {
 
 /** 构建路径节点缓存 */
 function buildDebugNodes() {
-    debugNodesData = [];
-    debugNodeGroup.clearLayers();   // 清空路径节点
-    // 重建站点标记
-    buildDebugStations();
-    const lineIds = Object.keys(lineData);
-    if (lineIds.length === 0) return;
-    for (const [id, info] of Object.entries(lineData)) {
-        const color = info.color || '#808080';
-        const segments = info.segments;
-        segments.forEach(([priority, pts], segIdx) => {
-            if (!pts || pts.length < 2) return;
-            pts.forEach((latlng, pointIdx) => {
-                debugNodesData.push({
-                    latlng: latlng,
-                    lineId: id,
-                    segmentIdx: segIdx,
-                    pointIdx: pointIdx,
-                    color: color
+    function _buildFromCurrentData(){
+        debugNodesData = [];
+        debugNodeGroup.clearLayers();   // 清空路径节点
+        // 重建站点标记
+        buildDebugStations();
+        const lineIds = Object.keys(lineData);
+        if (lineIds.length === 0) return;
+        for (const [id, info] of Object.entries(lineData)) {
+            const color = info.color || '#808080';
+            const segments = info._debugPoints || info.segments;  // 优先使用已加载的 temp 数据，否则使用原始 segments
+            if(!segments)
+                continue;
+            segments.forEach(([priority, pts], segIdx) => {
+                if (!pts || pts.length < 2) return;
+                pts.forEach((latlng, pointIdx) => {
+                    debugNodesData.push({
+                        latlng: latlng,
+                        lineId: id,
+                        segmentIdx: segIdx,
+                        pointIdx: pointIdx,
+                        color: color
+                    });
                 });
             });
-        });
+        }
+        // 根据当前视口更新路径节点显示
+        if(debugVisible)
+            updateDebugNodes();
     }
-    // 根据当前视口更新路径节点显示
-    updateDebugNodes();
+    // 先尝试构建
+    _buildFromCurrentData();
+    // 异步加载所有线路的 temp 文件，成功后更新缓存并刷新节点
+    const loadPromises = [];
+    for (const [id, info] of Object.entries(lineData)) {
+        // 已尝试加载过则跳过（无论成功或失败）
+        if (info._debugPointsLoaded) continue;
+        info._debugPointsLoaded = true; // 标记已尝试
+        const url = `./resource/temp/${id}.json`;
+        const promise = fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if (data && data.points)  // 将 temp 中的 points 存入缓存，后续构建时优先使用
+                    info._debugPoints = data.points;
+            })
+            .catch((e) => {
+                console.warn(e);
+            });
+        loadPromises.push(promise);
+    }
+    if (loadPromises.length === 0)
+        return;
+    Promise.allSettled(loadPromises).then(() => _buildFromCurrentData());  // 所有加载任务完成后，用最新数据重新构建
 }
 
 /** 根据当前视口更新路径节点 */

@@ -1,0 +1,724 @@
+{
+  "color": "#A73C34",
+  "main": [
+    [
+      {
+        "priority": -1,
+        "points": [
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ]
+        ]
+      }
+    ],
+    [
+      {
+        "priority": -1,
+        "points": [
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ],
+          [
+            NaN,
+            NaN
+          ]
+        ]
+      }
+    ]
+  ],
+  "stations": [
+    {
+      "n": "苹果园",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "古城",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "八角游乐园",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "八宝山",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "玉泉路",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "五棵松",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "万寿路",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "公主坟",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "军事博物馆",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "木樨地",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "南礼士路",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "复兴门",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "西单",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "天安门西",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "天安门东",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "王府井",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "东单",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "建国门",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "永安里",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "国贸",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "大望路",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "四惠",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    },
+    {
+      "n": "四惠东",
+      "center": [
+        39.9264,
+        116.17777
+      ],
+      "rect": [
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ],
+        [
+          NaN,
+          NaN
+        ]
+      ],
+      "priority": -1
+    }
+  ],
+  "priority": -1
+}
