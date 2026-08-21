@@ -240,7 +240,6 @@ function buildtrackLayer() {
     const drawTasks = [];
     for (const [id, info] of Object.entries(lineData)) {
         const color = info.color || '#808080';
-        console.log(info.hasTrack);
         if (info.hasTrack) {
             // 主轨道上下行分段
             (info.trackMain[0] || []).forEach(seg => {
