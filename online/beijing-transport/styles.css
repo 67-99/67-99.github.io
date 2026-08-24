@@ -12,15 +12,15 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 /* 导航栏样式 */
 nav {
     background: linear-gradient(135deg, #006600 0%, #11998e 100%);
     color: white;
     padding: 1rem 2rem;
-    position: sticky;
     top: 0;
-    z-index: 9999;
+    z-index: 99999;
 }
 nav * {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -127,7 +127,7 @@ nav * {
 }
 .locate-btn {
     position: absolute;
-    bottom: 15px;
+    bottom: 30px;
     left: 15px;
     z-index: 1000;
     background: rgba(255, 255, 255, 0.95);
@@ -256,12 +256,11 @@ nav * {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 40px;
+    height: 20px;
     background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
     border-radius: 16px 16px 0 0;
-    transition: height 0.3s ease;
-    z-index: 10000;
+    z-index: 9999;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -270,8 +269,8 @@ nav * {
     height: 40vh;
 }
 .drawer-handle {
-    height: 40px;
-    min-height: 40px;
+    height: 20px;
+    min-height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -279,31 +278,141 @@ nav * {
     user-select: none;
     color: #888;
     font-size: 14px;
+    background: rgba(255, 255, 255, 0.6);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    flex-shrink: 0;
 }
 .drawer-content {
     flex: 1;
     overflow-y: auto;
     padding: 10px 20px 20px;
 }
-.drawer-content ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+.drawer-content h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #11998e;
 }
-.drawer-content li {
-    padding: 6px 0;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
+.drawer-content strong {
+    color: #333;
+}
+.drawer-content div {
+    margin-bottom: 10px;
+    line-height: 1.8;
+}
+.drawer-content .time-list {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 8px;
 }
-.drawer-content li:hover {
-    background: #f0f0f0;
+.drawer-content .time-item {
+    font-family: monospace;
+    font-size: 14px;
+    background: #f0f2f5;
+    padding: 0 6px;
+    border-radius: 4px;
 }
-.drawer-content .badge {
-    background: #11998e;
-    color: white;
-    border-radius: 12px;
-    padding: 0 10px;
+.drawer-content .time-item.next-train {
+    background: #ffeb3b;
+    border: 1px solid #fbc02d;
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+    color: #333;
+}
+.drawer-content .time-item.arrive-train {
+    border: 1px solid #11998e;
+    font-weight: bold;
+    color: #11998e;
+}
+/* 更早/更晚折叠按钮 */
+.toggle-earlier,
+.toggle-later {
+    background: transparent;
+    border: none;
+    color: #11998e;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.toggle-earlier:hover,
+.toggle-later:hover {
+    text-decoration: underline;
+}
+.toggle-earlier i,
+.toggle-later i {
     font-size: 12px;
+    margin-left: 4px;
+    transition: transform 0.2s;
+}
+.time-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin: 4px 0 6px;
+}
+.earlier-list,
+.later-list {
+    display: none;
+}
+.dir-container {
+    margin-bottom: 12px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+.dir-container strong {
+    display: block;
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 4px;
+}
+@media (min-width: 768px) {
+    .drawer {
+        bottom: auto;
+        top: 78px;
+        right: 0;
+        left: auto;
+        height: calc(100% - 78px) !important;
+        width: 20px;
+        border-radius: 0;
+        border-left: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow: -4px 0 12px rgba(0, 0, 0, 0.06);
+        flex-direction: row;
+    }
+    .drawer.open {
+        width: 380px;
+    }
+    .drawer-handle {
+        height: 100%;
+        min-height: auto;
+        width: 20px;
+        min-width: 20px;
+        writing-mode: vertical-rl;
+        letter-spacing: 6px;
+        cursor: ew-resize;
+        border-bottom: none;
+        border-right: 1px solid rgba(0, 0, 0, 0.04);
+        padding: 20px 0;
+        font-size: 14px;
+        color: #666;
+        background: rgba(255, 255, 255, 0.5);
+        flex-shrink: 0;
+    }
+    .drawer-handle i {
+        transform: rotate(-90deg);
+        margin-right: -7px;
+    }
+    .drawer-content {
+        padding: 16px 14px;
+        overflow-y: auto;
+        height: 100%;
+    }
+    /* 其他控件微调 */
+    .locate-btn {
+        bottom: 30px;
+    }
+    .float-buttons{
+        right: 35px;
+    }
+    .leaflet-right{
+        right: 20px;
+    }
 }

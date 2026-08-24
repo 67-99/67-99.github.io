@@ -72,6 +72,9 @@ let locationCircle = null;  // 定位范围
 let watchId = null;         // 定位追踪watcher
 let focusOnLocation = true; // 定位聚焦
 
+const timetableCache = {};       // 时刻表数据缓存
+let timetableUpdateTimer = null; // 定时器句柄
+
 // ===========================
 // 地图初始化
 // ===========================
@@ -277,7 +280,8 @@ function buildtrackLayer() {
                         type: 'stationLabel',
                         priority: st.priority || 0,
                         center: st.center,
-                        name: st.n || ''
+                        name: st.n || '',
+                        lineId: id
                     });
                 }
             });
@@ -382,7 +386,8 @@ function buildtrackLayer() {
                     type: 'stationLabel',
                     priority: bestPriority || 0,
                     center: [bestProj[0], bestProj[1]],
-                    name: st.n || ''
+                    name: st.n || '',
+                    lineId: id
                 });
             }
             // 收集轨道任务 ----
@@ -409,16 +414,22 @@ function buildtrackLayer() {
                 interactive: false
             }).addTo(trackLayer);
         } else if (task.type === 'stationLabel') {
+            const w = (12 * task.name?.length || 0) + 20
+            const h = 20.8
             const labelIcon = L.divIcon({
                 className: 'station-label',
-                html: `<span class="station-label-text">${task.name}</span>`,
-                iconSize: [0, 0],
-                iconAnchor: [0, 0]
+                html: `<span class="station-label-text" style="margin: ${h / 2}px ${w / 2}px">${task.name}</span>`,
+                iconSize: [w, h]
             });
-            L.marker(task.center, {
+            const marker = L.marker(task.center, {
                 icon: labelIcon,
-                interactive: false
-            }).addTo(trackLayer);
+                interactive: true,
+                keyboard: false
+            });
+            marker.on('click', function () {
+                loadAndShowTimetable(task.lineId, task.name);
+            });
+            marker.addTo(trackLayer);
         }
     }
 }
@@ -533,44 +544,130 @@ function loadAllbaseline() {
         });
 }
 
+// ---------------------------
+// 时刻表加载与展示
+// ---------------------------
+
+/** 加载时刻表 JSON */
+async function loadTimetable(lineId) {
+    if(timetableCache[lineId])
+        return timetableCache[lineId];
+    const url = `./resource/timetable/${lineId}.json`;
+    try {
+        const res = await fetch(url);
+        if (!res.ok)
+            throw new Error('Timetable not found');
+        const data = await res.json();
+        timetableCache[lineId] = data;
+        return data;
+    } catch (e) {
+        console.warn('加载时刻表失败:', lineId, e);
+        return null;
+    }
+}
+
+/** 加载并显示时刻表（点击站标时调用） */
+async function loadAndShowTimetable(lineId, stationName) {
+    let html = `<h3>${lineId} · ${stationName}</h3><p><strong>加载数据错误</strong></p>`;
+    const data = await loadTimetable(lineId);
+    if(data){
+        const lineInfo = lineData[lineId];
+        const lineName = lineInfo? lineInfo.name : lineId;
+        html = getTimetableHtml(stationName, lineName, data);
+    }
+    updateDrawerContent(html);
+}
+
 // ===========================
-// 抽屉面板（预留，暂不使用）
+// 抽屉面板
 // ===========================
 function initDrawerDrag() {
     const drawer = document.getElementById('drawer');
     const handle = document.getElementById('drawerHandle');
     let isDragging = false;
-    let startY = 0;
-    let startHeight = 0;
-
-    function onDragStart(e) {
-        const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-        isDragging = true;
-        startY = clientY;
-        startHeight = drawer.offsetHeight;
-        document.body.style.cursor = 'grabbing';
+    let startPos = 0;
+    let startSize = 0;
+    let isVertical = true;
+    // 判断当前拖拽方向
+    function updateDirection() {
+        isVertical = window.innerWidth < 768;
+        handle.style.cursor = isVertical ? 'grab' : 'ew-resize';
     }
+    function onDragStart(e) {
+        const ev = e.type === 'touchstart' ? e.touches[0] : e;
+        isDragging = true;
+        updateDirection();
 
+        if (isVertical) {
+            startPos = ev.clientY;
+            startSize = drawer.offsetHeight;
+            document.body.style.cursor = 'grabbing';
+        } else {
+            startPos = ev.clientX;
+            startSize = drawer.offsetWidth;
+            document.body.style.cursor = 'ew-resize';
+        }
+        document.body.style.userSelect = 'none';
+        e.preventDefault?.();
+    }
     function onDragMove(e) {
         if (!isDragging) return;
-        const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-        const diff = startY - clientY;
-        let newHeight = Math.min(window.innerHeight * 0.6, Math.max(40, startHeight + diff));
-        drawer.style.height = newHeight + 'px';
-        drawer.classList.toggle('open', newHeight > 60);
+        const ev = e.type === 'touchmove' ? e.touches[0] : e;
+        if (isVertical) {
+            const diff = startPos - ev.clientY;
+            const maxH = Math.min(window.innerHeight * 0.6, 420);
+            let newH = Math.min(maxH, Math.max(20, startSize + diff));
+            drawer.style.height = newH + 'px';
+            drawer.classList.toggle('open', newH > 60);
+        } else {
+            const diff = startPos - ev.clientX;
+            const maxW = Math.min(window.innerWidth * 0.45, 480);
+            let newW = Math.min(maxW, Math.max(20, startSize + diff));
+            drawer.style.width = newW + 'px';
+            drawer.classList.toggle('open', newW > 60);
+        }
+        e.preventDefault?.();
     }
-
     function onDragEnd() {
-        if (isDragging) {
-            isDragging = false;
-            document.body.style.cursor = '';
-            if (drawer.offsetHeight < 80) {
-                drawer.style.height = '40px';
+        if (!isDragging) return;
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+
+        if(isVertical){
+            if (drawer.offsetHeight < 80){
+                drawer.style.height = '20px';
                 drawer.classList.remove('open');
+            }
+        } else if (drawer.offsetWidth < 80) {
+            drawer.style.width = '20px';
+            drawer.classList.remove('open');
+        }
+
+        if (!drawer.classList.contains('open')) {
+            if (timetableUpdateTimer) {
+                clearInterval(timetableUpdateTimer);
+                timetableUpdateTimer = null;
             }
         }
     }
-
+    // 窗口尺寸变化时更新方向
+    window.addEventListener('resize', () => {
+        updateDirection();
+        // 切换布局时重置为收缩状态，避免尺寸错乱
+        if (isVertical) {
+            drawer.style.width = '';
+            drawer.style.height = '20px';
+        } else {
+            drawer.style.height = '';
+            drawer.style.width = '20px';
+        }
+        drawer.classList.remove('open');
+        if (timetableUpdateTimer) {
+            clearInterval(timetableUpdateTimer);
+            timetableUpdateTimer = null;
+        }
+    });
     // 鼠标事件
     handle.addEventListener('mousedown', onDragStart);
     document.addEventListener('mousemove', onDragMove);
@@ -579,6 +676,171 @@ function initDrawerDrag() {
     handle.addEventListener('touchstart', onDragStart);
     document.addEventListener('touchmove', onDragMove);
     document.addEventListener('touchend', onDragEnd);
+    // 初始化方向
+    updateDirection();
+}
+
+/** 分钟数 → HH:mm（忽略 >1440） */
+function minutesToHHMM(minutes) {
+    if (minutes > 1440) return null; // 超出24:00不显示
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** 更新抽屉中内容 */
+function updateDrawerContent(html) {
+    const drawer = document.getElementById('drawer');
+    const content = document.getElementById('drawerContent');
+    content.innerHTML = html;
+    drawer.classList.add('open');
+    if (window.innerWidth < 768)
+        drawer.style.height = '40vh';
+    else
+        drawer.style.width = '380px';
+    // 绑定更早/更晚折叠按钮
+    content.querySelectorAll('.toggle-earlier, .toggle-later').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const container = this.closest('.dir-container');
+            if (!container) return;
+            // 判断是更早还是更晚
+            let targetList;
+            if(this.classList.contains('toggle-earlier'))
+                targetList = container.querySelector('.earlier-list');
+            else
+                targetList = container.querySelector('.later-list');
+            if (!targetList) return;
+            const isHidden = targetList.style.display === 'none';
+            targetList.style.display = isHidden ? '' : 'none';
+            // 旋转图标
+            const icon = this.querySelector('i');
+            if(icon){
+                if (this.classList.contains('toggle-earlier'))
+                    icon.className = isHidden ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+                else
+                    icon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+            }
+        });
+    });
+    updateHighlights();  // 立即更新一次
+    // 清除旧定时器并启动高亮定时器
+    if (timetableUpdateTimer) {
+        clearInterval(timetableUpdateTimer);
+        timetableUpdateTimer = null;
+    }
+    timetableUpdateTimer = setInterval(updateHighlights, 5000);
+}
+
+/** 渲染时刻表 */
+function getTimetableHtml(stationName, lineName, data) {
+    let html = `<h3>${lineName} · ${stationName}</h3>`;
+    const stationData = data.stations.find(s => s.station_name === stationName);
+    if (!stationData) {
+        html += '<p>未找到该站时刻表</p>';
+        return html;
+    }
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const directions = [
+        { key: 'up', label: '上行' },
+        { key: 'down', label: '下行' }
+    ];
+
+    for (const dir of directions) {
+        const dirData = stationData[dir.key];
+        if (!dirData) continue;
+        let times = dirData.weekday || dirData.weekend || [];
+        times = times.filter(t => t <= 1440);
+        if (times.length === 0) {
+            html += `<p><strong>${dir.label}</strong> 无数据</p>`;
+            continue;
+        }
+        times.sort((a, b) => a - b);
+        // 分组：默认显示当前时间前后1小时，若为空则显示首班1小时
+        let defaultTimes = [];
+        let earlierTimes = [];
+        let laterTimes = [];
+        const near = times.filter(t => t >= currentMinutes - 60 && t <= currentMinutes + 60);
+        if (near.length > 0) {
+            defaultTimes = near;
+            earlierTimes = times.filter(t => t < currentMinutes - 60);
+            laterTimes = times.filter(t => t > currentMinutes + 60);
+        } else {
+            // 无近期车次，取首班1小时
+            const first = times[0];
+            const end = first + 60;
+            defaultTimes = times.filter(t => t >= first && t <= end);
+            earlierTimes = [];
+            laterTimes = times.filter(t => t > end);
+        }
+        html += `<div class="dir-container" data-dir="${dir.key}">`;
+        html += `<strong>${dir.label}</strong>`;
+        // 更早（上箭头）
+        if (earlierTimes.length > 0) {
+            html += `<button class="toggle-earlier" data-dir="${dir.key}">更早 <i class="fas fa-chevron-up"></i></button>`;
+            html += `<span class="time-list earlier-list" style="display:none;">`;
+            for (const t of earlierTimes) {
+                const timeStr = minutesToHHMM(t);
+                if (timeStr) html += `<span class="time-item" data-minutes="${t}">${timeStr}</span>`;
+            }
+            html += `</span>`;
+        }
+        // 默认显示（始终可见）
+        html += `<span class="time-list near-list">`;
+        for (const t of defaultTimes) {
+            const timeStr = minutesToHHMM(t);
+            if (timeStr) html += `<span class="time-item" data-minutes="${t}">${timeStr}</span>`;
+        }
+        html += `</span>`;
+        // 更晚（下箭头）
+        if (laterTimes.length > 0) {
+            html += `<button class="toggle-later" data-dir="${dir.key}">更晚 <i class="fas fa-chevron-down"></i></button>`;
+            html += `<span class="time-list later-list" style="display:none;">`;
+            for (const t of laterTimes) {
+                const timeStr = minutesToHHMM(t);
+                if (timeStr) html += `<span class="time-item" data-minutes="${t}">${timeStr}</span>`;
+            }
+            html += `</span>`;
+        }
+        html += `</div>`;
+    }
+    return html;
+}
+
+/** 高亮本次列车和下一列车 */
+function updateHighlights() {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const lists = document.querySelectorAll(".dir-container");
+    for(const listDom of lists){
+        const items = listDom.querySelectorAll('.time-item[data-minutes]');
+        if (!items.length) return;
+        // 收集所有时间，找未来最近和过去最近
+        let futureBest = null; // { minutes, diff }
+        let pastBest = null;   // { minutes, diff }
+        for (const el of items) {
+            const minutes = parseInt(el.dataset.minutes, 10);
+            const diff = minutes - currentMinutes;
+            if(0 <= diff && diff <= 30)
+                if(!futureBest || diff < futureBest.diff)
+                    futureBest = { minutes, diff };
+            if(-1 <= diff && diff <= 0)
+                if(!pastBest || Math.abs(diff) < Math.abs(pastBest.diff))
+                    pastBest = { minutes, diff };
+        }
+        // 应用高亮
+        for (const el of items) {
+            const minutes = parseInt(el.dataset.minutes, 10);
+            el.classList.remove('next-train', 'arrive-train');
+            if (pastBest && minutes === pastBest.minutes)
+                el.classList.add('arrive-train');
+            else if (futureBest && minutes === futureBest.minutes)
+                el.classList.add('next-train');
+        }
+        console.log(futureBest, pastBest);
+    }
 }
 
 // ===========================
