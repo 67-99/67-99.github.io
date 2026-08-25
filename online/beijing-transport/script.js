@@ -559,6 +559,26 @@ async function loadTimetable(lineId) {
             throw new Error('Timetable not found');
         const data = await res.json();
         timetableCache[lineId] = data;
+        // 辅助函数：判断是否为普通对象（字典）
+        function isPlainObject(obj) {
+            return Object.prototype.toString.call(obj) === '[object Object]';
+        }
+        if(data.stations)
+            data.stations.forEach(item => {
+                ['up', 'down'].forEach(prop => {
+                    const obj = item[prop];
+                    if (obj && typeof obj === 'object') {
+                        Object.keys(obj).forEach(key => {
+                            const sub = obj[key];
+                            if(sub && typeof sub === 'object' && !Array.isArray(sub)) {
+                                const values = Object.values(sub);
+                                if(values.every(Array.isArray))
+                                    obj[key] = [].concat(...values);
+                            }
+                        });
+                    }
+                });
+            });
         return data;
     } catch (e) {
         console.warn('加载时刻表失败:', lineId, e);
@@ -744,30 +764,38 @@ function getTimetableHtml(stationName, lineName, data) {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const directions = [
-        { key: 'up', label: '上行' },
-        { key: 'down', label: '下行' }
+        { key: 'up', label: data.up || '上行' },
+        { key: 'down', label: data.down || '下行' }
     ];
 
     for (const dir of directions) {
         const dirData = stationData[dir.key];
         if (!dirData) continue;
         let times = dirData.weekday || dirData.weekend || [];
+        if(now.getDay() == 5 && dirData.friday)
+            times = dirData.friday;
+        if(now.getDay() > 5 && dirData.weekend)
+            times = dirData.weekend;
         times = times.filter(t => t <= 1440);
-        if (times.length === 0) {
-            html += `<p><strong>${dir.label}</strong> 无数据</p>`;
+        if(times.length === 0)
             continue;
-        }
         times.sort((a, b) => a - b);
         // 分组：默认显示当前时间前后1小时，若为空则显示首班1小时
         let defaultTimes = [];
         let earlierTimes = [];
-        let laterTimes = [];
+        let laterTimes = times.filter(t => t > currentMinutes + 60);
         const near = times.filter(t => t >= currentMinutes - 60 && t <= currentMinutes + 60);
         if (near.length > 0) {
             defaultTimes = near;
             earlierTimes = times.filter(t => t < currentMinutes - 60);
-            laterTimes = times.filter(t => t > currentMinutes + 60);
         } else {
+            if(laterTimes.length === 0){
+                let times = dirData.weekday || dirData.weekend || [];
+                if(now.getDay() == 4 && dirData.friday)
+                    times = dirData.friday;
+                if((now.getDay() == 5 || now.getDay() == 6) && dirData.weekend)
+                    times = dirData.weekend;
+            }
             // 无近期车次，取首班1小时
             const first = times[0];
             const end = first + 60;
@@ -776,16 +804,16 @@ function getTimetableHtml(stationName, lineName, data) {
             laterTimes = times.filter(t => t > end);
         }
         html += `<div class="dir-container" data-dir="${dir.key}">`;
-        html += `<strong>${dir.label}</strong>`;
+        html += `<strong>${dir.label}方向</strong>`;
         // 更早（上箭头）
         if (earlierTimes.length > 0) {
-            html += `<button class="toggle-earlier" data-dir="${dir.key}">更早 <i class="fas fa-chevron-up"></i></button>`;
             html += `<span class="time-list earlier-list" style="display:none;">`;
             for (const t of earlierTimes) {
                 const timeStr = minutesToHHMM(t);
                 if (timeStr) html += `<span class="time-item" data-minutes="${t}">${timeStr}</span>`;
             }
             html += `</span>`;
+            html += `<button class="toggle-earlier" data-dir="${dir.key}">更早 <i class="fas fa-chevron-up"></i></button>`;
         }
         // 默认显示（始终可见）
         html += `<span class="time-list near-list">`;
@@ -839,7 +867,6 @@ function updateHighlights() {
             else if (futureBest && minutes === futureBest.minutes)
                 el.classList.add('next-train');
         }
-        console.log(futureBest, pastBest);
     }
 }
 
