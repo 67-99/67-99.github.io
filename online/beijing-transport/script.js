@@ -702,10 +702,19 @@ function initDrawerDrag() {
 
 /** 分钟数 → HH:mm（忽略 >1440） */
 function minutesToHHMM(minutes) {
-    if (minutes > 1440) return null; // 超出24:00不显示
+    if (minutes > 1440)
+        minutes %= 1440;
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** 计算两个分钟数的循环时间差（返回 -720 ~ 720 之间的值） */
+function getCircularDiff(minutes, currentMinutes) {
+    let diff = (minutes - currentMinutes) % 1440;
+    if (diff > 720) diff -= 1440;
+    if (diff < -720) diff += 1440;
+    return diff;
 }
 
 /** 更新抽屉中内容 */
@@ -783,26 +792,29 @@ function getTimetableHtml(stationName, lineName, data) {
         // 分组：默认显示当前时间前后1小时，若为空则显示首班1小时
         let defaultTimes = [];
         let earlierTimes = [];
-        let laterTimes = times.filter(t => t > currentMinutes + 60);
-        const near = times.filter(t => t >= currentMinutes - 60 && t <= currentMinutes + 60);
-        if (near.length > 0) {
-            defaultTimes = near;
-            earlierTimes = times.filter(t => t < currentMinutes - 60);
-        } else {
-            if(laterTimes.length === 0){
-                let times = dirData.weekday || dirData.weekend || [];
-                if(now.getDay() == 4 && dirData.friday)
-                    times = dirData.friday;
-                if((now.getDay() == 5 || now.getDay() == 6) && dirData.weekend)
-                    times = dirData.weekend;
-            }
-            // 无近期车次，取首班1小时
-            const first = times[0];
-            const end = first + 60;
-            defaultTimes = times.filter(t => t >= first && t <= end);
-            earlierTimes = [];
-            laterTimes = times.filter(t => t > end);
+        let laterTimes = [];
+        for (const t of times) {
+            const diff = getCircularDiff(t, currentMinutes);
+            if (diff >= -60 && diff <= 60)
+                defaultTimes.push(t);      // 前后 1 小时内
+            else if (diff < -60)
+                earlierTimes.push(t);      // 更早（已过超过 1 小时）
+            else
+                laterTimes.push(t);        // 更晚（未来超过 1 小时）
         }
+        // 如果没有“附近”的车次，则默认显示首班车
+        if (defaultTimes.length === 0 && times.length > 0) {
+            let first = times.find(t => t > 200);
+            if(first === undefined)
+                first = times[0];
+            defaultTimes = times.filter(t => getCircularDiff(t, first) >= 0 && getCircularDiff(t, first) <= 60);
+            earlierTimes = [];
+            laterTimes = times.filter(t => getCircularDiff(t, first) > 60);
+        }
+        const byCircular = (a, b) => getCircularDiff(a, currentMinutes) - getCircularDiff(b, currentMinutes);
+        earlierTimes.sort(byCircular);
+        defaultTimes.sort(byCircular);
+        laterTimes.sort(byCircular);
         html += `<div class="dir-container" data-dir="${dir.key}">`;
         html += `<strong>${dir.label}方向</strong>`;
         // 更早（上箭头）
@@ -850,7 +862,7 @@ function updateHighlights() {
         let pastBest = null;   // { minutes, diff }
         for (const el of items) {
             const minutes = parseInt(el.dataset.minutes, 10);
-            const diff = minutes - currentMinutes;
+            const diff = getCircularDiff(minutes, currentMinutes);
             if(0 <= diff && diff <= 30)
                 if(!futureBest || diff < futureBest.diff)
                     futureBest = { minutes, diff };
