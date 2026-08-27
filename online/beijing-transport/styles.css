@@ -364,6 +364,71 @@ nav * {
     color: #333;
     margin-bottom: 4px;
 }
+/* 列车纵向时刻表 */
+.train-icon {
+    cursor: pointer;
+}
+.train-schedule-meta {
+    margin: -4px 0 8px;
+    font-size: 12px;
+    color: #888;
+}
+.train-schedule {
+    position: relative;
+    margin: 4px 0 8px;
+    padding-left: 20px;
+}
+.train-schedule::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: #ddd;
+}
+.train-schedule .train-schedule-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 3px 0;
+    margin-bottom: 0;
+    line-height: 1.6;
+    font-size: 14px;
+    color: #333;
+}
+.train-schedule .train-schedule-row::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    margin-top: -5px;
+    border-radius: 50%;
+    background: #11998e;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #11998e;
+}
+.train-schedule-time {
+    font-family: monospace;
+    min-width: 44px;
+    color: #666;
+}
+.train-schedule-station {
+    flex: 1;
+}
+.train-schedule .train-schedule-row.passed {
+    color: #bbb;
+}
+.train-schedule .train-schedule-row.passed .train-schedule-time {
+    color: #bbb;
+}
+.train-schedule .train-schedule-row.passed::before {
+    background: #ccc;
+    box-shadow: 0 0 0 1px #ccc;
+}
 @media (min-width: 768px) {
     .drawer {
         bottom: auto;
@@ -415,4 +480,19 @@ nav * {
     .leaflet-right{
         right: 20px;
     }
+}
+/* ===== 列车显示 ===== */
+.train-icon {
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+.train-icon i {
+    line-height: 1;
 }

@@ -75,6 +75,10 @@ let focusOnLocation = true; // 定位聚焦
 const timetableCache = {};       // 时刻表数据缓存
 let timetableUpdateTimer = null; // 定时器句柄
 
+let trainLayer = null;        // 列车图层
+let trainPosData = {};        // 缓存各线路的车次数据
+let trainUpdateTimer = null;  // 列车位置更新定时器
+
 // ===========================
 // 地图初始化
 // ===========================
@@ -533,6 +537,7 @@ function loadAllbaseline() {
             updateLineVisibility();  // 根据当前缩放决定是否显示
             if(debugVisible)
                 refreshDebug();
+            initTrainDisplay();      // 加载列车数据并开始实时显示
         })
         .catch((e) => {
             console.warn('未找到 baseline，使用默认线路', e);
@@ -540,6 +545,7 @@ function loadAllbaseline() {
             Promise.all(ids.map(id => loadLineFile(id))).then(() => {
                 if(debugVisible)
                     refreshDebug();
+                initTrainDisplay();
             });
         });
 }
@@ -880,6 +886,290 @@ function updateHighlights() {
                 el.classList.add('next-train');
         }
     }
+    // 列车纵向时刻表：随时间更新“已通过”站点变灰
+    const trainRows = document.querySelectorAll('.train-schedule-row[data-time]');
+    for (const row of trainRows) {
+        const t = parseInt(row.dataset.time, 10);
+        if (!isNaN(t))
+            row.classList.toggle('passed', t + TRAIN_DWELL_MIN <= currentMinutes);
+    }
+}
+
+// ===========================
+// 列车显示
+// ===========================
+// 列车数据位于 ./resource/train/{id}.json，顶层为 [上行, 下行]；
+// 每个方向含 weekday / weekend 两组车次，每趟车记录各站进站时间（分钟，0 点起）。
+// track 文件中的 main 同为 [上行, 下行] 两段轨道，列车沿对应方向轨道折线前进。
+const TRAIN_DWELL_MIN = 45 / 60;  // 停站时长（分钟）
+const trainGeoData = {};          // 各线路轨道几何缓存 {polylines, cumDists, stationDist}
+const trainMarkers = {};          // 实时列车标记缓存 {key: marker}
+const TrainIcon = L.DivIcon.extend({
+    options: { trainColor: '#ff5722' },
+    createIcon: function (oldIcon) {
+        const div = L.DivIcon.prototype.createIcon.call(this, oldIcon);
+        div.style.background = this.options.trainColor;
+        return div;
+    }
+});
+
+/** 加载线路列车数据 */
+async function loadTrainData(lineId) {
+    if (trainPosData[lineId])
+        return trainPosData[lineId];
+    const url = `./resource/train/${lineId}.json`;
+    try {
+        const res = await fetch(url);
+        if (!res.ok)
+            throw new Error('Train not found');
+        const data = await res.json();
+        trainPosData[lineId] = data;
+        return data;
+    } catch (e) {
+        // 部分线路没有列车数据，属正常情况
+        if (!/not found/i.test(e && e.message || ''))
+            console.warn('加载列车数据失败:', lineId, e);
+        return null;
+    }
+}
+
+/** 计算折线各点的累计距离 */
+function buildCumulativeDistances(points) {
+    const cum = [0];
+    for (let i = 1; i < points.length; i++) {
+        const dx = points[i][0] - points[i - 1][0];
+        const dy = points[i][1] - points[i - 1][1];
+        cum.push(cum[i - 1] + Math.sqrt(dx * dx + dy * dy));
+    }
+    return cum;
+}
+
+/** 将点投影到折线上，返回沿折线的距离 */
+function projectToPolyline(point, points, cum) {
+    let bestIdx = 0, bestT = 0, bestDist2 = Infinity;
+    for (let i = 0; i < points.length - 1; i++) {
+        const a = points[i], b = points[i + 1];
+        const dx = b[0] - a[0], dy = b[1] - a[1];
+        const len2 = dx * dx + dy * dy;
+        let t = len2 > 1e-14 ? ((point[0] - a[0]) * dx + (point[1] - a[1]) * dy) / len2 : 0;
+        t = Math.max(0, Math.min(1, t));
+        const px = a[0] + t * dx, py = a[1] + t * dy;
+        const d2 = (point[0] - px) ** 2 + (point[1] - py) ** 2;
+        if (d2 < bestDist2) {
+            bestDist2 = d2;
+            bestIdx = i;
+            bestT = t;
+        }
+    }
+    return cum[bestIdx] + bestT * (cum[bestIdx + 1] - cum[bestIdx]);
+}
+
+/** 取折线上指定距离处的坐标 */
+function pointAtDistance(points, cum, dist) {
+    const total = cum[cum.length - 1];
+    if (dist <= 0) return points[0];
+    if (dist >= total) return points[points.length - 1];
+    let i = 0;
+    while (i < cum.length - 2 && cum[i + 1] < dist) i++;
+    const segLen = cum[i + 1] - cum[i];
+    const t = segLen > 1e-12 ? (dist - cum[i]) / segLen : 0;
+    return [
+        points[i][0] + t * (points[i + 1][0] - points[i][0]),
+        points[i][1] + t * (points[i + 1][1] - points[i][1])
+    ];
+}
+
+/**
+ * 为线路构建列车定位几何
+ * 每个方向：完整轨道折线 + 各站在折线上的距离；
+ * 若折线方向与列车运行方向相反（部分线路 main 与车次方向不一致），自动反转折线。
+ */
+function prepareTrainGeometry(lineId) {
+    const info = lineData[lineId];
+    if (!info || !info.hasTrack) return false;
+    const main = info.trackMain;
+    if (!Array.isArray(main) || main.length < 2) return false;
+    const trackStations = info.trackStations || [];
+    const geo = { polylines: [[], []], cumDists: [[], []], stationDist: [{}, {}] };
+    for (let d = 0; d < 2; d++) {
+        const segs = main[d];
+        if (!Array.isArray(segs)) return false;
+        let points = [];
+        for (const seg of segs) {
+            if (seg && Array.isArray(seg.points) && seg.points.length >= 2)
+                for (const p of seg.points) points.push([p[0], p[1]]);
+        }
+        if (points.length < 2) return false;
+        let cum = buildCumulativeDistances(points);
+        // 站点投影（按站名去重）
+        const distMap = {};
+        const seen = new Set();
+        for (const st of trackStations) {
+            if (!st || !st.n || seen.has(st.n)) continue;
+            seen.add(st.n);
+            distMap[st.n] = projectToPolyline(st.center, points, cum);
+        }
+        // 以覆盖站点最多的列车为方向参照
+        const data = trainPosData[lineId];
+        let ref = null;
+        if (data && data[d]) {
+            const list = (data[d].weekday && data[d].weekday.length) ? data[d].weekday : (data[d].weekend || []);
+            for (const tr of list) {
+                if (tr.stations && tr.stations.length >= 2 &&
+                    (!ref || tr.stations.length > ref.stations.length))
+                    ref = tr;
+            }
+        }
+        if (ref) {
+            const first = ref.stations[0].station;
+            const last = ref.stations[ref.stations.length - 1].station;
+            const dFirst = distMap[first], dLast = distMap[last];
+            if (typeof dFirst === 'number' && typeof dLast === 'number' && dFirst > dLast) {
+                points = points.slice().reverse();      // 反转折线
+                cum = buildCumulativeDistances(points);
+                const total = cum[cum.length - 1];
+                for (const key of Object.keys(distMap)) // 镜像站点距离
+                    distMap[key] = total - distMap[key];
+            }
+        }
+        geo.polylines[d] = points;
+        geo.cumDists[d] = cum;
+        geo.stationDist[d] = distMap;
+    }
+    trainGeoData[lineId] = geo;
+    return true;
+}
+
+/**
+ * 计算列车当前沿轨道的距离位置
+ * 到站时刻进站，停 45s 后发车；不在时刻表运行区间内返回 null（不显示）
+ * @param {*} geo 线路轨道几何
+ * @param {number} dirIdx 方向索引（0 上行 / 1 下行）
+ */
+function computeTrainPosition(geo, dirIdx, train, nowMin) {
+    const sts = train.stations;
+    if (!sts || sts.length < 2) return null;
+    const stationDist = geo.stationDist[dirIdx];
+    const matched = [];  // 只保留能在轨道上定位的站点
+    for (const s of sts) {
+        const dist = stationDist[s.station];
+        if (dist !== undefined) matched.push({ time: s.time, dist: dist });
+    }
+    if (matched.length < 2) return null;
+    const firstArrival = matched[0].time;
+    const lastDeparture = matched[matched.length - 1].time + TRAIN_DWELL_MIN;
+    if (nowMin < firstArrival || nowMin >= lastDeparture) return null;  // 未在时刻表内
+    for (let i = 0; i < matched.length; i++) {
+        const arrive = matched[i].time;
+        const depart = arrive + TRAIN_DWELL_MIN;
+        if (nowMin >= arrive && nowMin <= depart)       // 停站中
+            return { dist: matched[i].dist };
+        if (i < matched.length - 1 && nowMin > depart && nowMin < matched[i + 1].time) {
+            const travel = matched[i + 1].time - depart;
+            const f = travel > 1e-9 ? (nowMin - depart) / travel : 0;
+            return { dist: matched[i].dist + f * (matched[i + 1].dist - matched[i].dist) };
+        }
+    }
+    return null;
+}
+
+/** 更新所有列车位置（定时调用） */
+function updateTrainPositions() {
+    if (!map || !trainLayer) return;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+    const day = now.getDay();
+    const kind = (day === 0 || day === 6) ? 'weekend' : 'weekday';
+    const active = new Set();
+    for (const [lineId, data] of Object.entries(trainPosData)) {
+        const geo = trainGeoData[lineId];
+        if (!geo) continue;
+        const color = (lineData[lineId] && lineData[lineId].color) || '#808080';
+        for (let d = 0; d < 2; d++) {
+            const dir = data[d];
+            if (!dir || !Array.isArray(dir[kind])) continue;
+            const points = geo.polylines[d];
+            const cum = geo.cumDists[d];
+            for (const tr of dir[kind]) {
+                const pos = computeTrainPosition(geo, d, tr, nowMin);
+                if (!pos) continue;
+                const key = `${lineId}-${d}-${tr.id}`;
+                active.add(key);
+                const latlng = L.latLng(pointAtDistance(points, cum, pos.dist));
+                let marker = trainMarkers[key];
+                if (marker) {
+                    marker.setLatLng(latlng);
+                } else {
+                    marker = L.marker(latlng, {
+                        icon: new TrainIcon({
+                            className: 'train-icon',
+                            html: '<i class="fas fa-train-subway"></i>',
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10],
+                            trainColor: color
+                        }),
+                        interactive: true,
+                        keyboard: false
+                    });
+                    marker.on('click', function () {
+                        showTrainSchedule(lineId, d, tr);
+                    });
+                    marker.addTo(trainLayer);
+                    trainMarkers[key] = marker;
+                }
+            }
+        }
+    }
+    // 移除已不在时刻表上的列车
+    for (const key of Object.keys(trainMarkers)) {
+        if (!active.has(key)) {
+            trainLayer.removeLayer(trainMarkers[key]);
+            delete trainMarkers[key];
+        }
+    }
+}
+
+/**
+ * 显示列车的纵向时刻表（点击列车时调用，与点击站点行为一致）
+ * 每行显示进站时间 + 站点；已通过（发车）的站点变灰
+ */
+function showTrainSchedule(lineId, dirIdx, train) {
+    const sts = train.stations || [];
+    if (!sts.length) return;
+    const lineInfo = lineData[lineId];
+    const lineName = lineInfo ? lineInfo.name : lineId;
+    const dirLabel = dirIdx === 0 ? '上行' : '下行';
+    const first = sts[0].station;
+    const last = sts[sts.length - 1].station;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    let html = `<h3>${lineName} · ${dirLabel}（${first} → ${last}）</h3>`;
+    html += `<p class="train-schedule-meta">车次 ${train.id} · 已通过站点为灰色</p>`;
+    html += '<div class="train-schedule">';
+    for (const st of sts) {
+        const passed = st.time + TRAIN_DWELL_MIN <= nowMin;  // 已发车即已通过
+        html += `<div class="train-schedule-row${passed ? ' passed' : ''}" data-time="${st.time}">`;
+        html += `<span class="train-schedule-time">${minutesToHHMM(st.time)}</span>`;
+        html += `<span class="train-schedule-station">${st.station}</span>`;
+        html += '</div>';
+    }
+    html += '</div>';
+    updateDrawerContent(html);
+}
+
+/** 初始化列车显示：加载各线路列车数据并定时更新位置 */
+async function initTrainDisplay() {
+    for (const id of Object.keys(lineData)) {
+        const info = lineData[id];
+        if (!info || !info.hasTrack) continue;
+        const data = await loadTrainData(id);
+        if (data)
+            prepareTrainGeometry(id);
+    }
+    if (trainUpdateTimer)
+        clearInterval(trainUpdateTimer);
+    trainUpdateTimer = setInterval(updateTrainPositions, 1000);
+    updateTrainPositions();
 }
 
 // ===========================
@@ -926,7 +1216,7 @@ function onLocationFound(latlng, accuracy) {
 }
 
 /** 开始位置检测 */
-function startLocationTracking() {
+async function startLocationTracking() {
     if (!navigator.geolocation) {
         showToast('浏览器不支持地理定位', 3000);
         return;
@@ -987,6 +1277,7 @@ function initMap() {
     map = L.map('map').setView([39.9, 116.4], 10);
     tileLayer = createTileLayer(true).addTo(map);
     lineLayer = L.layerGroup().addTo(map);
+    trainLayer = L.layerGroup().addTo(map);
     // 设置copyright
     map.attributionControl.setPrefix('');
     map.attributionControl.addAttribution('&copy; <a href="https://www.amap.com/">高德地图</a>');

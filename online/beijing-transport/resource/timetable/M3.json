@@ -3,7 +3,7 @@
   "down": "东四十条",
   "stations": [
     {
-      "station_name": "朝阳公",
+      "station_name": "朝阳公园",
       "up": {
         "weekday": {
           "5": [342, 352],
@@ -94,7 +94,7 @@
       }
     },
     {
-      "station_name": "朝阳",
+      "station_name": "朝阳站",
       "up": {
         "weekday": {
           "5": [347, 357],
