@@ -26,7 +26,7 @@ if __name__ == "__main__":
         station_data[name] = [[st["n"] for st in direction if "n" in st] for direction in directions]
     for time_file in os.listdir(getFilePath("timetable")):
         id_ = os.path.splitext(time_file)[0]
-        if id_ in station_data and time_file not in {"M16.json"}:
+        if id_ in station_data and time_file not in {"M6.json"}:
             stations = station_data[id_]
             with open(getFilePath("timetable", time_file), "r", encoding="utf-8") as f:
                 timetable_data = json.load(f)
@@ -154,11 +154,27 @@ if __name__ == "__main__":
                             chain.append(cur)
                         if len(chain) < 2:
                             continue    # 孤立时刻不成车次
+                        # ---- 补全终点：末站无时刻表时用典型站间时分(min_time_list)推算 ----
+                        k_end = chain[-1][0]
+                        tail = []                       # [(站序号, 推算时刻)]
+                        if k_end < n - 1:
+                            if all(not times[kk] for kk in range(k_end + 1, n)):
+                                t_est = chain[-1][1]
+                                ok = True
+                                for kk in range(k_end, n - 1):
+                                    m = line_min(seq[kk], seq[kk + 1])
+                                    if m is None:
+                                        ok = False
+                                        break
+                                    t_est += m
+                                    tail.append((kk + 1, t_est))
+                                if not ok:
+                                    tail = []
                         train_id += 1
-                        result[i].setdefault(sche_type, []).append({
-                            "id": train_id,
-                            "stations": [{"station": seq[k], "time": t} for k, t in chain],
-                        })
+                        stops = [{"station": seq[kk], "time": tt} for kk, tt in chain]
+                        stops += [{"station": seq[kk], "time": tt, "estimated": True} for kk, tt in tail]
+                        train: dict[str, object] = {"id": train_id, "stations": stops}
+                        result[i].setdefault(sche_type, []).append(train)
 
             with open(getFilePath("train", f"{id_}.json"), "w", encoding="utf-8") as f:
                 json.dump(result, f, ensure_ascii=False, indent=2)

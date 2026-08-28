@@ -791,36 +791,34 @@ function getTimetableHtml(stationName, lineName, data) {
             times = dirData.friday;
         if(now.getDay() > 5 && dirData.weekend)
             times = dirData.weekend;
-        times = times.filter(t => t <= 1440);
+        times = times.filter(t => typeof t === 'number' && t >= 0 && t < 2880);
+        times = [...new Set(times)];      // 去除重复车次（部分线路数据存在重复）
         if(times.length === 0)
             continue;
         times.sort((a, b) => a - b);
-        // 分组：默认显示当前时间前后1小时，若为空则显示首班1小时
+        const firstTime = times[0];
+        // 分组（按“今天”的服务日）：默认显示当前时间前后 1 小时（循环时间，可跨天），更早/更晚只取今天服务日内的时间
         let defaultTimes = [];
         let earlierTimes = [];
         let laterTimes = [];
-        for (const t of times) {
-            const diff = getCircularDiff(t, currentMinutes);
-            if (diff >= -60 && diff <= 60)
-                defaultTimes.push(t);      // 前后 1 小时内
-            else if (diff < -60)
-                earlierTimes.push(t);      // 更早（已过超过 1 小时）
-            else
-                laterTimes.push(t);        // 更晚（未来超过 1 小时）
+        if (currentMinutes < firstTime) {
+            // 服务尚未开始（凌晨）：首班 1 小时为默认，其余为更晚
+            defaultTimes = times.filter(t => t - firstTime <= 60);
+            laterTimes = times.filter(t => t - firstTime > 60);
+        } else {
+            for (const t of times) {
+                const diff = getCircularDiff(t, currentMinutes);
+                if (diff >= -60 && diff <= 60)
+                    defaultTimes.push(t);      // 前后 1 小时内（含跨天时刻）
+                else if (t < currentMinutes - 60)
+                    earlierTimes.push(t);      // 今天已过
+                else if (t > currentMinutes + 60)
+                    laterTimes.push(t);        // 今天未到
+            }
         }
-        // 如果没有“附近”的车次，则默认显示首班车
-        if (defaultTimes.length === 0 && times.length > 0) {
-            let first = times.find(t => t > 200);
-            if(first === undefined)
-                first = times[0];
-            defaultTimes = times.filter(t => getCircularDiff(t, first) >= 0 && getCircularDiff(t, first) <= 60);
-            earlierTimes = [];
-            laterTimes = times.filter(t => getCircularDiff(t, first) > 60);
-        }
-        const byCircular = (a, b) => getCircularDiff(a, currentMinutes) - getCircularDiff(b, currentMinutes);
-        earlierTimes.sort(byCircular);
-        defaultTimes.sort(byCircular);
-        laterTimes.sort(byCircular);
+        earlierTimes.sort((a, b) => a - b);
+        defaultTimes.sort((a, b) => a - b);
+        laterTimes.sort((a, b) => a - b);
         html += `<div class="dir-container" data-dir="${dir.key}">`;
         html += `<strong>${dir.label}方向</strong>`;
         // 更早（上箭头）
@@ -886,12 +884,17 @@ function updateHighlights() {
                 el.classList.add('next-train');
         }
     }
-    // 列车纵向时刻表：随时间更新“已通过”站点变灰
+    // 列车纵向时刻表：随时间更新“已通过”站点变灰（跨天车次按自身时间轴对齐）
     const trainRows = document.querySelectorAll('.train-schedule-row[data-time]');
     for (const row of trainRows) {
         const t = parseInt(row.dataset.time, 10);
-        if (!isNaN(t))
-            row.classList.toggle('passed', t + TRAIN_DWELL_MIN <= currentMinutes);
+        if (isNaN(t)) continue;
+        const firstT = parseInt(row.dataset.first, 10);
+        const lastT = parseInt(row.dataset.last, 10);
+        let aligned = currentMinutes;
+        if (!isNaN(lastT) && lastT > 1440 && (currentMinutes <= lastT - 1440 || currentMinutes < firstT))
+            aligned = currentMinutes + 1440;
+        row.classList.toggle('passed', t + TRAIN_DWELL_MIN <= aligned);
     }
 }
 
@@ -1143,12 +1146,18 @@ function showTrainSchedule(lineId, dirIdx, train) {
     const last = sts[sts.length - 1].station;
     const now = new Date();
     const nowMin = now.getHours() * 60 + now.getMinutes();
+    // 跨天对齐：末站时刻 > 1440（次日凌晨）的车次，凌晨时按自身时间轴对齐
+    const firstTime = sts[0].time;
+    const lastTime = sts[sts.length - 1].time;
+    let alignedNow = nowMin;
+    if (lastTime > 1440 && (nowMin <= lastTime - 1440 || nowMin < firstTime))
+        alignedNow = nowMin + 1440;
     let html = `<h3>${lineName} · ${dirLabel}（${first} → ${last}）</h3>`;
     html += `<p class="train-schedule-meta">车次 ${train.id} · 已通过站点为灰色</p>`;
     html += '<div class="train-schedule">';
     for (const st of sts) {
-        const passed = st.time + TRAIN_DWELL_MIN <= nowMin;  // 已发车即已通过
-        html += `<div class="train-schedule-row${passed ? ' passed' : ''}" data-time="${st.time}">`;
+        const passed = st.time + TRAIN_DWELL_MIN <= alignedNow;  // 已发车即已通过
+        html += `<div class="train-schedule-row${passed ? ' passed' : ''}" data-time="${st.time}" data-first="${firstTime}" data-last="${lastTime}">`;
         html += `<span class="train-schedule-time">${minutesToHHMM(st.time)}</span>`;
         html += `<span class="train-schedule-station">${st.station}</span>`;
         html += '</div>';
