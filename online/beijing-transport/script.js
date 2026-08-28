@@ -121,6 +121,60 @@ function toggleMapType() {
         window._lonlatScale._update(); // 更新debug比例尺
 }
 
+/** 加载指示器 */
+const LoadingIndicator = {
+    element: null,
+    textSpan: null,
+    textList: [],
+
+    // 创建 DOM 元素（页面加载后调用一次）
+    init() {
+        if (this.element) return;
+        const div = document.createElement('div');
+        div.id = 'loading-indicator';
+        div.innerHTML = `
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span class="loading-text">加载中...</span>
+        `;
+        document.body.appendChild(div);
+        this.element = div;
+        this.textSpan = div.querySelector('.loading-text');
+    },
+
+    // 显示加载指示器，可指定文本
+    show(text) {
+        this.init();
+        this.textList.push(text || "加载中...");
+        this.textSpan.textContent = this.textList[this.textList.length - 1];
+        this.element.classList.add('show');
+    },
+
+    // 隐藏（计数器减一，归零时隐藏）
+    hide(text = null) {
+        if(text === undefined || text === null)
+            this.textList.pop();
+        else
+            this.textList = this.textList.filter(item => item !== text);
+        this.textSpan.textContent = this.textList[this.textList.length - 1];
+        if(this.textList.length === 0 && this.element)
+            this.element.classList.remove('show');
+    },
+
+    // 更新文本
+    setText(text) {
+        if(this.textList.length === 0 || !text)
+            return;
+        this.textList[this.textList.length - 1] = text;
+        if (this.textSpan) this.textSpan.textContent = text;
+    },
+
+    clear(){
+        this.textList = [];
+        if(this.element)
+            this.element.classList.remove('show');
+    }
+};
+
 // ===========================
 // 线路加载
 // ===========================
@@ -139,8 +193,9 @@ function updateLineVisibility() {
     }
 }
 
-/** 添加线路图/配线图图层 */
+/** 添加配线图图层 */
 function buildtrackLayer() {
+    LoadingIndicator.show(`绘制配线中...`);
     if (trackLayer) {
         if (map.hasLayer(trackLayer)) map.removeLayer(trackLayer);
         trackLayer.clearLayers();
@@ -436,6 +491,7 @@ function buildtrackLayer() {
             marker.addTo(trackLayer);
         }
     }
+    LoadingIndicator.hide();
 }
 
 /**
@@ -444,6 +500,7 @@ function buildtrackLayer() {
  * @returns 获取的json结果
  */
 async function loadTrackFile(id) {
+    LoadingIndicator.show(`加载${id}配线数据...`);
     const url = `./resource/track/${id}.json`;
     try {
         const res = await fetch(url);
@@ -456,8 +513,10 @@ async function loadTrackFile(id) {
         lineData[id].trackStations = data.stations;  // 含 rect、center
         lineData[id].hasTrack = true;
         if (data.color) lineData[id].color = data.color;
+        LoadingIndicator.hide();
         return id;
     } catch(e) {
+        LoadingIndicator.hide();
         return null;
     }
 }
@@ -468,6 +527,7 @@ async function loadTrackFile(id) {
  * @returns 获取的json结果
  */
 async function loadLineFile(id){
+    LoadingIndicator.show(`加载${id}线路数据...`);
     const url = `./resource/baseline/${id}.json`;
     return fetch(url)
         .then(res => {
@@ -486,6 +546,7 @@ async function loadLineFile(id){
             const group = L.featureGroup();
             const layers = [];
 
+            LoadingIndicator.show(`绘制${id}线路...`);
             segments.forEach(([priority, pts]) => {
                 if (!pts || pts.length < 2) return;
                 const polyline = L.polyline(pts, {
@@ -498,6 +559,7 @@ async function loadLineFile(id){
                 group.addLayer(polyline);
                 layers.push(polyline);
             });
+            LoadingIndicator.hide();
 
             if (layers.length === 0) {
                 console.warn('线路无有效折线段', id);
@@ -517,17 +579,25 @@ async function loadLineFile(id){
             };
 
             lineLayer.addLayer(group);
+            LoadingIndicator.hide();
             return id;
         })
-        .catch(err => console.error(err));
+        .catch(err => {
+            console.error(err);
+            LoadingIndicator.hide();
+        });
 }
 
 /** 加载全部线路 */
 function loadAllbaseline() {
+    LoadingIndicator.show('加载线路列表...');
     fetch('./resource/baseline/lines.json')
         .then(res => {
-            if(!res.ok)
+            if(!res.ok){
+                LoadingIndicator.hide();
                 throw new Error('baseline 不存在');
+            }
+            LoadingIndicator.hide();
             return res.json();
         })
         .then(ids => Promise.all(ids.map(id => loadLineFile(id))).then(() => ids))
@@ -539,8 +609,12 @@ function loadAllbaseline() {
                 refreshDebug();
             initTrainDisplay();      // 加载列车数据并开始实时显示
         })
+        .then(() => {
+            LoadingIndicator.hide();  // 所有加载完成，隐藏指示器
+        })
         .catch((e) => {
             console.warn('未找到 baseline，使用默认线路', e);
+            LoadingIndicator.hide();
             const ids = ['M1', 'M2'];
             Promise.all(ids.map(id => loadLineFile(id))).then(() => {
                 if(debugVisible)
@@ -777,7 +851,7 @@ function getTimetableHtml(stationName, lineName, data) {
     }
 
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentMinutes = (now.getHours() <= 3) * 1440 + now.getHours() * 60 + now.getMinutes();
     const directions = [
         { key: 'up', label: data.up || '上行' },
         { key: 'down', label: data.down || '下行' }
@@ -791,7 +865,7 @@ function getTimetableHtml(stationName, lineName, data) {
             times = dirData.friday;
         if(now.getDay() > 5 && dirData.weekend)
             times = dirData.weekend;
-        times = times.filter(t => typeof t === 'number' && t >= 0 && t < 2880);
+        times = times.filter(t => typeof t === 'number' && t >= 200 && t < 1660);
         times = [...new Set(times)];      // 去除重复车次（部分线路数据存在重复）
         if(times.length === 0)
             continue;
@@ -801,8 +875,13 @@ function getTimetableHtml(stationName, lineName, data) {
         let defaultTimes = [];
         let earlierTimes = [];
         let laterTimes = [];
-        if (currentMinutes < firstTime) {
+        if (currentMinutes < firstTime - 60 || times[times.length - 1] + 60 < currentMinutes) {
             // 服务尚未开始（凌晨）：首班 1 小时为默认，其余为更晚
+            times = dirData.weekday || dirData.weekend || [];
+            if(now.getDay() == 4 && dirData.friday)
+                times = dirData.friday;
+            if((now.getDay() == 5 || now.getDay() == 6) && dirData.weekend)
+                times = dirData.weekend;
             defaultTimes = times.filter(t => t - firstTime <= 60);
             laterTimes = times.filter(t => t - firstTime > 60);
         } else {
@@ -918,8 +997,7 @@ const TrainIcon = L.DivIcon.extend({
 
 /** 加载线路列车数据 */
 async function loadTrainData(lineId) {
-    if (trainPosData[lineId])
-        return trainPosData[lineId];
+    LoadingIndicator.show(`加载${lineId}列车数据...`);
     const url = `./resource/train/${lineId}.json`;
     try {
         const res = await fetch(url);
@@ -927,11 +1005,13 @@ async function loadTrainData(lineId) {
             throw new Error('Train not found');
         const data = await res.json();
         trainPosData[lineId] = data;
+        LoadingIndicator.hide();
         return data;
     } catch (e) {
         // 部分线路没有列车数据，属正常情况
         if (!/not found/i.test(e && e.message || ''))
             console.warn('加载列车数据失败:', lineId, e);
+        LoadingIndicator.hide();
         return null;
     }
 }
@@ -992,17 +1072,24 @@ function prepareTrainGeometry(lineId) {
     if (!info || !info.hasTrack) return false;
     const main = info.trackMain;
     if (!Array.isArray(main) || main.length < 2) return false;
+    LoadingIndicator.show(`绘制${lineId}列车中...`);
     const trackStations = info.trackStations || [];
     const geo = { polylines: [[], []], cumDists: [[], []], stationDist: [{}, {}] };
     for (let d = 0; d < 2; d++) {
         const segs = main[d];
-        if (!Array.isArray(segs)) return false;
+        if (!Array.isArray(segs)){
+            LoadingIndicator.hide();
+            return false;
+        }
         let points = [];
         for (const seg of segs) {
             if (seg && Array.isArray(seg.points) && seg.points.length >= 2)
                 for (const p of seg.points) points.push([p[0], p[1]]);
         }
-        if (points.length < 2) return false;
+        if (points.length < 2){
+            LoadingIndicator.hide();
+            return false;
+        }
         let cum = buildCumulativeDistances(points);
         // 站点投影（按站名去重）
         const distMap = {};
@@ -1040,6 +1127,7 @@ function prepareTrainGeometry(lineId) {
         geo.stationDist[d] = distMap;
     }
     trainGeoData[lineId] = geo;
+    LoadingIndicator.hide();
     return true;
 }
 

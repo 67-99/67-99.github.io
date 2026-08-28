@@ -147,6 +147,36 @@ nav * {
     background: rgba(230, 230, 230, 0.95);
     transform: scale(0.95);
 }
+/* 加载指示器容器 */
+#loading-indicator {
+    position: fixed;
+    left: 10px;
+    bottom: 75px;
+    z-index: 99999;
+    background: #fffc;
+    color: black;
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transform: translateX(-120%);
+    transition: ease 0.3s;
+    pointer-events: none;
+    max-width: 80vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#loading-indicator.show {
+    transform: translateX(0);
+}
+#loading-indicator i {
+    color: #11998e;
+    font-size: 14px;
+}
 /* 站名标签 */
 .station-label-text {
     position: absolute;
