@@ -3608,7 +3608,8 @@
             "time": 573,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 64,
@@ -12848,7 +12849,8 @@
             "time": 595,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 236,
@@ -13050,7 +13052,8 @@
             "time": 1139,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 243,
@@ -30596,7 +30599,8 @@
             "time": 1055,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 549,
@@ -30737,7 +30741,8 @@
             "station": "七里庄",
             "time": 1053
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 552,
@@ -30874,7 +30879,8 @@
             "station": "丰台南路",
             "time": 1070
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 555,
@@ -31020,7 +31026,8 @@
             "time": 1086,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 558,
@@ -31099,7 +31106,8 @@
             "time": 1098,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 560,
@@ -31419,7 +31427,8 @@
             "time": 1122,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 566,
@@ -31436,7 +31445,8 @@
             "station": "丰台南路",
             "time": 1115
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 567,
@@ -31560,7 +31570,8 @@
             "station": "丰台南路",
             "time": 1127
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 570,
@@ -31697,7 +31708,8 @@
             "station": "丰台南路",
             "time": 1138
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 573,
@@ -34798,7 +34810,8 @@
             "station": "七里庄",
             "time": 1043
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 632,
@@ -34870,7 +34883,8 @@
             "time": 1077,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 634,
@@ -34900,7 +34914,8 @@
             "time": 1092,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 635,
@@ -34959,7 +34974,8 @@
             "station": "丰台南路",
             "time": 1092
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 637,
@@ -34981,7 +34997,8 @@
             "time": 1139,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 638,
@@ -35075,7 +35092,8 @@
             "time": 1133,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 641,

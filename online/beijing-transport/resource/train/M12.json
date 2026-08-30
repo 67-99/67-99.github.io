@@ -17,7 +17,8 @@
             "time": 353,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 2,
@@ -15878,7 +15879,8 @@
             "time": 640,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 190,
@@ -15912,7 +15914,8 @@
             "time": 645,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 191,
@@ -16210,7 +16213,8 @@
             "time": 357,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 203,
@@ -37469,7 +37473,8 @@
             "station": "长春桥",
             "time": 1016
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 456,
@@ -44861,7 +44866,8 @@
             "time": 1188,
             "estimated": true
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 545,
@@ -44874,7 +44880,8 @@
             "station": "长春桥",
             "time": 1185
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 546,
@@ -44887,7 +44894,8 @@
             "station": "人民大学",
             "time": 1192
           }
-        ]
+        ],
+        "express": true
       },
       {
         "id": 547,

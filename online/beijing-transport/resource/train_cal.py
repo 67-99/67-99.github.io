@@ -14,6 +14,44 @@ def hav_dist(a: tuple[float, float], b: tuple[float, float]) -> float:
     h = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng / 2) ** 2
     return 2 * R * math.asin(math.sqrt(h))
 
+def estimate_run_time(l1: list[int], l2: list[int], hi: int) -> int | None:
+    """从两站时刻列表估算典型站间运行时分。
+
+    混合策略：
+    1) 若“全局众数”明显占优（计数 ≥ 次高计数的 1.2 倍），直接取众数——此时同列车
+       运行时分簇占绝对多数（如 M9 六里桥东→北京西站，真实 5 分钟 vs 巧合 19 分钟）；
+    2) 否则取“差值直方图的最小显著局部峰”（≥30% 最大计数的第一个峰）——众数被
+       高密度行车下整表平移/跨车次巧合差值（5/10/15 分钟）打成平手时（如
+       军事博物馆→北京西站 25 vs 4 几乎同票），第一个显著峰才是真实运行时分。
+    """
+    diffs = [b - a for a in l1 for b in l2 if 1 <= b - a <= hi]
+    if not diffs:
+        return None
+    cnt = Counter(diffs)
+    maxc = max(cnt.values())
+    mode_v = min(d for d, c in cnt.items() if c == maxc)
+    second = max(c for d, c in cnt.items() if c != maxc) if len(cnt) > 1 else 0
+    if second > 0 and maxc >= second * 1.2:
+        return mode_v
+    for d in range(1, hi + 1):
+        c = cnt.get(d, 0)
+        if c < maxc * 0.3:
+            continue
+        if c >= cnt.get(d - 1, 0) and c >= cnt.get(d + 1, 0):
+            return d
+    return mode_v
+
+# 待避站匹配窗口的额外放宽（分钟）：慢车在待避站（如 M6 常营/通运门）临时停车
+# 2~2.5 分钟再发车，导致“进入待避站”区间的运行时分比众数大 2~3 分钟；
+# 放宽该方向的匹配窗口可避免待避车次链在此断开（轻微代价：高密度时段可能与
+# 下一班次错配，但对整体链的连贯性利大于弊）。
+PAUSE_SLACK = 3
+
+# 折返时长范围（分钟）：列车循环运行，到达大小交路终点后大多调向发车（小部分进停车场/
+# 停车线），因此“终点站反向发车时刻 - 折返时长”可推得大致的到站时刻。折返匹配同时用于
+# 判定某车次确实在正线终点折返（大交路，可延伸至终点）还是中途折返（小交路）/进停车场。
+TURN_MIN, TURN_MAX = 3, 12
+
 if __name__ == "__main__":
     if not os.path.exists(getFilePath("train")):
         os.mkdir(getFilePath("train"))
@@ -26,155 +64,252 @@ if __name__ == "__main__":
         station_data[name] = [[st["n"] for st in direction if "n" in st] for direction in directions]
     for time_file in os.listdir(getFilePath("timetable")):
         id_ = os.path.splitext(time_file)[0]
-        if id_ in station_data and time_file not in {"M6.json"}:
-            stations = station_data[id_]
-            with open(getFilePath("timetable", time_file), "r", encoding="utf-8") as f:
-                timetable_data = json.load(f)
-            time_dict: dict[str, dict[str, str|dict[str, list[int]]]] = {}
-            for st in timetable_data["stations"]:
-                for key, value in st.items():
-                    if isinstance(value, dict):
-                        for k, v in value.items():
-                            if isinstance(v, dict):
-                                time_list = [item for items in v.values() for item in items]
-                                value[k] = time_list
-                    time_dict.setdefault(st["station_name"], {})[key] = value
-            min_time_list: dict[tuple[str, str], int] = {}
-            pos = station_pos.get(id_, {})
-            for i, direc in enumerate(("up", "down")):
-                for j in range(1, len(stations[i])):
-                    st1, st2 = stations[i][j - 1], stations[i][j]
+        if id_ not in station_data or time_file in {}:
+            continue
+        stations = station_data[id_]
+        with open(getFilePath("timetable", time_file), "r", encoding="utf-8") as f:
+            timetable_data = json.load(f)
+        time_dict: dict[str, dict[str, str|dict[str, list[int]]]] = {}
+        for st in timetable_data["stations"]:
+            for key, value in st.items():
+                if isinstance(value, dict):
+                    for k, v in value.items():
+                        if isinstance(v, dict):
+                            value[k] = sorted({x for items in v.values() for x in items})
+                time_dict.setdefault(st["station_name"], {})[key] = value
+        # ---- 小交路终点 / 待避站（顶层新键，均按方向给出站名列表）----
+        # short_end: 该方向小交路列车折返/终到的车站，如 M6 up: ["潞城", "草房", "通州北关"]
+        # pause:     待避车站（慢车在此等待快车越行），不等于越行车站
+        short_end = timetable_data.get("short_end") or {}
+        pause = timetable_data.get("pause") or {}
+        short_end_sets = [set(short_end.get("up", [])), set(short_end.get("down", []))]
+        pause_sets = [set(pause.get("up", [])), set(pause.get("down", []))]
+        # ---- 小环检测（如机场线 CAE：3号航站楼仅上行经过，2号航站楼仅下行经过）----
+        # 两方向站点集合不一致 => 环线，可用“环闭合”补算缺失的运行时分。
+        loop = set(stations[0]) != set(stations[1])
+
+        # ---- 典型站间运行时分 ----
+        min_time_list: dict[tuple[str, str], int] = {}
+        pos = station_pos.get(id_, {})
+        for i, direc in enumerate(("up", "down")):
+            # 本方向参与配对的站序：原始序列 + （小环时）插入对侧额外站后的扩展序列
+            seqs = [list(stations[i])]
+            if loop:
+                ext = list(stations[i])
+                for st in stations[1 - i]:
+                    if st not in ext:
+                        idx = stations[1 - i].index(st)
+                        prev_st = stations[1 - i][idx - 1] if idx > 0 else None
+                        next_st = stations[1 - i][idx + 1] if idx + 1 < len(stations[1 - i]) else None
+                        if prev_st in ext and next_st in ext:
+                            p, q = ext.index(prev_st), ext.index(next_st)
+                            if abs(p - q) == 1:
+                                ext.insert(max(p, q), st)
+                seqs.append(ext)
+            for seq_i in seqs:
+                for j in range(1, len(seq_i)):
+                    st1, st2 = seq_i[j - 1], seq_i[j]
                     st_t1, st_t2 = time_dict[st1].get(direc, {}), time_dict[st2].get(direc, {})
-                    if sum(len(st_) for st_ in st_t1.values()) > 0 and sum(len(st_) for st_ in st_t2.values()) > 0:
-                        # 用站间距推算“合理站间运行时分”区间（最低速度按 10 km/h），只统计区间内的差值取众数：
-                        # 整表平移产生的巧合差值（如 23/50 分钟）不会混入，同时兼容 CAE/DAE 等大站间距线路。
-                        if st1 in pos and st2 in pos:
-                            d_km = hav_dist(pos[st1], pos[st2])
-                            hi = max(1, math.ceil(d_km / 10 * 60))
-                        else:
-                            hi = 30    # 无坐标时的兜底范围
-                        diffs = [t2 - t1 for key in st_t1 for t1 in st_t1[key] for t2 in st_t2[key] if 1 <= t2 - t1 <= hi]
-                        if diffs:
-                            # 取“最常见运行时分（众数）”而非全局最小值：时刻表里混有区间车、不同车次的巧合时刻，
-                            # 全局最小会被跨车次的巧合污染，导致 {min, min+1} 窗口完全错配；众数才是真实旅行时间。
-                            cnt = Counter(diffs)
-                            m = max(cnt.values())
-                            min_time_list[(st1, st2)] = min(d for d, c in cnt.items() if c == m)
-            # 双方向核查：同一对站的上下行运行时分应一致（起终点站仅单方向有数据，无法核查）
-            for (st1, st2), t in list(min_time_list.items()):
-                if (st2, st1) in min_time_list and abs(min_time_list[(st2, st1)] - t) > 1:
-                    print(f"  警告 {id_} {st1}<->{st2}：上下行运行时分不一致 "
-                          f"({t} vs {min_time_list[(st2, st1)]})，请检查时刻表数据")
+                    l1 = sorted(x for v in st_t1.values() for x in v)
+                    l2 = sorted(x for v in st_t2.values() for x in v)
+                    if not l1 or not l2:
+                        continue
+                    if st1 in pos and st2 in pos:
+                        d_km = hav_dist(pos[st1], pos[st2])
+                        hi = max(1, math.ceil(d_km / 10 * 60))
+                    else:
+                        hi = 30    # 无坐标时的兜底范围
+                    est = estimate_run_time(l1, l2, hi)
+                    if est is not None:
+                        min_time_list[(st1, st2)] = est
+        # ---- 小环闭合：补算缺失配对（环的两条弧总耗时相等）----
+        # 例（CAE 上行）：三元桥->3号航站楼 已知 X，2号航站楼->三元桥（下行直连）已知 Z，
+        # 则 3号航站楼->2号航站楼 = Z - X（两条弧 三元桥→T3→T2 与 T2→三元桥 耗时相等）。
+        # 注意：必须在两个方向都算完 min_time 之后再执行，否则对侧方向的弧2还未就绪。
+        if loop:
+            for i in (0, 1):
+                other = stations[1 - i]
+                for b in stations[i]:
+                    if b in other:
+                        continue                      # 仅处理本方向独有的“分支站”
+                    idx = stations[i].index(b)
+                    if idx == 0 or idx == len(stations[i]) - 1:
+                        continue
+                    prev_st, next_st = stations[i][idx - 1], stations[i][idx + 1]
+                    tp = min_time_list.get((prev_st, b))          # 弧1前半段
+                    tn = min_time_list.get((next_st, prev_st))    # 弧2（对侧方向直连）
+                    if tp is not None and tn is not None and tp < tn and (b, next_st) not in min_time_list:
+                        min_time_list[(b, next_st)] = tn - tp
+                    elif tp is not None and tn is not None and (b, next_st) in min_time_list and (prev_st, b) not in min_time_list:
+                        v = tn - min_time_list[(b, next_st)]
+                        if v >= 1:
+                            min_time_list[(prev_st, b)] = v
+        # 双方向核查：同一对站的上下行运行时分应一致（起终点站仅单方向有数据，无法核查）
+        for (st1, st2), t in list(min_time_list.items()):
+            if (st2, st1) in min_time_list and abs(min_time_list[(st2, st1)] - t) > 1:
+                print(f"  警告 {id_} {st1}<->{st2}：上下行运行时分不一致 "
+                      f"({t} vs {min_time_list[(st2, st1)]})，请检查时刻表数据")
 
-            def line_min(st1: str, st2: str) -> int | None:
-                """取相邻站的典型运行时分（众数）；缺失时尝试反方向（旅行时间与方向无关）"""
-                if (st1, st2) in min_time_list:
-                    return min_time_list[(st1, st2)]
-                if (st2, st1) in min_time_list:
-                    return min_time_list[(st2, st1)]
-                return None
+        def line_min(st1: str, st2: str) -> int | None:
+            """取相邻站的典型运行时分（众数）；缺失时尝试反方向（旅行时间与方向无关）"""
+            if (st1, st2) in min_time_list:
+                return min_time_list[(st1, st2)]
+            if (st2, st1) in min_time_list:
+                return min_time_list[(st2, st1)]
+            return None
 
-            result: list[dict[str, list[dict[str,]]]] = [{}, {}]
-            train_id = 0
-            sche_types = {k for val in time_dict.values() for key, v in val.items() if key in {"up", "down"} for k in v.keys()}
-            for i, direc in enumerate(("up", "down")):
-                seq = stations[i]
-                n = len(seq)
-                for sche_type in sche_types:
-                    # 各站该方向该时段的时刻表（已排序）
-                    times = []
-                    for st in seq:
-                        lst = time_dict[st].get(direc, {}).get(sche_type, []) if st is not None else []
-                        times.append(sorted(lst))
+        result: list[dict[str, list[dict[str,]]]] = [{}, {}]
+        train_id = 0
+        sche_types = {k for val in time_dict.values() for key, v in val.items() if key in {"up", "down"} for k in v.keys()}
+        for i, direc in enumerate(("up", "down")):
+            seq = stations[i]
+            n = len(seq)
+            for sche_type in sche_types:
+                # 各站该方向该时段的时刻表（已排序）
+                times = []
+                for st in seq:
+                    lst = time_dict[st].get(direc, {}).get(sche_type, []) if st is not None else []
+                    times.append(sorted(lst))
 
-                    # ---- 第一步：相邻站合并 ----
-                    # 将 st1 与 st2 间时间差约为运行时分（众数 ±1 分钟）的时刻配对，并删除已配对时刻
-                    out_link = {}               # (站序号, 时刻) -> (下一站序号, 时刻)
-                    target_used = [set() for _ in range(n)]  # 各站已被配对（作为目标）的时刻
-                    for k in range(n - 1):
-                        m = line_min(seq[k], seq[k + 1])
-                        if m is None:
+                # ---- 第一步：相邻站合并 ----
+                # 将 st1 与 st2 间时间差约为运行时分（众数 ±1 分钟，待避站可放宽）的时刻配对，
+                # 并删除已配对时刻
+                out_link = {}               # (站序号, 时刻) -> (下一站序号, 时刻)
+                target_used = [set() for _ in range(n)]  # 各站已被配对（作为目标）的时刻
+                for k in range(n - 1):
+                    m = line_min(seq[k], seq[k + 1])
+                    if m is None:
+                        continue
+                    hi_w = m + (PAUSE_SLACK if seq[k + 1] in pause_sets[i] else 1)
+                    for t1 in times[k]:
+                        for t2 in times[k + 1]:
+                            if t2 in target_used[k + 1]:
+                                continue
+                            d = t2 - t1
+                            if d < max(m - 1, 1):
+                                continue
+                            if d > hi_w:
+                                break            # times 有序，超出窗口即可停止
+                            out_link[(k, t1)] = (k + 1, t2)
+                            target_used[k + 1].add(t2)
+                            break
+
+                # ---- 第二步：跨站车次（越行/通过不停车，如 M6 金台路→郝家府）----
+                for k in range(n - 2):
+                    for t1 in times[k]:
+                        if (k, t1) in out_link:
                             continue
-                        for t1 in times[k]:
-                            for t2 in times[k + 1]:
-                                if t2 in target_used[k + 1]:
+                        for k2 in range(k + 2, n):
+                            # 累计运行时分，允许每跳一站再浮动 ±1 分钟
+                            expected = 0
+                            valid = True
+                            for j in range(k, k2):
+                                m = line_min(seq[j], seq[j + 1])
+                                if m is None:
+                                    valid = False
+                                    break
+                                expected += m
+                            if not valid:
+                                continue
+                            slack = k2 - k
+                            for t2 in times[k2]:
+                                if t2 in target_used[k2]:
                                     continue
                                 d = t2 - t1
-                                if d < max(m - 1, 1):
+                                if d < max(expected - slack, 1):
                                     continue
-                                if d > m + 1:
-                                    break            # times 有序，超出窗口即可停止
-                                out_link[(k, t1)] = (k + 1, t2)
-                                target_used[k + 1].add(t2)
+                                if d > expected + slack:
+                                    break
+                                out_link[(k, t1)] = (k2, t2)
+                                target_used[k2].add(t2)
+                                break
+                            if (k, t1) in out_link:
                                 break
 
-                    # ---- 第二步：跨站车次（跳过中间站不停，未来数据可能包含） ----
-                    for k in range(n - 2):
-                        for t1 in times[k]:
-                            if (k, t1) in out_link:
-                                continue
-                            for k2 in range(k + 2, n):
-                                # 累计运行时分，允许每跳一站再浮动 ±1 分钟
-                                expected = 0
-                                valid = True
-                                for j in range(k, k2):
-                                    m = line_min(seq[j], seq[j + 1])
-                                    if m is None:
-                                        valid = False
-                                        break
-                                    expected += m
-                                if not valid:
-                                    continue
-                                slack = k2 - k
-                                for t2 in times[k2]:
-                                    if t2 in target_used[k2]:
-                                        continue
-                                    d = t2 - t1
-                                    if d < max(expected - slack, 1):
-                                        continue
-                                    if d > expected + slack:
-                                        break
-                                    out_link[(k, t1)] = (k2, t2)
-                                    target_used[k2].add(t2)
-                                    break
-                                if (k, t1) in out_link:
-                                    break
+                # ---- 链成完整车次（含区间车：中途站始发/终到）----
+                incoming = {}
+                for (k, t1), (k2, t2) in out_link.items():
+                    incoming[(k2, t2)] = (k, t1)
+                starts = [(k, t) for k in range(n) for t in times[k] if (k, t) not in incoming]
+                starts.sort(key=lambda x: (x[0], x[1]))
+                for k, t in starts:
+                    chain = [(k, t)]
+                    cur = (k, t)
+                    while cur in out_link:
+                        cur = out_link[cur]
+                        chain.append(cur)
+                    if len(chain) < 2:
+                        continue    # 孤立时刻不成车次
 
-                    # ---- 链成完整车次（含区间车：中途站始发/终到） ----
-                    incoming = {}
-                    for (k, t1), (k2, t2) in out_link.items():
-                        incoming[(k2, t2)] = (k, t1)
-                    starts = [(k, t) for k in range(n) for t in times[k] if (k, t) not in incoming]
-                    starts.sort(key=lambda x: (x[0], x[1]))
-                    for k, t in starts:
-                        chain = [(k, t)]
-                        cur = (k, t)
-                        while cur in out_link:
-                            cur = out_link[cur]
-                            chain.append(cur)
-                        if len(chain) < 2:
-                            continue    # 孤立时刻不成车次
-                        # ---- 补全终点：末站无时刻表时用典型站间时分(min_time_list)推算 ----
-                        k_end = chain[-1][0]
-                        tail = []                       # [(站序号, 推算时刻)]
-                        if k_end < n - 1:
-                            if all(not times[kk] for kk in range(k_end + 1, n)):
-                                t_est = chain[-1][1]
-                                ok = True
-                                for kk in range(k_end, n - 1):
-                                    m = line_min(seq[kk], seq[kk + 1])
-                                    if m is None:
-                                        ok = False
-                                        break
-                                    t_est += m
-                                    tail.append((kk + 1, t_est))
-                                if not ok:
-                                    tail = []
-                        train_id += 1
-                        stops = [{"station": seq[kk], "time": tt} for kk, tt in chain]
-                        stops += [{"station": seq[kk], "time": tt, "estimated": True} for kk, tt in tail]
-                        train: dict[str, object] = {"id": train_id, "stations": stops}
-                        result[i].setdefault(sche_type, []).append(train)
+                    # ---- 终点处理：折返匹配 + 运行时分推算 ----
+                    # 列车循环运行：到终点/折返站后大多调向发车（小部分进停车场/停车线），
+                    # 所以“终点站反向发车时刻 - 折返时长”可推得到站时刻；折返匹配同时用于
+                    # 判定该车次是正线终点折返（大交路，延伸至终点）还是中途折返（小交路）/
+                    # 进停车场（无折返匹配，如末班车）。
+                    k_end = chain[-1][0]
+                    T = chain[-1][1]
+                    tail = []                        # [(站序号, 推算时刻)]
+                    short_turn_st = None
+                    if k_end < n - 1 and all(not times[kk] for kk in range(k_end + 1, n)):
+                        rev = "down" if i == 0 else "up"
+                        # 1) 推算到正线终点的到达时刻（逐段累计典型运行时分）
+                        t_est = T
+                        legs = []                    # [(站序号, 该段运行时分)]
+                        ok = True
+                        for kk in range(k_end, n - 1):
+                            m = line_min(seq[kk], seq[kk + 1])
+                            if m is None:
+                                ok = False
+                                break
+                            t_est += m
+                            legs.append((kk + 1, m))
+                        # 2) 正线终点折返匹配：反向发车 D 满足 到站+3 ≤ D ≤ 到站+12
+                        term_d = None
+                        if ok:
+                            rev_list = time_dict[seq[n - 1]].get(rev, {}).get(sche_type, [])
+                            cand = [D for D in rev_list if TURN_MIN <= D - t_est <= TURN_MAX]
+                            if cand:
+                                term_d = min(cand, key=lambda D: abs(D - t_est - (TURN_MIN + TURN_MAX) // 2))
+                        if term_d is not None:
+                            # 大交路：在正线终点折返 => 延伸到正线终点。
+                            # 中间站按典型运行时分累计；末站到站时刻优先用实测运行时分（t_est，
+                            # 精确且保持单调），折返反推（D - 折返时长）作为运行时分缺失时的兜底。
+                            tt = T
+                            for kk, m in legs:
+                                tt += m
+                                tail.append((kk, tt))
+                            if not ok:
+                                arr = term_d - (TURN_MIN + TURN_MAX) // 2
+                                arr = max(arr, T + 1)             # 保持单调
+                                tail[-1] = (n - 1, arr)
+                        else:
+                            # 未在正线终点折返（可能是小交路/进停车场，也可能是正线终点
+                            # 反向数据缺失——如金安桥上行 16:18 后截断）。小交路标记只依据
+                            # short_end 声明（反向折返匹配在密集数据下噪声太大，不作为依据）；
+                            # 未声明的按典型运行时分兜底延伸到正线终点。
+                            if seq[k_end] in short_end_sets[i]:
+                                short_turn_st = seq[k_end]       # 声明的小交路终点
+                            elif ok:
+                                tt = T
+                                for kk, m in legs:
+                                    tt += m
+                                    tail.append((kk, tt))
+                    elif seq[k_end] in short_end_sets[i] and k_end < n - 1:
+                        # 链末站是声明的小交路终点（其后仍有数据、链在此断）：标记
+                        short_turn_st = seq[k_end]
+                    # ---- 越行/快车识别：车次链跳站（通过不停车）----
+                    max_gap = max((chain[j + 1][0] - chain[j][0] for j in range(len(chain) - 1)), default=0)
+                    is_express = max_gap >= 3
 
-            with open(getFilePath("train", f"{id_}.json"), "w", encoding="utf-8") as f:
-                json.dump(result, f, ensure_ascii=False, indent=2)
+                    train_id += 1
+                    stops = [{"station": seq[kk], "time": tt} for kk, tt in chain]
+                    stops += [{"station": seq[kk], "time": tt, "estimated": True} for kk, tt in tail]
+                    train: dict[str, object] = {"id": train_id, "stations": stops}
+                    if short_turn_st:
+                        train["short_turn"] = short_turn_st
+                    if is_express:
+                        train["express"] = True
+                    result[i].setdefault(sche_type, []).append(train)
+
+        with open(getFilePath("train", f"{id_}.json"), "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
