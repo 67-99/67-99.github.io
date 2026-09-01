@@ -526,3 +526,116 @@ nav * {
 .train-icon i {
     line-height: 1;
 }
+/* ===== 天气组件 ===== */
+.weather-widget-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(4px);
+    border-radius: 8px;
+    padding: 4px 10px 4px 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.10);
+    font-size: 12px;
+    line-height: 1.4;
+    color: #333;
+    max-width: 200px;
+    cursor: default;
+    transition: all 0.15s ease;
+    user-select: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.weather-widget-container:hover {
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.weather-widget .weather-main {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.weather-widget .weather-city {
+    font-weight: 600;
+    font-size: 12px;
+    color: #1a1a2e;
+}
+.weather-widget .weather-temp {
+    font-size: 16px;
+    font-weight: 700;
+    color: #e65100;
+    margin-right: 2px;
+}
+.weather-widget .weather-type {
+    font-size: 11px;
+    color: #555;
+    background: rgba(0,0,0,0.05);
+    padding: 0 6px;
+    border-radius: 8px;
+}
+.weather-widget .weather-detail {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    color: #777;
+    margin: 1px 0;
+}
+.weather-widget .weather-aqi {
+    font-weight: 500;
+}
+.weather-widget .weather-allergy {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    margin: 1px 0;
+}
+.weather-widget .allergy-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.weather-widget .allergy-label {
+    font-weight: 600;
+}
+.weather-widget .allergy-advice {
+    font-size: 10px;
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+.weather-widget .weather-update {
+    display: none; /* 隐藏更新时间，节省空间 */
+}
+/* 移动端适配 */
+@media (max-width: 600px) {
+    .weather-widget-container {
+        top: 6px;
+        left: 6px;
+        padding: 3px 8px;
+        font-size: 11px;
+        max-width: 160px;
+    }
+    .weather-widget .weather-temp {
+        font-size: 14px;
+    }
+    .weather-widget .weather-city {
+        font-size: 11px;
+    }
+    .weather-widget .weather-allergy {
+        font-size: 10px;
+    }
+    .weather-widget .allergy-advice {
+        max-width: 70px;
+    }
+}
+@media (max-width: 260px) {
+    .weather-widget-container {
+        display: none;
+    }
+}

@@ -1368,10 +1368,168 @@ function stopLocationTracking() {
 }
 
 // ===========================
+// 天气模块
+// ===========================
+const WEATHER_CACHE_KEY = 'beijing_weather_cache';
+const WEATHER_CACHE_EXPIRY = 60 * 60 * 1000; // 60分钟缓存（高频访问易被封IP）
+
+/**
+ * 根据空气质量计算过敏程度
+ * @param {string} quality - 空气质量等级（优/良/轻度污染/中度污染/重度污染）
+ * @param {number} pm25 - PM2.5 数值
+ * @returns {object} { level: string, advice: string, color: string }
+ */
+function getAllergyLevel(quality, pm25) {
+    // 基于空气质量等级和PM2.5综合判断
+    const q = quality || '良';
+    const p = pm25 || 0;
+    
+    if (q === '优' && p < 35) {
+        return { level: '低', advice: '过敏风险低，适宜户外活动', color: '#4CAF50' };
+    } else if ((q === '优' || q === '良') && p < 75) {
+        return { level: '中', advice: '敏感人群注意防护', color: '#FF9800' };
+    } else if (q === '轻度污染' || p >= 75) {
+        return { level: '较高', advice: '过敏人群建议减少外出', color: '#F44336' };
+    } else if (q === '中度污染' || q === '重度污染' || p >= 150) {
+        return { level: '高', advice: '建议佩戴口罩，减少户外活动', color: '#9C27B0' };
+    }
+    return { level: '中', advice: '注意天气变化', color: '#FF9800' };
+}
+
+/** 获取并显示天气 */
+async function fetchAndDisplayWeather() {
+    /** 获取缓存的天气数据 */
+    function getCachedWeather() {
+        try {
+            const cached = localStorage.getItem(WEATHER_CACHE_KEY);
+            if (!cached) return null;
+            const data = JSON.parse(cached);
+            const now = Date.now();
+            if (now - data.timestamp > WEATHER_CACHE_EXPIRY) {
+                localStorage.removeItem(WEATHER_CACHE_KEY);
+                return null;
+            }
+            return data.weather;
+        } catch {
+            return null;
+        }
+    }
+    const cached = getCachedWeather();  // 尝试读取缓存
+    if(cached){
+        updateWeatherUI(cached);
+        return;
+    }
+    // 缓存失效或无缓存，发起网络请求
+    const weatherContainer = document.getElementById('weather-display');
+    if(weatherContainer)
+        weatherContainer.innerHTML = '<span class="weather-loading">⏳ 加载中...</span>';
+    try {
+        // 天气获取，详见https://www.sojson.com/api/weather.html
+        const url = 'http://t.weather.itboy.net/api/weather/city/101010100';
+        const response = await fetch(url);
+        if (!response.ok)
+            throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data.status !== 200)
+            throw new Error(data.message || 'API返回错误');
+        // 提取关键数据
+        const today = data.data.forecast[0] || {};
+        const lowMatch = today.low ? today.low.match(/\d+/) : null;
+        const highMatch = today.high ? today.high.match(/\d+/) : null;
+        const lowTemp = lowMatch ? lowMatch[0] : '--';
+        const highTemp = highMatch ? highMatch[0] : '--';
+        const tempRange = `${lowTemp}~${highTemp}°C`;
+        const weatherInfo = {
+            city: data.cityInfo.city,
+            tempRange: tempRange,               // 温度范围
+            weatherType: today.type || '--',
+            quality: data.data.quality || '--',
+            pm25: data.data.pm25,
+            pm10: data.data.pm10,
+            humidity: data.data.shidu || '--%', // 湿度
+            aqi: today.aqi || '--',
+            ganmao: data.data.ganmao || '',
+            updateTime: data.cityInfo.updateTime || data.time,
+            // 过敏程度（基于AQI/PM2.5计算）
+            allergy: getAllergyLevel(data.data.quality, data.data.pm25)
+        };
+        // 缓存数据
+        try {
+            localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({
+                weather: weatherInfo,
+                timestamp: Date.now()
+            }));
+        } catch (e) {
+            console.warn('缓存天气数据失败:', e);
+        }
+        // 更新UI
+        updateWeatherUI(weatherInfo);
+    } catch (error) {
+        console.error('获取天气失败:', error);
+        const container = document.getElementById('weather-display');
+        if (container) {
+            container.innerHTML = `
+                <span class="weather-error" title="${error.message}">
+                    ⚠️ 天气加载失败
+                </span>
+            `;
+        }
+    }
+}
+
+/** 更新天气UI（显示在左上角） */
+function updateWeatherUI(info) {
+    const container = document.getElementById('weather-display');
+    if (!container) return;
+    const allergy = info.allergy;
+    const dotColor = allergy.color;
+    container.innerHTML = `
+        <div class="weather-widget">
+            <div class="weather-main">
+                <span class="weather-city">${info.city}</span>
+                <span class="weather-temp">${info.tempRange}</span>
+                <span class="weather-type">${info.weatherType}</span>
+            </div>
+            <div class="weather-detail">
+                <span class="weather-humidity">💧 ${info.humidity}</span>
+                <span class="weather-aqi">AQI ${info.aqi}</span>
+                <span class="weather-pm">PM${info.pm25}</span>
+                <span>· ${info.quality}</span>
+            </div>
+            <div class="weather-allergy">
+                <span class="allergy-dot" style="background:${dotColor}"></span>
+                <span class="allergy-label">过敏 ${allergy.level}</span>
+                <span class="allergy-advice" title="${allergy.advice}">${allergy.advice}</span>
+            </div>
+            <div class="weather-update">更新 ${info.updateTime}</div>
+        </div>
+    `;
+    // 将更新时间放到 title 属性中（鼠标悬停可见）
+    container.title = `数据更新于 ${info.updateTime}`;
+}
+
+// 创建天气显示DOM元素（注入到左上角）
+function initWeather() {
+    // 检查是否已存在
+    if (document.getElementById('weather-display'))
+        return;
+    const widget = document.createElement('div');
+    widget.id = 'weather-display';
+    widget.className = 'weather-widget-container';
+    // 插入到地图容器左上角（在map容器内）
+    const mapContainer = document.getElementById('map');
+    if(mapContainer)
+        mapContainer.appendChild(widget);
+    else
+        document.body.appendChild(widget);
+    fetchAndDisplayWeather();
+}
+
+// ===========================
 // 启动入口与启动函数
 // ===========================
 function initMap() {
-    map = L.map('map').setView([39.9, 116.4], 10);
+    map = L.map('map', { zoomControl: false }).setView([39.9, 116.4], 10);
     tileLayer = createTileLayer(true).addTo(map);
     lineLayer = L.layerGroup().addTo(map);
     trainLayer = L.layerGroup().addTo(map);
@@ -1382,17 +1540,10 @@ function initMap() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 天气获取，详见https://www.sojson.com/api/weather.html
-    // fetch("http://t.weather.itboy.net/api/weather/city/101010100")
-    //     .then(res => {
-    //         if(!res.ok)
-    //             throw new Error(`加载 ${id} 失败 (${res.status})`);
-    //         return res.json();
-    //     })
-    //     .then(data => console.log(data));
     initMap();
     if(typeof initDebug === 'function')
         initDebug();
+    initWeather();  // 创建天气组件并加载数据
     initDrawerDrag();
     loadAllbaseline();
     // ---- 浮动按钮事件 ----
