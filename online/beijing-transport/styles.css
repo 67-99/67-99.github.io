@@ -529,8 +529,8 @@ nav * {
 /* ===== 天气组件 ===== */
 .weather-widget-container {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: 16px;
+    left: 16px;
     z-index: 1000;
     background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(4px);
@@ -615,8 +615,6 @@ nav * {
 /* 移动端适配 */
 @media (max-width: 600px) {
     .weather-widget-container {
-        top: 6px;
-        left: 6px;
         padding: 3px 8px;
         font-size: 11px;
         max-width: 160px;
@@ -634,7 +632,7 @@ nav * {
         max-width: 70px;
     }
 }
-@media (max-width: 260px) {
+@media (max-width: 300px) {
     .weather-widget-container {
         display: none;
     }

@@ -1371,41 +1371,104 @@ function stopLocationTracking() {
 // 天气模块
 // ===========================
 const WEATHER_CACHE_KEY = 'beijing_weather_cache';
-const WEATHER_CACHE_EXPIRY = 60 * 60 * 1000; // 60分钟缓存（高频访问易被封IP）
+
+/** 获取当天日期的字符串，用于判断缓存是否过期 */
+function getTodayDateStr() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
 
 /**
- * 根据空气质量计算过敏程度
- * @param {string} quality - 空气质量等级（优/良/轻度污染/中度污染/重度污染）
- * @param {number} pm25 - PM2.5 数值
+ * 根据过敏指数等级和花粉等级生成过敏信息
+ * @param {object} allergy - 过敏指数对象 { level, brief, advice }
+ * @param {object} pollen - 花粉指数对象 { level, brief, advice }
  * @returns {object} { level: string, advice: string, color: string }
  */
-function getAllergyLevel(quality, pm25) {
-    // 基于空气质量等级和PM2.5综合判断
-    const q = quality || '良';
-    const p = pm25 || 0;
-    
-    if (q === '优' && p < 35) {
-        return { level: '低', advice: '过敏风险低，适宜户外活动', color: '#4CAF50' };
-    } else if ((q === '优' || q === '良') && p < 75) {
-        return { level: '中', advice: '敏感人群注意防护', color: '#FF9800' };
-    } else if (q === '轻度污染' || p >= 75) {
-        return { level: '较高', advice: '过敏人群建议减少外出', color: '#F44336' };
-    } else if (q === '中度污染' || q === '重度污染' || p >= 150) {
-        return { level: '高', advice: '建议佩戴口罩，减少户外活动', color: '#9C27B0' };
+function getAllergyInfo(allergy, pollen) {
+    if (!allergy) {
+        console.log(allergy, pollen);
+        return {
+            level: '未知',
+            advice: '无过敏指数',
+            color: 'gray'
+        };
     }
-    return { level: '中', advice: '注意天气变化', color: '#FF9800' };
+    // 根据过敏等级和花粉等级综合判断
+    const levelMap = {
+        '低':    { label: '低',    color: '#43A047' },  // 鲜绿
+        '较低':  { label: '低',    color: '#43A047' },
+        '不易':  { label: '低',    color: '#43A047' },
+        '中':    { label: '中',    color: '#FFA000' },  // 亮琥珀黄
+        '中等':  { label: '中',    color: '#FFA000' },
+        '较易':  { label: '中',    color: '#FFA000' },
+        '较高':  { label: '较高',  color: '#E65100' },  // 亮橙
+        '偏高':  { label: '较高',  color: '#E65100' },
+        '易':    { label: '较高',  color: '#E65100' },
+        '高':    { label: '高',    color: '#B71C1C' },  // 深红
+        '很高':  { label: '高',    color: '#B71C1C' },
+        '极高':  { label: '高',    color: '#B71C1C' },
+        '极易':  { label: '高',    color: '#B71C1C' }
+    };
+    // 优先级数值（越大风险越高）
+    const priorityMap = { '低': 1, '中': 2, '较高': 3, '高': 4 };
+    const reverseMap = { 1: '低', 2: '中', 3: '较高', 4: '高' };
+    const rawLevel = allergy.level;
+    if (!rawLevel || !levelMap[rawLevel]) {
+        console.log(allergy, pollen);
+        return {
+            level: rawLevel || '未知',   // 保留原始值，若没有则显示"未知"
+            advice: '未知等级',
+            color: 'gray'
+        };
+    }
+    const baseInfo = levelMap[rawLevel];
+    let finalPriority = priorityMap[baseInfo.label]; // 初始为过敏等级
+    // 如果花粉指数存在且等级较高，提升过敏等级
+    if (pollen && pollen.level) {
+        const pollenRaw = pollen.level;
+        // 花粉可能的等级文本也映射到统一标签
+        const pollenMap = {
+            '很低': '低', '低': '低', '较低': '低',
+            '中': '中', '中等': '中',
+            '较高': '较高', '偏高': '较高',
+            '高': '高', '很高': '高', '极高': '高'
+        };
+        const pollenLabel = pollenMap[pollenRaw];
+        if (pollenLabel) {
+            const pollenPriority = priorityMap[pollenLabel];
+            if (pollenPriority > finalPriority) {
+                finalPriority = pollenPriority;
+            }
+        }
+    }
+    const finalLabel = reverseMap[finalPriority] || '中';
+    const finalColor = levelMap[Object.keys(levelMap).find(k => levelMap[k].label === finalLabel)]?.color || '#FF9800';
+    // 生成建议文案
+    let advice = allergy.advice || '注意天气变化';
+    if (pollen && pollen.brief)
+        advice += `，花粉浓度${pollen.brief}`;
+    else if (pollen && pollen.level) {
+        // 若没有 brief，尝试从 pollen.level 生成描述
+        const pollenDesc = pollen.level; // 直接使用原始值
+        advice += `，花粉浓度${pollenDesc}`;
+    }
+    return {
+        level: finalLabel,
+        advice: advice,
+        color: finalColor
+    };
 }
 
 /** 获取并显示天气 */
 async function fetchAndDisplayWeather() {
-    /** 获取缓存的天气数据 */
+    /** 获取缓存的天气数据（按天缓存） */
     function getCachedWeather() {
         try {
             const cached = localStorage.getItem(WEATHER_CACHE_KEY);
             if (!cached) return null;
             const data = JSON.parse(cached);
-            const now = Date.now();
-            if (now - data.timestamp > WEATHER_CACHE_EXPIRY) {
+            // 检查缓存日期是否为今天
+            if (data.cacheDate !== getTodayDateStr()) {
                 localStorage.removeItem(WEATHER_CACHE_KEY);
                 return null;
             }
@@ -1414,50 +1477,52 @@ async function fetchAndDisplayWeather() {
             return null;
         }
     }
-    const cached = getCachedWeather();  // 尝试读取缓存
-    if(cached){
+    // 尝试读取缓存
+    const cached = getCachedWeather();
+    if (cached) {
         updateWeatherUI(cached);
         return;
     }
     // 缓存失效或无缓存，发起网络请求
     const weatherContainer = document.getElementById('weather-display');
-    if(weatherContainer)
+    if (weatherContainer)
         weatherContainer.innerHTML = '<span class="weather-loading">⏳ 加载中...</span>';
     try {
-        // 天气获取，详见https://www.sojson.com/api/weather.html
-        const url = 'http://t.weather.itboy.net/api/weather/city/101010100';
+        // 不传 city 参数，API 自动根据客户端 IP 定位
+        const url = 'https://uapis.cn/api/v1/misc/weather?indices=true&extended=true&forecast=true';
         const response = await fetch(url);
         if (!response.ok)
             throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
-        if (data.status !== 200)
+        // 检查是否有错误码
+        if (data.code)
             throw new Error(data.message || 'API返回错误');
-        // 提取关键数据
-        const today = data.data.forecast[0] || {};
-        const lowMatch = today.low ? today.low.match(/\d+/) : null;
-        const highMatch = today.high ? today.high.match(/\d+/) : null;
-        const lowTemp = lowMatch ? lowMatch[0] : '--';
-        const highTemp = highMatch ? highMatch[0] : '--';
-        const tempRange = `${lowTemp}~${highTemp}°C`;
+        // 提取今日预报（forecast 数组的第一条）
+        const todayForecast = data.forecast && data.forecast.length > 0 ? data.forecast[0] : {};
+        // 提取生活指数
+        const lifeIndices = data.life_indices || {};
+        const allergy = lifeIndices.allergy || null;   // 过敏指数
+        const pollen = lifeIndices.pollen || null;     // 花粉指数
         const weatherInfo = {
-            city: data.cityInfo.city,
-            tempRange: tempRange,               // 温度范围
-            weatherType: today.type || '--',
-            quality: data.data.quality || '--',
-            pm25: data.data.pm25,
-            pm10: data.data.pm10,
-            humidity: data.data.shidu || '--%', // 湿度
-            aqi: today.aqi || '--',
-            ganmao: data.data.ganmao || '',
-            updateTime: data.cityInfo.updateTime || data.time,
-            // 过敏程度（基于AQI/PM2.5计算）
-            allergy: getAllergyLevel(data.data.quality, data.data.pm25)
+            city: data.city || '未知',                          // 城市名
+            district: data.district || '',                     // 区县
+            weather: data.weather || '--',                     // 天气状况
+            tempMax: todayForecast.temp_max || data.temp_max || '--', // 当日最高温
+            tempMin: todayForecast.temp_min || data.temp_min || '--', // 当日最低温
+            humidity: `${data.humidity}%` || '--%',                  // 湿度
+            aqi: data.aqi || '--',                             // AQI
+            aqiCategory: data.aqi_category || '--',            // AQI等级描述
+            pm25: data.air_pollutants?.pm25 || '--',           // PM2.5
+            reportTime: data.report_time || '',                // 数据更新时间
+            allergy: getAllergyInfo(allergy, pollen),          // 过敏信息（含花粉综合）
+            // 保留原始指数供扩展
+            _raw: { allergy, pollen }
         };
         // 缓存数据
         try {
             localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({
                 weather: weatherInfo,
-                timestamp: Date.now()
+                cacheDate: getTodayDateStr()
             }));
         } catch (e) {
             console.warn('缓存天气数据失败:', e);
@@ -1482,30 +1547,30 @@ function updateWeatherUI(info) {
     const container = document.getElementById('weather-display');
     if (!container) return;
     const allergy = info.allergy;
-    const dotColor = allergy.color;
+    const tempRange = `${info.tempMin}~${info.tempMax}°C`;
     container.innerHTML = `
         <div class="weather-widget">
             <div class="weather-main">
                 <span class="weather-city">${info.city}</span>
-                <span class="weather-temp">${info.tempRange}</span>
-                <span class="weather-type">${info.weatherType}</span>
+                <span class="weather-temp">${tempRange}</span>
+                <span class="weather-type">${info.weather}</span>
             </div>
             <div class="weather-detail">
                 <span class="weather-humidity">💧 ${info.humidity}</span>
                 <span class="weather-aqi">AQI ${info.aqi}</span>
                 <span class="weather-pm">PM${info.pm25}</span>
-                <span>· ${info.quality}</span>
+                <span>· ${info.aqiCategory}</span>
             </div>
             <div class="weather-allergy">
-                <span class="allergy-dot" style="background:${dotColor}"></span>
+                <span class="allergy-dot" style="background:${allergy.color}"></span>
                 <span class="allergy-label">过敏 ${allergy.level}</span>
                 <span class="allergy-advice" title="${allergy.advice}">${allergy.advice}</span>
             </div>
-            <div class="weather-update">更新 ${info.updateTime}</div>
+            <div class="weather-update">更新 ${info.reportTime}</div>
         </div>
     `;
     // 将更新时间放到 title 属性中（鼠标悬停可见）
-    container.title = `数据更新于 ${info.updateTime}`;
+    container.title = `数据更新于 ${info.reportTime}`;
 }
 
 // 创建天气显示DOM元素（注入到左上角）
