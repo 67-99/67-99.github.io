@@ -744,7 +744,14 @@ function initDrawerDrag() {
             drawer.classList.remove('open');
         }
 
-        if (!drawer.classList.contains('open')) {
+        // 如果 drawer 已打开且内容非空，但定时器已被清除，则重新启动并立即更新
+        if (drawer.classList.contains('open')) {
+            const content = document.getElementById('drawerContent');
+            if (content && content.innerHTML.trim() !== '' && !timetableUpdateTimer) {
+                updateHighlights();
+                timetableUpdateTimer = setInterval(updateHighlights, 5000);
+            }
+        } else {
             if (timetableUpdateTimer) {
                 clearInterval(timetableUpdateTimer);
                 timetableUpdateTimer = null;
@@ -963,26 +970,43 @@ function updateHighlights() {
                 el.classList.add('next-train');
         }
     }
-    // 列车纵向时刻表：随时间更新“已通过”站点变灰（跨天车次按自身时间轴对齐）
+    // 列车纵向时刻表：随时间更新高亮（当前停靠站、下一站、已通过）
     const trainRows = document.querySelectorAll('.train-schedule-row[data-time]');
+    let currentStopFound = false;
+    let nextStopFound = false;
     for (const row of trainRows) {
         const t = parseInt(row.dataset.time, 10);
         if (isNaN(t)) continue;
         const firstT = parseInt(row.dataset.first, 10);
         const lastT = parseInt(row.dataset.last, 10);
-        let aligned = currentMinutes;
+        const isStop = row.dataset.stop === '1';
+        const dwell = isStop ? TRAIN_DWELL_MIN : 0;
+        let aligned = currentMinutes + now.getSeconds() / 60;
         if (!isNaN(lastT) && lastT > 1440 && (currentMinutes <= lastT - 1440 || currentMinutes < firstT))
             aligned = currentMinutes + 1440;
-        row.classList.toggle('passed', t + TRAIN_DWELL_MIN <= aligned);
+        // 已通过（发车时间已过）
+        const passed = t + dwell <= aligned;
+        row.classList.toggle('passed', passed);
+        // 当前停靠站：时间在 [t, t+dwell] 内（仅停站才可能成为当前停靠站）
+        if (!currentStopFound && !passed && isStop && aligned >= t && aligned <= t + dwell) {
+            row.classList.add('current-stop');
+            currentStopFound = true;
+        }
+        else
+            row.classList.remove('current-stop');
+        // 下一站：第一个未通过且时间大于当前时间的站点（无论是否停站，但只标记停靠站为下一停靠站）
+        if (!nextStopFound && !passed && t > aligned && isStop) {
+            row.classList.add('next-stop');
+            nextStopFound = true;
+        }
+        else
+            row.classList.remove('next-stop');
     }
 }
 
 // ===========================
 // 列车显示
 // ===========================
-// 列车数据位于 ./resource/train/{id}.json，顶层为 [上行, 下行]；
-// 每个方向含 weekday / weekend 两组车次，每趟车记录各站进站时间（分钟，0 点起）。
-// track 文件中的 main 同为 [上行, 下行] 两段轨道，列车沿对应方向轨道折线前进。
 const TRAIN_DWELL_MIN = 45 / 60;  // 停站时长（分钟）
 const trainGeoData = {};          // 各线路轨道几何缓存 {polylines, cumDists, stationDist}
 const trainMarkers = {};          // 实时列车标记缓存 {key: marker}
@@ -1144,7 +1168,10 @@ function computeTrainPosition(geo, dirIdx, train, nowMin) {
     const matched = [];  // 只保留能在轨道上定位的站点
     for (const s of sts) {
         const dist = stationDist[s.station];
-        if (dist !== undefined) matched.push({ time: s.time, dist: dist });
+        if (dist !== undefined) {
+            const isStop = !(s.stop === false || s.isStop === false || s.dwell === 0);
+            matched.push({ time: s.time, dist: dist, stop: isStop });
+        }
     }
     if (matched.length < 2) return null;
     const firstArrival = matched[0].time;
@@ -1152,8 +1179,9 @@ function computeTrainPosition(geo, dirIdx, train, nowMin) {
     if (nowMin < firstArrival || nowMin >= lastDeparture) return null;  // 未在时刻表内
     for (let i = 0; i < matched.length; i++) {
         const arrive = matched[i].time;
-        const depart = arrive + TRAIN_DWELL_MIN;
-        if (nowMin >= arrive && nowMin <= depart)       // 停站中
+        const dwell = matched[i].stop ? TRAIN_DWELL_MIN : 0;
+        const depart = arrive + dwell;
+        if (nowMin >= arrive && nowMin <= depart)       // 停站中（通过站 dwell=0）
             return { dist: matched[i].dist };
         if (i < matched.length - 1 && nowMin > depart && nowMin < matched[i + 1].time) {
             const travel = matched[i + 1].time - depart;
@@ -1203,7 +1231,7 @@ function updateTrainPositions() {
                         keyboard: false
                     });
                     marker.on('click', function () {
-                        showTrainSchedule(lineId, d, tr);
+                        showTrainSchedule(lineId, tr);
                     });
                     marker.addTo(trainLayer);
                     trainMarkers[key] = marker;
@@ -1224,12 +1252,11 @@ function updateTrainPositions() {
  * 显示列车的纵向时刻表（点击列车时调用，与点击站点行为一致）
  * 每行显示进站时间 + 站点；已通过（发车）的站点变灰
  */
-function showTrainSchedule(lineId, dirIdx, train) {
+function showTrainSchedule(lineId, train) {
     const sts = train.stations || [];
     if (!sts.length) return;
     const lineInfo = lineData[lineId];
     const lineName = lineInfo ? lineInfo.name : lineId;
-    const dirLabel = dirIdx === 0 ? '上行' : '下行';
     const first = sts[0].station;
     const last = sts[sts.length - 1].station;
     const now = new Date();
@@ -1240,12 +1267,21 @@ function showTrainSchedule(lineId, dirIdx, train) {
     let alignedNow = nowMin;
     if (lastTime > 1440 && (nowMin <= lastTime - 1440 || nowMin < firstTime))
         alignedNow = nowMin + 1440;
-    let html = `<h3>${lineName} · ${dirLabel}（${first} → ${last}）</h3>`;
+    let html = `<h3>${lineName}（${first} → ${last}）</h3>`;
     html += `<p class="train-schedule-meta">车次 ${train.id} · 已通过站点为灰色</p>`;
     html += '<div class="train-schedule">';
     for (const st of sts) {
-        const passed = st.time + TRAIN_DWELL_MIN <= alignedNow;  // 已发车即已通过
-        html += `<div class="train-schedule-row${passed ? ' passed' : ''}" data-time="${st.time}" data-first="${firstTime}" data-last="${lastTime}">`;
+        // 判断是否停站：默认停站，若字段明确为 false 或 dwell 为 0 则视为通过
+        const isStop = !(st.stop === false || st.isStop === false || st.dwell === 0);
+        const stopClass = isStop ? 'stop' : 'pass';
+        const stopLabel = isStop ? '停' : '过';
+        const dwell = isStop ? TRAIN_DWELL_MIN : 0;
+        const passed = st.time + dwell <= alignedNow;
+        html += `<div class="train-schedule-row ${stopClass}${passed ? ' passed' : ''}" 
+                    data-time="${st.time}" 
+                    data-first="${firstTime}" 
+                    data-last="${lastTime}" 
+                    data-stop="${isStop ? 1 : 0}">`;
         html += `<span class="train-schedule-time">${minutesToHHMM(st.time)}</span>`;
         html += `<span class="train-schedule-station">${st.station}</span>`;
         html += '</div>';
@@ -1488,7 +1524,7 @@ async function fetchAndDisplayWeather() {
     if (weatherContainer)
         weatherContainer.innerHTML = '<span class="weather-loading">⏳ 加载中...</span>';
     try {
-        // 不传 city 参数，API 自动根据客户端 IP 定位
+        // 不传city参数，API自动根据客户端IP定位，详见https://uapis.cn/docs/api-reference/get-misc-weather
         const url = 'https://uapis.cn/api/v1/misc/weather?indices=true&extended=true&forecast=true';
         const response = await fetch(url);
         if (!response.ok)

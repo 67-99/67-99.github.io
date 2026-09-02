@@ -417,6 +417,30 @@ nav * {
     width: 2px;
     background: #ddd;
 }
+.train-schedule-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+.train-schedule-row.pass .train-schedule-station {
+    color: #999;
+    font-style: italic;
+}
+.train-schedule-row.passed {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+.train-schedule-row.current-stop {
+    background: #fff3cd;
+    font-weight: bold;
+    box-shadow: 0 0 4px rgba(255, 193, 7, 0.5);
+}
+.train-schedule-row.next-stop {
+    background: #e7f3ff;
+}
 .train-schedule .train-schedule-row {
     position: relative;
     display: flex;
