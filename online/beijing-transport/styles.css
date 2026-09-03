@@ -19,7 +19,6 @@ nav {
     background: linear-gradient(135deg, #006600 0%, #11998e 100%);
     color: white;
     padding: 1rem 2rem;
-    top: 0;
     z-index: 99999;
 }
 nav * {
@@ -121,7 +120,6 @@ nav * {
 }
 #map {
     flex: 1;
-    height: auto;
     min-height: 0;
     width: 100%;
 }
@@ -161,9 +159,9 @@ nav * {
     align-items: center;
     gap: 8px;
     font-size: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transform: translateX(-120%);
-    transition: ease 0.3s;
+    transition: all 0.3s ease;
     pointer-events: none;
     max-width: 80vw;
     white-space: nowrap;
@@ -286,7 +284,7 @@ nav * {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 20px;
+    height: 20px;                    /* 收起状态 */
     background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
     border-radius: 16px 16px 0 0;
@@ -296,7 +294,7 @@ nav * {
     flex-direction: column;
 }
 .drawer.open {
-    height: 40vh;
+    height: 40vh;                    /* 打开状态（移动端） */
 }
 .drawer-handle {
     height: 20px;
@@ -318,7 +316,7 @@ nav * {
     padding: 10px 20px 20px;
 }
 .drawer-content h3 {
-    margin: 0 0 10px 0;
+    margin: 0 0 10px;
     font-size: 16px;
     color: #11998e;
 }
@@ -333,6 +331,15 @@ nav * {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 8px;
+    margin: 4px 0 6px;
+}
+.drawer-content .earlier-list,
+.drawer-content .later-list {
+    display: none;                   /* 默认收起 */
+}
+.drawer-content .earlier-list.is-open,
+.drawer-content .later-list.is-open {
+    display: flex;                   /* 展开（JS 切换 .is-open） */
 }
 .drawer-content .time-item {
     font-family: monospace;
@@ -371,20 +378,9 @@ nav * {
 .toggle-later i {
     font-size: 12px;
     margin-left: 4px;
-    transition: transform 0.2s;
 }
-.time-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
-    margin: 4px 0 6px;
-}
-.earlier-list,
-.later-list {
-    display: none;
-}
+/* 单方向（上行/下行）容器 */
 .dir-container {
-    margin-bottom: 12px;
     border-bottom: 1px solid #eee;
     padding-bottom: 8px;
 }
@@ -395,9 +391,6 @@ nav * {
     margin-bottom: 4px;
 }
 /* 列车纵向时刻表 */
-.train-icon {
-    cursor: pointer;
-}
 .train-schedule-meta {
     margin: -4px 0 8px;
     font-size: 12px;
@@ -417,30 +410,6 @@ nav * {
     width: 2px;
     background: #ddd;
 }
-.train-schedule-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background 0.2s;
-}
-.train-schedule-row.pass .train-schedule-station {
-    color: #999;
-    font-style: italic;
-}
-.train-schedule-row.passed {
-    opacity: 0.6;
-    text-decoration: line-through;
-}
-.train-schedule-row.current-stop {
-    background: #fff3cd;
-    font-weight: bold;
-    box-shadow: 0 0 4px rgba(255, 193, 7, 0.5);
-}
-.train-schedule-row.next-stop {
-    background: #e7f3ff;
-}
 .train-schedule .train-schedule-row {
     position: relative;
     display: flex;
@@ -451,7 +420,10 @@ nav * {
     line-height: 1.6;
     font-size: 14px;
     color: #333;
+    border-radius: 4px;
+    transition: background 0.2s;
 }
+/* 站点圆点 */
 .train-schedule .train-schedule-row::before {
     content: '';
     position: absolute;
@@ -473,8 +445,16 @@ nav * {
 .train-schedule-station {
     flex: 1;
 }
+/* 过站不停 */
+.train-schedule-row.pass .train-schedule-station {
+    color: #999;
+    font-style: italic;
+}
+/* 已通过 */
 .train-schedule .train-schedule-row.passed {
     color: #bbb;
+    opacity: 0.6;
+    text-decoration: line-through;
 }
 .train-schedule .train-schedule-row.passed .train-schedule-time {
     color: #bbb;
@@ -483,6 +463,16 @@ nav * {
     background: #ccc;
     box-shadow: 0 0 0 1px #ccc;
 }
+/* 当前停靠站 / 下一停靠站 */
+.train-schedule-row.current-stop {
+    background: #fff3cd;
+    font-weight: bold;
+    box-shadow: 0 0 4px rgba(255, 193, 7, 0.5);
+}
+.train-schedule-row.next-stop {
+    background: #e7f3ff;
+}
+/* 桌面端抽屉变侧栏 */
 @media (min-width: 768px) {
     .drawer {
         bottom: auto;
@@ -525,18 +515,16 @@ nav * {
         height: 100%;
     }
     /* 其他控件微调 */
-    .locate-btn {
-        bottom: 30px;
-    }
-    .float-buttons{
+    .float-buttons {
         right: 35px;
     }
-    .leaflet-right{
+    .leaflet-right {
         right: 20px;
     }
 }
 /* ===== 列车显示 ===== */
 .train-icon {
+    cursor: pointer;
     border-radius: 50%;
     width: 20px;
     height: 20px;
@@ -545,7 +533,7 @@ nav * {
     justify-content: center;
     color: white;
     font-size: 12px;
-    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 }
 .train-icon i {
     line-height: 1;
@@ -559,7 +547,7 @@ nav * {
     background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(4px);
     border-radius: 8px;
-    padding: 4px 10px 4px 10px;
+    padding: 4px 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.10);
     font-size: 12px;
     line-height: 1.4;
@@ -594,7 +582,7 @@ nav * {
 .weather-widget .weather-type {
     font-size: 11px;
     color: #555;
-    background: rgba(0,0,0,0.05);
+    background: rgba(0, 0, 0, 0.05);
     padding: 0 6px;
     border-radius: 8px;
 }
@@ -641,7 +629,7 @@ nav * {
     .weather-widget-container {
         padding: 3px 8px;
         font-size: 11px;
-        max-width: 160px;
+        max-width: 180px;
     }
     .weather-widget .weather-temp {
         font-size: 14px;

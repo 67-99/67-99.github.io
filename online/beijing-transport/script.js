@@ -810,10 +810,9 @@ function updateDrawerContent(html) {
     const content = document.getElementById('drawerContent');
     content.innerHTML = html;
     drawer.classList.add('open');
-    if (window.innerWidth < 768)
-        drawer.style.height = '40vh';
-    else
-        drawer.style.width = '380px';
+    // 先清除拖拽遗留的内联尺寸，避免覆盖类样式
+    drawer.style.height = '';
+    drawer.style.width = '';
     // 绑定更早/更晚折叠按钮
     content.querySelectorAll('.toggle-earlier, .toggle-later').forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -827,15 +826,16 @@ function updateDrawerContent(html) {
             else
                 targetList = container.querySelector('.later-list');
             if (!targetList) return;
-            const isHidden = targetList.style.display === 'none';
-            targetList.style.display = isHidden ? '' : 'none';
+            // 展开/收起列表（显示/隐藏由 CSS 类 .is-open 控制）
+            const wasOpen = targetList.classList.contains('is-open');
+            targetList.classList.toggle('is-open');
             // 旋转图标
             const icon = this.querySelector('i');
             if(icon){
                 if (this.classList.contains('toggle-earlier'))
-                    icon.className = isHidden ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+                    icon.className = wasOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
                 else
-                    icon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+                    icon.className = wasOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
             }
         });
     });
@@ -909,7 +909,7 @@ function getTimetableHtml(stationName, lineName, data) {
         html += `<strong>${dir.label}方向</strong>`;
         // 更早（上箭头）
         if (earlierTimes.length > 0) {
-            html += `<span class="time-list earlier-list" style="display:none;">`;
+            html += `<span class="time-list earlier-list">`;
             for (const t of earlierTimes) {
                 const timeStr = minutesToHHMM(t);
                 if (timeStr) html += `<span class="time-item" data-minutes="${t}">${timeStr}</span>`;
@@ -927,7 +927,7 @@ function getTimetableHtml(stationName, lineName, data) {
         // 更晚（下箭头）
         if (laterTimes.length > 0) {
             html += `<button class="toggle-later" data-dir="${dir.key}">更晚 <i class="fas fa-chevron-down"></i></button>`;
-            html += `<span class="time-list later-list" style="display:none;">`;
+            html += `<span class="time-list later-list">`;
             for (const t of laterTimes) {
                 const timeStr = minutesToHHMM(t);
                 if (timeStr) html += `<span class="time-item" data-minutes="${t}">${timeStr}</span>`;
@@ -1642,7 +1642,7 @@ function initMap() {
 
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
-    if(typeof initDebug === 'function')
+    if(window.innerWidth > 768 && typeof initDebug === 'function')
         initDebug();
     initWeather();  // 创建天气组件并加载数据
     initDrawerDrag();
@@ -1652,7 +1652,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('map-type-btn').classList.add('active-type'); // 初始卫星
     // 设置debug按钮
     const debugBtn = document.getElementById('debug-btn');
-    if (typeof toggleDebug === 'function') {
+    if (window.innerWidth > 768 && typeof toggleDebug === 'function') {
         // debug.js 已成功加载，显示按钮并绑定事件
         debugBtn.style.display = '';
         debugBtn.addEventListener('click', toggleDebug);
