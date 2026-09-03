@@ -1,6 +1,7 @@
 import os
 import json
 import math
+from tqdm import tqdm
 from collections import Counter
 
 def getFilePath(*path: list[str] | str):
@@ -62,7 +63,7 @@ if __name__ == "__main__":
                    for name, value in tracks_config.items() if "main" in value}
     for name, directions in station_data.items():
         station_data[name] = [[st["n"] for st in direction if "n" in st] for direction in directions]
-    for time_file in os.listdir(getFilePath("timetable")):
+    for time_file in tqdm(os.listdir(getFilePath("timetable")),leave=False):
         id_ = os.path.splitext(time_file)[0]
         if id_ not in station_data or time_file in {}:
             continue
@@ -145,10 +146,9 @@ if __name__ == "__main__":
                         if v >= 1:
                             min_time_list[(prev_st, b)] = v
         # 双方向核查：同一对站的上下行运行时分应一致（起终点站仅单方向有数据，无法核查）
-        for (st1, st2), t in list(min_time_list.items()):
+        for (st1, st2), t in sorted(min_time_list.items()):
             if (st2, st1) in min_time_list and abs(min_time_list[(st2, st1)] - t) > 1:
-                print(f"  警告 {id_} {st1}<->{st2}：上下行运行时分不一致 "
-                      f"({t} vs {min_time_list[(st2, st1)]})，请检查时刻表数据")
+                tqdm.write(f"  警告 {id_} {st1}<->{st2}：上下行运行时分不一致 ({t} vs {min_time_list[(st2, st1)]})，请检查时刻表数据")
 
         def line_min(st1: str, st2: str) -> int | None:
             """取相邻站的典型运行时分（众数）；缺失时尝试反方向（旅行时间与方向无关）"""
@@ -164,7 +164,7 @@ if __name__ == "__main__":
         for i, direc in enumerate(("up", "down")):
             seq = stations[i]
             n = len(seq)
-            for sche_type in sche_types:
+            for sche_type in sorted(sche_types):
                 # 各站该方向该时段的时刻表（已排序）
                 times = []
                 for st in seq:
