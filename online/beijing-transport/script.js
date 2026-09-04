@@ -73,6 +73,7 @@ let watchId = null;         // 定位追踪watcher
 let focusOnLocation = true; // 定位聚焦
 
 const timetableCache = {};       // 时刻表数据缓存
+const stationToLines = {};       // 站点对线路映射
 let timetableUpdateTimer = null; // 定时器句柄
 
 let trainLayer = null;        // 列车图层
@@ -541,11 +542,9 @@ async function loadLineFile(id){
                 console.warn('线路无有效段', id);
                 return;
             }
-
             const color = data.color || '#808080';
             const group = L.featureGroup();
             const layers = [];
-
             LoadingIndicator.show(`绘制${id}线路...`);
             segments.forEach(([priority, pts]) => {
                 if (!pts || pts.length < 2) return;
@@ -560,12 +559,10 @@ async function loadLineFile(id){
                 layers.push(polyline);
             });
             LoadingIndicator.hide();
-
             if (layers.length === 0) {
                 console.warn('线路无有效折线段', id);
                 return;
             }
-
             const bounds = group.getBounds();
             lineData[id] = {
                 name: data.name || id,
@@ -577,7 +574,13 @@ async function loadLineFile(id){
                 stations: data.stations || [],
                 hasTrack: false
             };
-
+            if(data.stations)
+                data.stations.forEach(st => {
+                    if (st.n) {
+                        if (!stationToLines[st.n]) stationToLines[st.n] = [];
+                        if (!stationToLines[st.n].includes(id)) stationToLines[st.n].push(id);
+                    }
+                });
             lineLayer.addLayer(group);
             LoadingIndicator.hide();
             return id;
@@ -668,123 +671,12 @@ async function loadTimetable(lineId) {
 
 /** 加载并显示时刻表（点击站标时调用） */
 async function loadAndShowTimetable(lineId, stationName) {
-    let html = `<h3>${lineId} · ${stationName}</h3><p><strong>加载数据错误</strong></p>`;
+    let allLines = stationToLines[stationName] || [];
+    if (!allLines.includes(lineId))
+        allLines.push(lineId);
     const data = await loadTimetable(lineId);
-    if(data){
-        const lineInfo = lineData[lineId];
-        const lineName = lineInfo? lineInfo.name : lineId;
-        html = getTimetableHtml(stationName, lineName, data);
-    }
+    const html = renderTimetable(stationName, lineId, allLines, data);
     updateDrawerContent(html);
-}
-
-// ===========================
-// 抽屉面板
-// ===========================
-function initDrawerDrag() {
-    const drawer = document.getElementById('drawer');
-    const handle = document.getElementById('drawerHandle');
-    let isDragging = false;
-    let startPos = 0;
-    let startSize = 0;
-    let isVertical = true;
-    // 判断当前拖拽方向
-    function updateDirection() {
-        isVertical = window.innerWidth < 768;
-        handle.style.cursor = isVertical ? 'grab' : 'ew-resize';
-    }
-    function onDragStart(e) {
-        const ev = e.type === 'touchstart' ? e.touches[0] : e;
-        isDragging = true;
-        updateDirection();
-
-        if (isVertical) {
-            startPos = ev.clientY;
-            startSize = drawer.offsetHeight;
-            document.body.style.cursor = 'grabbing';
-        } else {
-            startPos = ev.clientX;
-            startSize = drawer.offsetWidth;
-            document.body.style.cursor = 'ew-resize';
-        }
-        document.body.style.userSelect = 'none';
-        e.preventDefault?.();
-    }
-    function onDragMove(e) {
-        if (!isDragging) return;
-        const ev = e.type === 'touchmove' ? e.touches[0] : e;
-        if (isVertical) {
-            const diff = startPos - ev.clientY;
-            const maxH = Math.min(window.innerHeight * 0.6, 420);
-            let newH = Math.min(maxH, Math.max(20, startSize + diff));
-            drawer.style.height = newH + 'px';
-            drawer.classList.toggle('open', newH > 60);
-        } else {
-            const diff = startPos - ev.clientX;
-            const maxW = Math.min(window.innerWidth * 0.45, 480);
-            let newW = Math.min(maxW, Math.max(20, startSize + diff));
-            drawer.style.width = newW + 'px';
-            drawer.classList.toggle('open', newW > 60);
-        }
-        e.preventDefault?.();
-    }
-    function onDragEnd() {
-        if (!isDragging) return;
-        isDragging = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-
-        if(isVertical){
-            if (drawer.offsetHeight < 80){
-                drawer.style.height = '20px';
-                drawer.classList.remove('open');
-            }
-        } else if (drawer.offsetWidth < 80) {
-            drawer.style.width = '20px';
-            drawer.classList.remove('open');
-        }
-
-        // 如果 drawer 已打开且内容非空，但定时器已被清除，则重新启动并立即更新
-        if (drawer.classList.contains('open')) {
-            const content = document.getElementById('drawerContent');
-            if (content && content.innerHTML.trim() !== '' && !timetableUpdateTimer) {
-                updateHighlights();
-                timetableUpdateTimer = setInterval(updateHighlights, 5000);
-            }
-        } else {
-            if (timetableUpdateTimer) {
-                clearInterval(timetableUpdateTimer);
-                timetableUpdateTimer = null;
-            }
-        }
-    }
-    // 窗口尺寸变化时更新方向
-    window.addEventListener('resize', () => {
-        updateDirection();
-        // 切换布局时重置为收缩状态，避免尺寸错乱
-        if (isVertical) {
-            drawer.style.width = '';
-            drawer.style.height = '20px';
-        } else {
-            drawer.style.height = '';
-            drawer.style.width = '20px';
-        }
-        drawer.classList.remove('open');
-        if (timetableUpdateTimer) {
-            clearInterval(timetableUpdateTimer);
-            timetableUpdateTimer = null;
-        }
-    });
-    // 鼠标事件
-    handle.addEventListener('mousedown', onDragStart);
-    document.addEventListener('mousemove', onDragMove);
-    document.addEventListener('mouseup', onDragEnd);
-    // 触摸事件
-    handle.addEventListener('touchstart', onDragStart);
-    document.addEventListener('touchmove', onDragMove);
-    document.addEventListener('touchend', onDragEnd);
-    // 初始化方向
-    updateDirection();
 }
 
 /** 分钟数 → HH:mm（忽略 >1440） */
@@ -804,58 +696,11 @@ function getCircularDiff(minutes, currentMinutes) {
     return diff;
 }
 
-/** 更新抽屉中内容 */
-function updateDrawerContent(html) {
-    const drawer = document.getElementById('drawer');
-    const content = document.getElementById('drawerContent');
-    content.innerHTML = html;
-    drawer.classList.add('open');
-    // 先清除拖拽遗留的内联尺寸，避免覆盖类样式
-    drawer.style.height = '';
-    drawer.style.width = '';
-    // 绑定更早/更晚折叠按钮
-    content.querySelectorAll('.toggle-earlier, .toggle-later').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const container = this.closest('.dir-container');
-            if (!container) return;
-            // 判断是更早还是更晚
-            let targetList;
-            if(this.classList.contains('toggle-earlier'))
-                targetList = container.querySelector('.earlier-list');
-            else
-                targetList = container.querySelector('.later-list');
-            if (!targetList) return;
-            // 展开/收起列表（显示/隐藏由 CSS 类 .is-open 控制）
-            const wasOpen = targetList.classList.contains('is-open');
-            targetList.classList.toggle('is-open');
-            // 旋转图标
-            const icon = this.querySelector('i');
-            if(icon){
-                if (this.classList.contains('toggle-earlier'))
-                    icon.className = wasOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
-                else
-                    icon.className = wasOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
-            }
-        });
-    });
-    updateHighlights();  // 立即更新一次
-    // 清除旧定时器并启动高亮定时器
-    if (timetableUpdateTimer) {
-        clearInterval(timetableUpdateTimer);
-        timetableUpdateTimer = null;
-    }
-    timetableUpdateTimer = setInterval(updateHighlights, 5000);
-}
-
 /** 渲染时刻表 */
 function getTimetableHtml(stationName, lineName, data) {
-    let html = `<h3>${lineName} · ${stationName}</h3>`;
     const stationData = data.stations.find(s => s.station_name === stationName);
-    if (!stationData) {
-        html += '<p>未找到该站时刻表</p>';
-        return html;
-    }
+    if (!stationData)
+        return '<p>未找到该站时刻表</p>';
 
     const now = new Date();
     const currentMinutes = (now.getHours() <= 3) * 1440 + now.getHours() * 60 + now.getMinutes();
@@ -864,6 +709,7 @@ function getTimetableHtml(stationName, lineName, data) {
         { key: 'down', label: data.down || '下行' }
     ];
 
+    let html = "";
     for (const dir of directions) {
         const dirData = stationData[dir.key];
         if (!dirData) continue;
@@ -877,20 +723,21 @@ function getTimetableHtml(stationName, lineName, data) {
         if(times.length === 0)
             continue;
         times.sort((a, b) => a - b);
-        const firstTime = times[0];
         // 分组（按“今天”的服务日）：默认显示当前时间前后 1 小时（循环时间，可跨天），更早/更晚只取今天服务日内的时间
         let defaultTimes = [];
         let earlierTimes = [];
         let laterTimes = [];
-        if (currentMinutes < firstTime - 60 || times[times.length - 1] + 60 < currentMinutes) {
+        if (currentMinutes < times[0] - 60 || times[times.length - 1] + 60 < currentMinutes) {
             // 服务尚未开始（凌晨）：首班 1 小时为默认，其余为更晚
             times = dirData.weekday || dirData.weekend || [];
             if(now.getDay() == 4 && dirData.friday)
                 times = dirData.friday;
             if((now.getDay() == 5 || now.getDay() == 6) && dirData.weekend)
                 times = dirData.weekend;
-            defaultTimes = times.filter(t => t - firstTime <= 60);
-            laterTimes = times.filter(t => t - firstTime > 60);
+            times = times.filter(t => typeof t === 'number' && t >= 200 && t < 1660);
+            times.sort((a, b) => a - b);
+            defaultTimes = times.filter(t => t - times[0] <= 60);
+            laterTimes = times.filter(t => t - times[0] > 60);
         } else {
             for (const t of times) {
                 const diff = getCircularDiff(t, currentMinutes);
@@ -939,69 +786,25 @@ function getTimetableHtml(stationName, lineName, data) {
     return html;
 }
 
-/** 高亮本次列车和下一列车 */
-function updateHighlights() {
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const lists = document.querySelectorAll(".dir-container");
-    for(const listDom of lists){
-        const items = listDom.querySelectorAll('.time-item[data-minutes]');
-        if (!items.length) return;
-        // 收集所有时间，找未来最近和过去最近
-        let futureBest = null; // { minutes, diff }
-        let pastBest = null;   // { minutes, diff }
-        for (const el of items) {
-            const minutes = parseInt(el.dataset.minutes, 10);
-            const diff = getCircularDiff(minutes, currentMinutes);
-            if(0 <= diff && diff <= 30)
-                if(!futureBest || diff < futureBest.diff)
-                    futureBest = { minutes, diff };
-            if(-1 <= diff && diff <= 0)
-                if(!pastBest || Math.abs(diff) < Math.abs(pastBest.diff))
-                    pastBest = { minutes, diff };
+function renderTimetable(stationName, currentLineId, allLines, data) {
+    let html = `<h2>${stationName}</h2>`;
+    // 只有当线路数 > 1 时才显示切换按钮
+    if (allLines.length > 1) {
+        html += `<div class="line-tabs">`;
+        for (const lid of allLines) {
+            const active = lid === currentLineId ? 'active' : '';
+            const lineName = lineData[lid] ? lineData[lid].name : lid;
+            html += `<button class="line-tab ${active}" data-line="${lid}" data-station="${stationName}">${lineName}</button>`;
         }
-        // 应用高亮
-        for (const el of items) {
-            const minutes = parseInt(el.dataset.minutes, 10);
-            el.classList.remove('next-train', 'arrive-train');
-            if (pastBest && minutes === pastBest.minutes)
-                el.classList.add('arrive-train');
-            else if (futureBest && minutes === futureBest.minutes)
-                el.classList.add('next-train');
-        }
+        html += `</div>`;
     }
-    // 列车纵向时刻表：随时间更新高亮（当前停靠站、下一站、已通过）
-    const trainRows = document.querySelectorAll('.train-schedule-row[data-time]');
-    let currentStopFound = false;
-    let nextStopFound = false;
-    for (const row of trainRows) {
-        const t = parseInt(row.dataset.time, 10);
-        if (isNaN(t)) continue;
-        const firstT = parseInt(row.dataset.first, 10);
-        const lastT = parseInt(row.dataset.last, 10);
-        const isStop = row.dataset.stop === '1';
-        const dwell = isStop ? TRAIN_DWELL_MIN : 0;
-        let aligned = currentMinutes + now.getSeconds() / 60;
-        if (!isNaN(lastT) && lastT > 1440 && (currentMinutes <= lastT - 1440 || currentMinutes < firstT))
-            aligned = currentMinutes + 1440;
-        // 已通过（发车时间已过）
-        const passed = t + dwell <= aligned;
-        row.classList.toggle('passed', passed);
-        // 当前停靠站：时间在 [t, t+dwell] 内（仅停站才可能成为当前停靠站）
-        if (!currentStopFound && !passed && isStop && aligned >= t && aligned <= t + dwell) {
-            row.classList.add('current-stop');
-            currentStopFound = true;
-        }
-        else
-            row.classList.remove('current-stop');
-        // 下一站：第一个未通过且时间大于当前时间的站点（无论是否停站，但只标记停靠站为下一停靠站）
-        if (!nextStopFound && !passed && t > aligned && isStop) {
-            row.classList.add('next-stop');
-            nextStopFound = true;
-        }
-        else
-            row.classList.remove('next-stop');
-    }
+    else
+        html = `<h2>${stationName} · ${lineData[currentLineId]? lineData[currentLineId].name: currentLineId}</h2>`;
+    if(!data)
+        return html + `<p>该线路暂无时刻表数据</p>`;
+    const lineName = lineData[currentLineId] ? lineData[currentLineId].name : currentLineId;
+    html += getTimetableHtml(stationName, lineName, data);
+    return html;
 }
 
 // ===========================
@@ -1303,6 +1106,226 @@ async function initTrainDisplay() {
         clearInterval(trainUpdateTimer);
     trainUpdateTimer = setInterval(updateTrainPositions, 1000);
     updateTrainPositions();
+}
+
+// ===========================
+// 抽屉面板
+// ===========================
+
+function initDrawerDrag() {
+    const drawer = document.getElementById('drawer');
+    const handle = document.getElementById('drawerHandle');
+    let isDragging = false;
+    let startPos = 0;
+    let startSize = 0;
+    let isVertical = true;
+    // 判断当前拖拽方向
+    function updateDirection() {
+        isVertical = window.innerWidth < 768;
+        handle.style.cursor = isVertical ? 'grab' : 'ew-resize';
+    }
+    function onDragStart(e) {
+        const ev = e.type === 'touchstart' ? e.touches[0] : e;
+        isDragging = true;
+        updateDirection();
+
+        if (isVertical) {
+            startPos = ev.clientY;
+            startSize = drawer.offsetHeight;
+            document.body.style.cursor = 'grabbing';
+        } else {
+            startPos = ev.clientX;
+            startSize = drawer.offsetWidth;
+            document.body.style.cursor = 'ew-resize';
+        }
+        document.body.style.userSelect = 'none';
+        e.preventDefault?.();
+    }
+    function onDragMove(e) {
+        if (!isDragging) return;
+        const ev = e.type === 'touchmove' ? e.touches[0] : e;
+        if (isVertical) {
+            const diff = startPos - ev.clientY;
+            const maxH = Math.min(window.innerHeight * 0.6, 420);
+            let newH = Math.min(maxH, Math.max(20, startSize + diff));
+            drawer.style.height = newH + 'px';
+            drawer.classList.toggle('open', newH > 60);
+        } else {
+            const diff = startPos - ev.clientX;
+            const maxW = Math.min(window.innerWidth * 0.45, 480);
+            let newW = Math.min(maxW, Math.max(20, startSize + diff));
+            drawer.style.width = newW + 'px';
+            drawer.classList.toggle('open', newW > 60);
+        }
+        e.preventDefault?.();
+    }
+    function onDragEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+
+        if(isVertical){
+            if (drawer.offsetHeight < 80){
+                drawer.style.height = '20px';
+                drawer.classList.remove('open');
+            }
+        } else if (drawer.offsetWidth < 80) {
+            drawer.style.width = '20px';
+            drawer.classList.remove('open');
+        }
+
+        // 如果 drawer 已打开且内容非空，但定时器已被清除，则重新启动并立即更新
+        if (drawer.classList.contains('open')) {
+            const content = document.getElementById('drawerContent');
+            if (content && content.innerHTML.trim() !== '' && !timetableUpdateTimer) {
+                updateHighlights();
+                timetableUpdateTimer = setInterval(updateHighlights, 5000);
+            }
+        } else {
+            if (timetableUpdateTimer) {
+                clearInterval(timetableUpdateTimer);
+                timetableUpdateTimer = null;
+            }
+        }
+    }
+    // 窗口尺寸变化时更新方向
+    window.addEventListener('resize', () => {
+        updateDirection();
+        // 切换布局时重置为收缩状态，避免尺寸错乱
+        if (isVertical) {
+            drawer.style.width = '';
+            drawer.style.height = '20px';
+        } else {
+            drawer.style.height = '';
+            drawer.style.width = '20px';
+        }
+        drawer.classList.remove('open');
+        if (timetableUpdateTimer) {
+            clearInterval(timetableUpdateTimer);
+            timetableUpdateTimer = null;
+        }
+    });
+    // 鼠标事件
+    handle.addEventListener('mousedown', onDragStart);
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragEnd);
+    // 触摸事件
+    handle.addEventListener('touchstart', onDragStart);
+    document.addEventListener('touchmove', onDragMove);
+    document.addEventListener('touchend', onDragEnd);
+    // 初始化方向
+    updateDirection();
+}
+
+/** 更新抽屉中内容 */
+function updateDrawerContent(html) {
+    const drawer = document.getElementById('drawer');
+    const content = document.getElementById('drawerContent');
+    content.innerHTML = html;
+    drawer.classList.add('open');
+    // 先清除拖拽遗留的内联尺寸，避免覆盖类样式
+    drawer.style.height = '';
+    drawer.style.width = '';
+    // 绑定更早/更晚折叠按钮
+    content.querySelectorAll('.toggle-earlier, .toggle-later').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const container = this.closest('.dir-container');
+            if (!container) return;
+            // 判断是更早还是更晚
+            let targetList;
+            if(this.classList.contains('toggle-earlier'))
+                targetList = container.querySelector('.earlier-list');
+            else
+                targetList = container.querySelector('.later-list');
+            if (!targetList) return;
+            // 展开/收起列表（显示/隐藏由 CSS 类 .is-open 控制）
+            const wasOpen = targetList.classList.contains('is-open');
+            targetList.classList.toggle('is-open');
+            // 旋转图标
+            const icon = this.querySelector('i');
+            if(icon){
+                if (this.classList.contains('toggle-earlier'))
+                    icon.className = wasOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+                else
+                    icon.className = wasOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+            }
+        });
+    });
+    updateHighlights();  // 立即更新一次
+    // 清除旧定时器并启动高亮定时器
+    if (timetableUpdateTimer) {
+        clearInterval(timetableUpdateTimer);
+        timetableUpdateTimer = null;
+    }
+    timetableUpdateTimer = setInterval(updateHighlights, 5000);
+}
+
+
+/** 高亮本次列车和下一列车 */
+function updateHighlights() {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const lists = document.querySelectorAll(".dir-container");
+    for(const listDom of lists){
+        const items = listDom.querySelectorAll('.time-item[data-minutes]');
+        if (!items.length) return;
+        // 收集所有时间，找未来最近和过去最近
+        let futureBest = null; // { minutes, diff }
+        let pastBest = null;   // { minutes, diff }
+        for (const el of items) {
+            const minutes = parseInt(el.dataset.minutes, 10);
+            const diff = getCircularDiff(minutes, currentMinutes);
+            if(0 <= diff && diff <= 30)
+                if(!futureBest || diff < futureBest.diff)
+                    futureBest = { minutes, diff };
+            if(-1 <= diff && diff <= 0)
+                if(!pastBest || Math.abs(diff) < Math.abs(pastBest.diff))
+                    pastBest = { minutes, diff };
+        }
+        // 应用高亮
+        for (const el of items) {
+            const minutes = parseInt(el.dataset.minutes, 10);
+            el.classList.remove('next-train', 'arrive-train');
+            if (pastBest && minutes === pastBest.minutes)
+                el.classList.add('arrive-train');
+            else if (futureBest && minutes === futureBest.minutes)
+                el.classList.add('next-train');
+        }
+    }
+    // 列车纵向时刻表：随时间更新高亮（当前停靠站、下一站、已通过）
+    const trainRows = document.querySelectorAll('.train-schedule-row[data-time]');
+    let currentStopFound = false;
+    let nextStopFound = false;
+    for (const row of trainRows) {
+        const t = parseInt(row.dataset.time, 10);
+        if (isNaN(t)) continue;
+        const firstT = parseInt(row.dataset.first, 10);
+        const lastT = parseInt(row.dataset.last, 10);
+        const isStop = row.dataset.stop === '1';
+        const dwell = isStop ? TRAIN_DWELL_MIN : 0;
+        let aligned = currentMinutes + now.getSeconds() / 60;
+        if (!isNaN(lastT) && lastT > 1440 && (currentMinutes <= lastT - 1440 || currentMinutes < firstT))
+            aligned = currentMinutes + 1440;
+        // 已通过（发车时间已过）
+        const passed = t + dwell <= aligned;
+        row.classList.toggle('passed', passed);
+        // 当前停靠站：时间在 [t, t+dwell] 内（仅停站才可能成为当前停靠站）
+        if (!currentStopFound && !passed && isStop && aligned >= t && aligned <= t + dwell) {
+            row.classList.add('current-stop');
+            currentStopFound = true;
+        }
+        else
+            row.classList.remove('current-stop');
+        // 下一站：第一个未通过且时间大于当前时间的站点（无论是否停站，但只标记停靠站为下一停靠站）
+        if (!nextStopFound && !passed && t > aligned && isStop) {
+            row.classList.add('next-stop');
+            nextStopFound = true;
+        }
+        else
+            row.classList.remove('next-stop');
+    }
 }
 
 // ===========================
@@ -1672,4 +1695,15 @@ document.addEventListener('DOMContentLoaded', function() {
     startLocationTracking();
     // 页面卸载时停止定位
     window.addEventListener('beforeunload', stopLocationTracking);
+    // 换乘站时刻表按钮监听
+    document.getElementById('drawerContent').addEventListener('click', function(e) {
+        const tab = e.target.closest('.line-tab');
+        if (tab) {
+            const lineId = tab.dataset.line;
+            const stationName = tab.dataset.station;
+            if (lineId && stationName) {
+                loadAndShowTimetable(lineId, stationName);
+            }
+        }
+    });
 });
