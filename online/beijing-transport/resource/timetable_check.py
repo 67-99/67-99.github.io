@@ -63,13 +63,21 @@ def main():
         raw = json.load(open(fn, encoding="utf-8"))
         short_end = raw.get("short_end") or {}
         pause = raw.get("pause") or {}
+        rep = []     # 每行一条问题
+        def add(severity, direc, sche, st, msg):
+            rep.append((severity, direc, sche, st, msg))
+
         # td: {站: {方向: {sche: [原始时刻, 含重复]}}}
+        # 防御：站名必须是字符串（数字/空/None 的站名不参与比较与聚合，仅提示，不崩溃）；
+        # 小时键必须能转成整数（个别键如 "full" 视为脏数据跳过）；时刻必须是整数。
         td = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         hour_raw = {}          # (站,方向,sche,hour) -> [时刻]
         for st in raw.get("stations", []):
             name = st.get("station_name")
-            if not name:
+            if not isinstance(name, str) or not name.strip():
+                add("键", "-", "-", repr(name), "时刻表 station_name 不是有效字符串，已跳过")
                 continue
+            name = name.strip()
             for direc in ("up", "down"):
                 blk = st.get(direc)
                 if not isinstance(blk, dict):
@@ -77,19 +85,26 @@ def main():
                 for sche, v in blk.items():
                     if isinstance(v, dict):
                         for h, lst in v.items():
-                            if isinstance(lst, list):
-                                td[name][direc][sche].extend(lst)
-                                hour_raw[(name, direc, sche, int(h))] = lst
+                            if not isinstance(lst, list):
+                                continue
+                            if not str(h).lstrip("-").isdigit():
+                                add("键", direc, str(sche), name,
+                                    f"时段键 {h!r} 不是小时数字，该时刻未纳入逐小时检查")
+                                continue
+                            hi = int(h)
+                            vals = [x for x in lst if isinstance(x, int)]
+                            td[name][direc][sche].extend(vals)
+                            hour_raw[(name, direc, sche, hi)] = vals
                     elif isinstance(v, list):
-                        td[name][direc][sche].extend(v)
+                        td[name][direc][sche].extend(x for x in v if isinstance(x, int))
         seq = []
         if line in tracks and "main" in tracks[line]:
-            seq = [[st["n"] for st in d if "n" in st] for d in tracks[line]["main"]]
-        track_sts = set(seq[0]) | set(seq[1]) if seq else set()
-
-        rep = []     # 每行一条问题
-        def add(severity, direc, sche, st, msg):
-            rep.append((severity, direc, sche, st, msg))
+            main_ = tracks[line]["main"]
+            # 线路不完整防御：main 不足两个方向 / 方向含无名站时仍不崩溃
+            if isinstance(main_, list):
+                seq = [[st["n"] for st in d if isinstance(st, dict) and "n" in st and st["n"]]
+                       for d in main_ if isinstance(d, list)]
+        track_sts = set(seq[0]) | (set(seq[1]) if len(seq) > 1 else set()) if seq else set()
 
         for s in sorted(track_sts - set(td)):
             add("键", "-", "-", s, "tracks 有站但时刻表无此站")
@@ -192,23 +207,27 @@ def main():
                         add("缺", direc, sche, s, f"{h}:00-{h}:59 整段无车（邻站 {'、'.join(have)} 各有≥5趟）")
 
             # ---- 相邻首尾对匹配（终点站数据洞检测：起源站时刻应都能延续）----
-            for idx in (0, n - 2):
-                A = st_seq[idx]
-                B = st_seq[idx + 1]
-                if A == end_term or B == end_term:
-                    pass
-                la = sorted(set(td[A][direc][sche]))
-                lb = sorted(set(td[B][direc][sche]))
-                m = estimate_run_time(la, lb)
-                if not la or not lb or m is None:
-                    continue
-                slack = 1 if B not in pause_set else 4
-                no_next = sum(1 for a in la if not any(a + m - 1 <= b <= a + m + slack for b in lb))
-                no_prev = sum(1 for b in lb if not any(b - m - slack <= a <= b - m + 1 for a in la))
-                if no_next > max(4, len(la) * 0.15):
-                    add("缺", direc, sche, A, f"有 {no_next}/{len(la)} 个时刻到 {B} 无后继（{B} 该时段缺车或 {A} 多车）")
-                if no_prev > max(4, len(lb) * 0.15):
-                    add("缺", direc, sche, B, f"有 {no_prev}/{len(lb)} 个时刻来自 {A} 无前驱（{A} 该时段缺车或 {B} 多车）")
+            # 线路不完整时该方向可能只剩 1 个有数据车站（n < 2），无从配对，直接跳过。
+            if n >= 2:
+                for idx in (0, n - 2):
+                    if idx < 0 or idx + 1 >= n:
+                        continue          # n == 1 时 n - 2 == -1，防御
+                    A = st_seq[idx]
+                    B = st_seq[idx + 1]
+                    if A == end_term or B == end_term:
+                        pass
+                    la = sorted(set(td[A][direc][sche]))
+                    lb = sorted(set(td[B][direc][sche]))
+                    m = estimate_run_time(la, lb)
+                    if not la or not lb or m is None:
+                        continue
+                    slack = 1 if B not in pause_set else 4
+                    no_next = sum(1 for a in la if not any(a + m - 1 <= b <= a + m + slack for b in lb))
+                    no_prev = sum(1 for b in lb if not any(b - m - slack <= a <= b - m + 1 for a in la))
+                    if no_next > max(4, len(la) * 0.15):
+                        add("缺", direc, sche, A, f"有 {no_next}/{len(la)} 个时刻到 {B} 无后继（{B} 该时段缺车或 {A} 多车）")
+                    if no_prev > max(4, len(lb) * 0.15):
+                        add("缺", direc, sche, B, f"有 {no_prev}/{len(lb)} 个时刻来自 {A} 无前驱（{A} 该时段缺车或 {B} 多车）")
 
         # ---- 输出 ----
         if not rep:

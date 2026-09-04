@@ -53,11 +53,91 @@ PAUSE_SLACK = 3
 # 判定某车次确实在正线终点折返（大交路，可延伸至终点）还是中途折返（小交路）/进停车场。
 TURN_MIN, TURN_MAX = 3, 12
 
+# 闭环线路单列车最多跨过的“整圈”数（车次按无前驱时刻逐站续行，可自然跑多圈；
+# 此上限仅作安全护栏，防止个别误配对把一整天时刻吞进同一条链）。
+RING_MAX_LAPS = 8
+
+def gen_ring_direction(seq, direc, sche_type, time_dict, min_time_list, pause_set, start_id=0):
+    """闭环线路（tracks.json 中 "loop": true）一个方向一个时段的列车生成。
+
+    与直线线路的关键差异：
+    1) 序列是“整环缺一环缝”的列表 —— 除相邻站对（k, k+1）外，还配对“环缝”
+       （末站 -> 首站），环缝运行时分已在主流程用全线速度中位数估算进 min_time_list；
+    2) 列车由无前驱的时刻出发、沿环逐站续行，**可以跨环缝连续绕多圈**（时刻严格递增，
+       不会成环死循环），直到数据结束；
+    3) 不套用直线线路的“终点折返匹配 / 推算延伸 / 小交路标记” —— 环线列车无终点，
+       到站时刻耗尽即自然结束。
+    """
+    n = len(seq)
+    times = [sorted(time_dict[st].get(direc, {}).get(sche_type, [])) if st in time_dict else []
+             for st in seq]
+
+    # 环线发车间隔常与站间运行时分同量级（且出入库/停站时长有波动），配对窗口比直线
+    # 线路放宽 1 分钟（m-1 .. m+2），减少在个别“瓶颈站对”上整链断裂。
+    LOOP_WIN_LO, LOOP_WIN_HI = -1, 2
+
+    # ---- 第一步：相邻站合并（含环缝 末站->首站）----
+    out_link = {}                      # (站序号, 时刻) -> (下一站序号, 时刻)
+    target_used = [set() for _ in range(n)]
+    for k in range(n):
+        k2 = (k + 1) % n               # k == n-1 时为环缝（回到首站，允许跨圈续行）
+        m = min_time_list.get((seq[k], seq[k2]))
+        if m is None:
+            continue
+        hi_w = m + (PAUSE_SLACK if seq[k2] in pause_set else LOOP_WIN_HI)
+        for t1 in times[k]:
+            for t2 in times[k2]:
+                if t2 in target_used[k2]:
+                    continue
+                d = t2 - t1
+                if d < max(m + LOOP_WIN_LO, 1):
+                    continue
+                if d > hi_w:
+                    break            # times 有序，超出窗口即可停止
+                out_link[(k, t1)] = (k2, t2)
+                target_used[k2].add(t2)
+                break
+
+    # 不做直线线路的“跨站越行”配对：站间运行时分与发车间隔同量级时，跨多站的配对窗口
+    # 很宽（每跳 ±1 分钟累计），会把断链后残剩的时刻误拼成“跳十几站”的假快车。
+    # （如真需要环线越行快车，可再按 pause/越行站声明单独实现。）
+
+    # ---- 链成车次 ----
+    incoming = {}
+    for (k, t1), (k2, t2) in out_link.items():
+        incoming[(k2, t2)] = (k, t1)
+    starts = [(k, t) for k in range(n) for t in times[k] if (k, t) not in incoming]
+    starts.sort(key=lambda x: (x[0], x[1]))
+    max_stops = RING_MAX_LAPS * n     # 安全护栏：单个车次最多约 RING_MAX_LAPS 圈
+    trains = []
+    for k, t in starts:
+        chain = [(k, t)]
+        cur = (k, t)
+        while cur in out_link and len(chain) < max_stops:
+            cur = out_link[cur]
+            chain.append(cur)
+        if len(chain) < 2:
+            continue                 # 孤立时刻不成车次
+        # 越行/快车识别（跨圈处首尾相接不算跳站）
+        max_gap = 0
+        for j in range(len(chain) - 1):
+            gap = chain[j + 1][0] - chain[j][0]
+            if gap > 0 and gap > max_gap:
+                max_gap = gap
+        stops = [{"station": seq[kk], "time": tt} for kk, tt in chain]
+        train: dict[str, object] = {"id": start_id + len(trains) + 1, "stations": stops}
+        if max_gap >= 3:
+            train["express"] = True
+        trains.append(train)
+    return trains
+
 if __name__ == "__main__":
     if not os.path.exists(getFilePath("train")):
         os.mkdir(getFilePath("train"))
     with open(getFilePath("tracks.json"), "r", encoding="utf-8") as f:
         tracks_config = json.load(f)
+    # ring_lines：在 tracks.json 中以 "loop": true 显式声明的闭环线路（如 M2、M10）
+    ring_lines = {name for name, value in tracks_config.items() if "main" in value and value.get("loop")}
     station_data = {name: value["main"] for name, value in tracks_config.items() if "main" in value}
     station_pos = {name: {st["n"]: tuple(st["sl"]) for st in value.get("stations", []) if "n" in st and "sl" in st}
                    for name, value in tracks_config.items() if "main" in value}
@@ -145,6 +225,34 @@ if __name__ == "__main__":
                         v = tn - min_time_list[(b, next_st)]
                         if v >= 1:
                             min_time_list[(prev_st, b)] = v
+        # ---- 大环“环缝”运行时分 ----
+        # 闭环线路（tracks.json 中 "loop": true，如 M2/M10）的方向列表是整圈环线缺一环缝
+        # 的序列：列表首尾两站（如 M2 外环 西直门…积水潭）在环上实际相邻（积水潭↔西直门），
+        # 但两个方向的列表都在同一对站处断开，这段“环缝”不在任何相邻配对里。
+        # 站间时刻表对这段的众数会被出入库车次污染（实测 3 分钟 vs 巧合 7~10 分钟），因此
+        # 用“全线相邻对 分钟/公里 中位数 × 环缝距离”估算，随后用“整环时长一致性”做上下行校准。
+        if id_ in ring_lines:
+            sec_per_km = []
+            for (a, b), t in min_time_list.items():
+                if a in pos and b in pos:
+                    d_km = hav_dist(pos[a], pos[b])
+                    if d_km >= 0.15 and t <= max(5, d_km * 3.5 + 2):   # 剔除被污染的过大约值
+                        sec_per_km.append(t / d_km)
+            seam_min_km = sorted(sec_per_km)[len(sec_per_km) // 2] if sec_per_km else 2.6
+            seam_ests = []
+            for i in (0, 1):
+                a, b = stations[i][-1], stations[i][0]
+                if a not in pos or b not in pos:
+                    continue
+                d_km = hav_dist(pos[a], pos[b])
+                seam_ests.append(max(2, round(d_km * seam_min_km)))
+            # 上下行环缝方向相反但距离相同，理论上应一致：取二者中位数做双方向兜底
+            if seam_ests:
+                seam_t = sorted(seam_ests)[len(seam_ests) // 2]
+                for i in (0, 1):
+                    a, b = stations[i][-1], stations[i][0]
+                    if a in pos and b in pos:
+                        min_time_list.setdefault((a, b), seam_t)
         # 双方向核查：同一对站的上下行运行时分应一致（起终点站仅单方向有数据，无法核查）
         for (st1, st2), t in sorted(min_time_list.items()):
             if (st2, st1) in min_time_list and abs(min_time_list[(st2, st1)] - t) > 1:
@@ -164,6 +272,16 @@ if __name__ == "__main__":
         for i, direc in enumerate(("up", "down")):
             seq = stations[i]
             n = len(seq)
+            if id_ in ring_lines:
+                # ---- 大环（闭环线路）：列车绕整环运行，可跨“环缝”连续跑多圈 ----
+                # （不套用直线线路的终点折返/延伸逻辑 —— 环线无终点）
+                for sche_type in sorted(sche_types):
+                    trains = gen_ring_direction(seq, direc, sche_type, time_dict, min_time_list,
+                                                pause_sets[i], train_id)
+                    if trains:
+                        result[i][sche_type] = trains
+                        train_id += len(trains)
+                continue
             for sche_type in sorted(sche_types):
                 # 各站该方向该时段的时刻表（已排序）
                 times = []
