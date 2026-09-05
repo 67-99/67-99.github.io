@@ -1,0 +1,5 @@
+[
+    {"id": "beijing-transport","title": "北京交通地图","type": "html","src": "https://67-99.github.io/online/beijing-transport/index.html","sandbox": "allow-scripts allow-same-origin allow-forms"},
+    {"id": "purpose","title": "设计初衷","type": "markdown", "src": "purpose.md"},
+    {"id": "dats","title": "数据来源","type": "markdown", "src": "data.md"}
+]
