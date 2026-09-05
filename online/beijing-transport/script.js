@@ -893,6 +893,7 @@ function pointAtDistance(points, cum, dist) {
  * 为线路构建列车定位几何
  * 每个方向：完整轨道折线 + 各站在折线上的距离；
  * 若折线方向与列车运行方向相反（部分线路 main 与车次方向不一致），自动反转折线。
+ * 方向判断采用相邻站投票：多数相邻站沿折线正向弧长更短，则认为方向一致。
  */
 function prepareTrainGeometry(lineId) {
     const info = lineData[lineId];
@@ -901,7 +902,14 @@ function prepareTrainGeometry(lineId) {
     if (!Array.isArray(main) || main.length < 2) return false;
     LoadingIndicator.show(`绘制${lineId}列车中...`);
     const trackStations = info.trackStations || [];
-    const geo = { polylines: [[], []], cumDists: [[], []], stationDist: [{}, {}] };
+    const geo = {
+        polylines: [[], []],
+        cumDists: [[], []],
+        stationDist: [{}, {}],
+        totals: [0, 0],
+        closed: [false, false]
+    };
+
     for (let d = 0; d < 2; d++) {
         const segs = main[d];
         if (!Array.isArray(segs)){
@@ -937,21 +945,43 @@ function prepareTrainGeometry(lineId) {
                     ref = tr;
             }
         }
+
+        // 使用投票法判断折线方向是否与列车运行方向一致
+        const total = cum[cum.length - 1];
         if (ref) {
-            const first = ref.stations[0].station;
-            const last = ref.stations[ref.stations.length - 1].station;
-            const dFirst = distMap[first], dLast = distMap[last];
-            if (typeof dFirst === 'number' && typeof dLast === 'number' && dFirst > dLast) {
-                points = points.slice().reverse();      // 反转折线
-                cum = buildCumulativeDistances(points);
-                const total = cum[cum.length - 1];
-                for (const key of Object.keys(distMap)) // 镜像站点距离
-                    distMap[key] = total - distMap[key];
+            const stations = ref.stations.map(s => s.station).filter(name => distMap[name] !== undefined);
+            if (stations.length >= 2) {
+                let forwardVotes = 0, reverseVotes = 0;
+                for (let i = 0; i < stations.length - 1; i++) {
+                    const d0 = distMap[stations[i]];
+                    const d1 = distMap[stations[i + 1]];
+                    if (typeof d0 !== 'number' || typeof d1 !== 'number') continue;
+                    // 正向弧长（闭合环线需模运算）
+                    const forward = ((d1 - d0) % total + total) % total;
+                    const backward = total - forward;
+                    // 如果正向更短，投票给“方向一致”；否则投票给“需要反转”
+                    if (forward <= backward) forwardVotes++;
+                    else reverseVotes++;
+                }
+                // 多数票决定是否反转
+                if (reverseVotes > forwardVotes) {
+                    points = points.slice().reverse();
+                    cum = buildCumulativeDistances(points);
+                    const newTotal = cum[cum.length - 1];
+                    // 镜像站点距离，并处理边界情况
+                    for (const key of Object.keys(distMap))
+                        distMap[key] = (newTotal - distMap[key]) % newTotal;
+                }
             }
         }
         geo.polylines[d] = points;
         geo.cumDists[d] = cum;
         geo.stationDist[d] = distMap;
+        const tot = cum[cum.length - 1];
+        geo.totals[d] = tot;
+        geo.closed[d] = tot > 0 && points.length >= 2 &&
+            Math.abs(points[0][0] - points[points.length - 1][0]) < 1e-6 &&
+            Math.abs(points[0][1] - points[points.length - 1][1]) < 1e-6;
     }
     trainGeoData[lineId] = geo;
     LoadingIndicator.hide();
@@ -989,7 +1019,17 @@ function computeTrainPosition(geo, dirIdx, train, nowMin) {
         if (i < matched.length - 1 && nowMin > depart && nowMin < matched[i + 1].time) {
             const travel = matched[i + 1].time - depart;
             const f = travel > 1e-9 ? (nowMin - depart) / travel : 0;
-            return { dist: matched[i].dist + f * (matched[i + 1].dist - matched[i].dist) };
+            const d0 = matched[i].dist;
+            const d1 = matched[i + 1].dist;
+            if (geo.closed && geo.closed[dirIdx] && geo.totals && geo.totals[dirIdx] > 0) {
+                // 闭环线路：两停站沿环正向可达（含跨“环缝”，如 积水潭->西直门），
+                // 用模运算取正向弧长，避免按直线距离差回扫整圈（列车“反向飞车”）。
+                const total = geo.totals[dirIdx];
+                let span = ((d1 - d0) % total + total) % total;
+                if (span < 1e-9) span = 1e-9;   // 同点退化：原地不动
+                return { dist: (d0 + f * span) % total };
+            }
+            return { dist: d0 + f * (d1 - d0) };
         }
     }
     return null;
@@ -1001,7 +1041,6 @@ function updateTrainPositions() {
     const now = new Date();
     const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
     const day = now.getDay();
-    const kind = (day === 0 || day === 6) ? 'weekend' : 'weekday';
     const active = new Set();
     for (const [lineId, data] of Object.entries(trainPosData)) {
         const geo = trainGeoData[lineId];
@@ -1009,35 +1048,47 @@ function updateTrainPositions() {
         const color = (lineData[lineId] && lineData[lineId].color) || '#808080';
         for (let d = 0; d < 2; d++) {
             const dir = data[d];
-            if (!dir || !Array.isArray(dir[kind])) continue;
+            if (!dir) continue;
+            // 选当天用的时刻表
+            let keys;
+            if (day === 5)
+                keys = dir.friday ? ['friday'] : ['weekday'];
+            else if (day === 0 || day === 6)
+                keys = dir.weekend ? ['weekend'] : ['weekday'];
+            else
+                keys = ['weekday'];
             const points = geo.polylines[d];
             const cum = geo.cumDists[d];
-            for (const tr of dir[kind]) {
-                const pos = computeTrainPosition(geo, d, tr, nowMin);
-                if (!pos) continue;
-                const key = `${lineId}-${d}-${tr.id}`;
-                active.add(key);
-                const latlng = L.latLng(pointAtDistance(points, cum, pos.dist));
-                let marker = trainMarkers[key];
-                if (marker) {
-                    marker.setLatLng(latlng);
-                } else {
-                    marker = L.marker(latlng, {
-                        icon: new TrainIcon({
-                            className: 'train-icon',
-                            html: '<i class="fas fa-train-subway"></i>',
-                            iconSize: [20, 20],
-                            iconAnchor: [10, 10],
-                            trainColor: color
-                        }),
-                        interactive: true,
-                        keyboard: false
-                    });
-                    marker.on('click', function () {
-                        showTrainSchedule(lineId, tr);
-                    });
-                    marker.addTo(trainLayer);
-                    trainMarkers[key] = marker;
+            for (const key of keys) {
+                const list = dir[key];
+                if (!Array.isArray(list)) continue;
+                for (const tr of list) {
+                    const pos = computeTrainPosition(geo, d, tr, nowMin);
+                    if (!pos) continue;
+                    const mkey = `${lineId}-${d}-${key}-${tr.id}`;
+                    active.add(mkey);
+                    const latlng = L.latLng(pointAtDistance(points, cum, pos.dist));
+                    let marker = trainMarkers[mkey];
+                    if (marker) {
+                        marker.setLatLng(latlng);
+                    } else {
+                        marker = L.marker(latlng, {
+                            icon: new TrainIcon({
+                                className: 'train-icon',
+                                html: '<i class="fas fa-train-subway"></i>',
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 10],
+                                trainColor: color
+                            }),
+                            interactive: true,
+                            keyboard: false
+                        });
+                        marker.on('click', function () {
+                            showTrainSchedule(lineId, tr);
+                        });
+                        marker.addTo(trainLayer);
+                        trainMarkers[mkey] = marker;
+                    }
                 }
             }
         }
