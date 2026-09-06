@@ -1128,7 +1128,6 @@ function showTrainSchedule(lineId, train) {
         // 判断是否停站：默认停站，若字段明确为 false 或 dwell 为 0 则视为通过
         const isStop = !(st.stop === false || st.isStop === false || st.dwell === 0);
         const stopClass = isStop ? 'stop' : 'pass';
-        const stopLabel = isStop ? '停' : '过';
         const dwell = isStop ? TRAIN_DWELL_MIN : 0;
         const passed = st.time + dwell <= alignedNow;
         html += `<div class="train-schedule-row ${stopClass}${passed ? ' passed' : ''}" 
@@ -1142,6 +1141,26 @@ function showTrainSchedule(lineId, train) {
     }
     html += '</div>';
     updateDrawerContent(html);
+    // 滚动逻辑
+    setTimeout(() => {
+        const drawer = document.getElementById('drawer');
+        const content = document.getElementById('drawerContent');
+        if (!drawer || !content)
+            return;
+        // 查找目标：优先当前站，其次下一站，再次第一个停靠站，最后第一行
+        let target = content.querySelector('.train-schedule-row.current-stop');
+        if(!target)
+            target = content.querySelector('.train-schedule-row.next-stop');
+        if (!target)
+            target = content.querySelector('.train-schedule-row.stop');
+        if (!target)
+            target = content.querySelector('.train-schedule-row');
+        if (target)
+            target.scrollIntoView({  // 使用原生 scrollIntoView，让元素在抽屉容器中居中
+                block: 'center',
+                behavior: 'smooth'
+            });
+    }, 50);
 }
 
 /** 初始化列车显示：加载各线路列车数据并定时更新位置 */
