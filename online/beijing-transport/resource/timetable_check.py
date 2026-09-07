@@ -52,10 +52,11 @@ def hour_belong(h: int, t: int) -> int:
 def main():
     only = sys.argv[1:]
     tracks = json.load(open(getFilePath("tracks.json"), encoding="utf-8"))
-    lines = sorted(os.path.splitext(f)[0] for f in os.listdir(getFilePath("timetable"))
-                   if f.endswith(".json"))
+    all_lines = sorted(os.path.splitext(f)[0] for f in os.listdir(getFilePath("timetable")) if f.endswith(".json"))
     if only:
-        lines = [l for l in lines if l in only]
+        lines = [l for l in all_lines if l in only]
+    else:
+        lines = all_lines
 
     grand = Counter()
     for line in lines:
@@ -72,12 +73,15 @@ def main():
         # 小时键必须能转成整数（个别键如 "full" 视为脏数据跳过）；时刻必须是整数。
         td = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
         hour_raw = {}          # (站,方向,sche,hour) -> [时刻]
+        station_warn = {}      # 站名 -> warn 文本（封站等，该站无时刻属正常）
         for st in raw.get("stations", []):
             name = st.get("station_name")
             if not isinstance(name, str) or not name.strip():
                 add("键", "-", "-", repr(name), "时刻表 station_name 不是有效字符串，已跳过")
                 continue
             name = name.strip()
+            if st.get("warn"):
+                station_warn[name] = st["warn"]
             for direc in ("up", "down"):
                 blk = st.get(direc)
                 if not isinstance(blk, dict):
@@ -97,19 +101,90 @@ def main():
                             hour_raw[(name, direc, sche, hi)] = vals
                     elif isinstance(v, list):
                         td[name][direc][sche].extend(x for x in v if isinstance(x, int))
+        # ---- 贯通站序：本线 + 无时刻表的字母后缀扩展线（M1E/M4S），按站序重叠拼接 ----
+        # 方向顺序必须按重叠（尾接/头接）自动判断：M1 上行=M1+M1E、下行=M1E+M1；
+        # M4 上行=M4S+M4、下行=M4+M4S。concat+去重只能用于站名集合，不能用于方向顺序。
+        def seq_overlap_len(x, y):
+            best = 0
+            for k in range(1, min(len(x), len(y)) + 1):
+                if x[-k:] == y[:k]:
+                    best = k
+            return best
+
+        def stitch_dirs(dirs):
+            for k in tracks:
+                if not (k.startswith(line) and len(k) > len(line)
+                        and k[len(line):].isalpha() and k not in all_lines):
+                    continue
+                ed = tracks.get(k, {}).get("main")
+                if not isinstance(ed, list):
+                    continue
+                ed = [[st["n"] for st in d if isinstance(st, dict) and "n" in st and st["n"]]
+                      for d in ed if isinstance(d, list)]
+                for d in (0, 1):
+                    if d >= len(dirs) or d >= len(ed):
+                        continue
+                    A, B = dirs[d], ed[d]
+                    ov = seq_overlap_len(A, B)
+                    if ov and len(B) > ov:
+                        dirs[d] = A + B[ov:]
+                        continue
+                    ov2 = seq_overlap_len(B, A)
+                    if ov2 and len(B) > ov2:
+                        dirs[d] = B[:len(B) - ov2] + A
+            # 去重保持顺序
+            for d in range(len(dirs)):
+                seen, keep = set(), []
+                for s in dirs[d]:
+                    if s not in seen:
+                        seen.add(s)
+                        keep.append(s)
+                dirs[d] = keep
+            return dirs
+
         seq = []
-        if line in tracks and "main" in tracks[line]:
+        track_keys = []
+        if line in tracks:
+            track_keys.append(line)
+        for k in tracks:
+            if (k.startswith(line) and len(k) > len(line)
+                    and k[len(line):].isalpha()
+                    and k not in all_lines):
+                track_keys.append(k)
+        track_keys = sorted(set(track_keys))
+        if line in tracks and isinstance(tracks[line].get("main"), list):
             main_ = tracks[line]["main"]
-            # 线路不完整防御：main 不足两个方向 / 方向含无名站时仍不崩溃
-            if isinstance(main_, list):
-                seq = [[st["n"] for st in d if isinstance(st, dict) and "n" in st and st["n"]]
-                       for d in main_ if isinstance(d, list)]
+            seq = [[st["n"] for st in d if isinstance(st, dict) and "n" in st and st["n"]]
+                   for d in main_ if isinstance(d, list)]
+            seq = stitch_dirs(seq)
+        elif track_keys:
+            # 本线无 tracks 但存在扩展线时（罕见），退化为按扩展线拼接
+            seq_up, seq_down = [], []
+            for tk in track_keys:
+                main_ = tracks.get(tk, {}).get("main")
+                if not isinstance(main_, list):
+                    continue
+                if len(main_) > 0 and isinstance(main_[0], list):
+                    seq_up.extend(st["n"] for st in main_[0]
+                                  if isinstance(st, dict) and "n" in st and st["n"])
+                if len(main_) > 1 and isinstance(main_[1], list):
+                    seq_down.extend(st["n"] for st in main_[1]
+                                    if isinstance(st, dict) and "n" in st and st["n"])
+            def dedupe(lst):
+                seen = set()
+                return [x for x in lst if not (x in seen or seen.add(x))]
+            seq = [dedupe(seq_up), dedupe(seq_down)] if seq_up or seq_down else []
+
         track_sts = set(seq[0]) | (set(seq[1]) if len(seq) > 1 else set()) if seq else set()
 
-        for s in sorted(track_sts - set(td)):
-            add("键", "-", "-", s, "tracks 有站但时刻表无此站")
+        known_sts = set(td) | set(station_warn)   # 只有 warn 无时刻的封站也算“有录入”
+        for s in sorted(track_sts - known_sts):
+            add("键", "-", "-", s, "tracks 有站但时刻表无此站（数据缺失，会被当作通过站处理）")
         for s in sorted(set(td) - track_sts):
-            add("键", "-", "-", s, "时刻表有站但 tracks 无此站")
+            hint = ""
+            if s.endswith("站") and s[:-1] in track_sts:
+                hint = "（去掉后缀“站”后与 tracks 站名重复 —— 疑似同一站重复录入，应合并）"
+            add("键", "-", "-", s, f"时刻表有站但 tracks 无此站{hint}")
 
         # 每方向每sche
         dir_sches = set()
@@ -149,21 +224,19 @@ def main():
                     for t in out:
                         add("时", direc, sche, s, f"小时块[{h}]越界时刻 {t}")
                     dup = {x: c for x, c in Counter(lst).items() if c > 1}
-                    if dup:
-                        add("重", direc, sche, s, f"小时块[{h}]内重复 {'、'.join(f'{x//60:02d}:{x%60:02d}×{c}' for x, c in list(dup.items())[:4])}")
             # ---- [重] 跨小时块重复（去重后仍多的站）----
             for s in st_seq:
                 c = Counter(td[s][direc][sche])
                 dup_all = sum(v - 1 for v in c.values() if v > 1)
                 if dup_all >= 2:
-                    ex = "、".join(f"{x//60:02d}:{x%60:02d}×{v}" for x, v in list(c.items())[:3] if v > 1)
+                    ex = "、".join(f"{x//60:02d}:{x%60:02d}×{v}" for x, v in [p for p in c.most_common() if p[1] > 1][:3])
                     add("重", direc, sche, s, f"共 {dup_all} 个重复时刻（如 {ex}）")
 
             # ---- [缺][多] 总量对比（越行少 => 各站应一致）----
             uniq = {s: len(set(td[s][direc][sche])) for s in st_seq}
             for idx, s in enumerate(st_seq):
-                if s == end_term:
-                    continue                     # 到达方向终点站无数据正常
+                if s == end_term or s in station_warn:
+                    continue                     # 到达方向终点站无数据正常；封站（warn）通过不停
                 c = uniq[s]
                 nb = []
                 if idx > 0:
@@ -174,7 +247,10 @@ def main():
                     continue
                 nbmax = max(nb)
                 if c == 0:
-                    add("缺", direc, sche, s, f"时刻数为 0（邻站 {nbmax}）")
+                    if s in station_warn:
+                        add("键", direc, sche, s, f"时刻数为 0 —— 时刻表已注明：{station_warn[s]}（通过站，正常）")
+                    else:
+                        add("缺", direc, sche, s, f"时刻数为 0（邻站 {nbmax}，数据缺失或封站未注明）")
                 elif c > nbmax * 1.5:
                     add("多", direc, sche, s, f"时刻数 {c} ≈ 邻站 {nbmax} 的 {c / max(nbmax,1):.1f} 倍（整表重复/误抄他站？）")
                 elif c < min(nb) * 0.6 and nbmax > 10:
@@ -191,7 +267,7 @@ def main():
                     lst = hour_raw.get((s, direc, sche, h)) or []
                     hour_of[(s, h)] = lst
             for idx, s in enumerate(st_seq):
-                if s == end_term:
+                if s == end_term or s in station_warn:
                     continue
                 for h in range(5, 24):
                     if hour_of[(s, h)]:

@@ -17856,25 +17856,6 @@
             "estimated": true
           }
         ]
-      },
-      {
-        "id": 471,
-        "stations": [
-          {
-            "station": "四道桥",
-            "time": 1429
-          },
-          {
-            "station": "小园",
-            "time": 1438
-          },
-          {
-            "station": "石厂",
-            "time": 1441,
-            "estimated": true
-          }
-        ],
-        "express": true
       }
     ]
   }

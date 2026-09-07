@@ -138,16 +138,65 @@ if __name__ == "__main__":
         tracks_config = json.load(f)
     # ring_lines：在 tracks.json 中以 "loop": true 显式声明的闭环线路（如 M2、M10）
     ring_lines = {name for name, value in tracks_config.items() if "main" in value and value.get("loop")}
+    have_timetable = {os.path.splitext(f)[0] for f in os.listdir(getFilePath("timetable")) if f.endswith(".json")}
     station_data = {name: value["main"] for name, value in tracks_config.items() if "main" in value}
     station_pos = {name: {st["n"]: tuple(st["sl"]) for st in value.get("stations", []) if "n" in st and "sl" in st}
                    for name, value in tracks_config.items() if "main" in value}
     for name, directions in station_data.items():
         station_data[name] = [[st["n"] for st in direction if "n" in st] for direction in directions]
+
+    def through_ext_ids(id_: str):
+        """贯通扩展线：线路 ID 加字母后缀、且【不带自己的时刻表文件】（如 M1E 之于 M1、
+        M4S 之于 M4）。贯通运营（1号线-八通线、4号线-大兴线）的时刻表只写在主线路
+        （M1/M4）文件里；自带时刻表的（如 M25W）不算贯通扩展。"""
+        return sorted(k for k in station_data
+                      if k != id_ and k.startswith(id_) and k[len(id_):].isalpha()
+                      and k not in have_timetable)
+
+    def seq_overlap_len(x: list[str], y: list[str]) -> int:
+        """x 末尾连续 == y 开头连续 的最大长度（站序重叠，用于贯通拼接）"""
+        best = 0
+        for k in range(1, min(len(x), len(y)) + 1):
+            if x[-k:] == y[:k]:
+                best = k
+        return best
+
+    def stitch_through(id_: str) -> list[list[str]]:
+        """把贯通扩展线的站序拼接到本线两个方向（重叠站去重）。
+        dir0/dir1 分别在“尾接”或“头接”方向拼接，重叠由站序后缀/前缀自动判断。"""
+        dirs = [list(station_data[id_][0]), list(station_data[id_][1])]
+        for eid in through_ext_ids(id_):
+            ed = station_data[eid]
+            for d in (0, 1):
+                A, B = dirs[d], ed[d]
+                ov = seq_overlap_len(A, B)          # 扩展线接在本线之后（尾接）
+                if ov and len(B) > ov:
+                    dirs[d] = A + B[ov:]
+                    continue
+                ov2 = seq_overlap_len(B, A)         # 扩展线接在本线之前（头接）
+                if ov2 and len(B) > ov2:
+                    dirs[d] = B[:len(B) - ov2] + A
+        for d in (0, 1):                            # 防御性去重（贯通线不应有重复站）
+            seen, keep = set(), []
+            for s in dirs[d]:
+                if s not in seen:
+                    seen.add(s)
+                    keep.append(s)
+            dirs[d] = keep
+        return dirs
+
     for time_file in tqdm(os.listdir(getFilePath("timetable")),leave=False):
         id_ = os.path.splitext(time_file)[0]
         if id_ not in station_data or time_file in {}:
             continue
         stations = station_data[id_]
+        # ---- 贯通拼接：M1/M4 的时刻表覆盖 M1E/M4S，生成贯穿两段线路的车次 ----
+        if id_ not in ring_lines and through_ext_ids(id_):
+            stitched = stitch_through(id_)
+            if len(stitched[0]) > len(stations[0]) or len(stitched[1]) > len(stations[1]):
+                tqdm.write(f"  贯通 {id_} ←→ {'、'.join(through_ext_ids(id_))}："
+                           f"{len(stations[0])}站 -> {len(stitched[0])}站")
+                stations = stitched
         with open(getFilePath("timetable", time_file), "r", encoding="utf-8") as f:
             timetable_data = json.load(f)
         time_dict: dict[str, dict[str, str|dict[str, list[int]]]] = {}
@@ -190,7 +239,7 @@ if __name__ == "__main__":
             for seq_i in seqs:
                 for j in range(1, len(seq_i)):
                     st1, st2 = seq_i[j - 1], seq_i[j]
-                    st_t1, st_t2 = time_dict[st1].get(direc, {}), time_dict[st2].get(direc, {})
+                    st_t1, st_t2 = time_dict.get(st1, {}).get(direc, {}), time_dict.get(st2, {}).get(direc, {})
                     l1 = sorted(x for v in st_t1.values() for x in v)
                     l2 = sorted(x for v in st_t2.values() for x in v)
                     if not l1 or not l2:
@@ -257,6 +306,18 @@ if __name__ == "__main__":
         for (st1, st2), t in sorted(min_time_list.items()):
             if (st2, st1) in min_time_list and abs(min_time_list[(st2, st1)] - t) > 1:
                 tqdm.write(f"  警告 {id_} {st1}<->{st2}：上下行运行时分不一致 ({t} vs {min_time_list[(st2, st1)]})，请检查时刻表数据")
+        # 全线“秒/公里”中位数：用于封站/无数据站跳连的直达运行时分估算（数据缺失站无法
+        # 直接取众数——高密度行车下跨站差值会被 d=1 的跨车次巧合污染，距离法更稳）。
+        if pos:
+            sec_per_km = []
+            for (a, b), t in min_time_list.items():
+                if a in pos and b in pos:
+                    d_km = hav_dist(pos[a], pos[b])
+                    if d_km >= 0.15 and t <= max(5, d_km * 3.5 + 2):
+                        sec_per_km.append(t / d_km)
+            line_sec_per_km = sorted(sec_per_km)[len(sec_per_km) // 2] if sec_per_km else 80.0
+        else:
+            line_sec_per_km = 80.0
 
         def line_min(st1: str, st2: str) -> int | None:
             """取相邻站的典型运行时分（众数）；缺失时尝试反方向（旅行时间与方向无关）"""
@@ -286,7 +347,7 @@ if __name__ == "__main__":
                 # 各站该方向该时段的时刻表（已排序）
                 times = []
                 for st in seq:
-                    lst = time_dict[st].get(direc, {}).get(sche_type, []) if st is not None else []
+                    lst = time_dict.get(st, {}).get(direc, {}).get(sche_type, []) if st is not None else []
                     times.append(sorted(lst))
 
                 # ---- 第一步：相邻站合并 ----
@@ -294,30 +355,59 @@ if __name__ == "__main__":
                 # 并删除已配对时刻
                 out_link = {}               # (站序号, 时刻) -> (下一站序号, 时刻)
                 target_used = [set() for _ in range(n)]  # 各站已被配对（作为目标）的时刻
+
+                # 无数据站（该方向无任何时刻）＝ 封站/数据缺失：列车直接通过不停。
+                # 计算“下一个有数据的站”及跨过无数据站的直达运行时分，供本步跳连。
+                has_data = [bool(times[k]) for k in range(n)]
+                next_data = [None] * n
+                nxt = None
+                for k in range(n - 1, -1, -1):
+                    next_data[k] = nxt
+                    if has_data[k]:
+                        nxt = k
                 for k in range(n - 1):
-                    m = line_min(seq[k], seq[k + 1])
-                    if m is None:
+                    if not has_data[k]:
                         continue
-                    hi_w = m + (PAUSE_SLACK if seq[k + 1] in pause_sets[i] else 1)
+                    k2 = k + 1
+                    if has_data[k2]:
+                        m = line_min(seq[k], seq[k2])
+                        hi_w = m + (PAUSE_SLACK if seq[k2] in pause_sets[i] else 1) if m else None
+                    else:
+                        # 下一站无数据：直接跨到其后第一个有数据的站（封站/数据缺失不停）
+                        k2 = next_data[k]
+                        if k2 is None:
+                            continue
+                        est = min_time_list.get((seq[k], seq[k2]))
+                        if est is None:
+                            # 直达运行时分缺失：按全线“秒/公里”中位数 × 站间距估算
+                            # （对两站直接取众数会被 d=1 的跨车次巧合污染，见上）
+                            if seq[k] in pos and seq[k2] in pos:
+                                est = max(2, round(hav_dist(pos[seq[k]], pos[seq[k2]]) * line_sec_per_km / 60))
+                            else:
+                                est = 3
+                        m, hi_w = est, est + 1
                     for t1 in times[k]:
-                        for t2 in times[k + 1]:
-                            if t2 in target_used[k + 1]:
+                        for t2 in times[k2]:
+                            if t2 in target_used[k2]:
                                 continue
                             d = t2 - t1
                             if d < max(m - 1, 1):
                                 continue
                             if d > hi_w:
                                 break            # times 有序，超出窗口即可停止
-                            out_link[(k, t1)] = (k + 1, t2)
-                            target_used[k + 1].add(t2)
+                            out_link[(k, t1)] = (k2, t2)
+                            target_used[k2].add(t2)
                             break
 
-                # ---- 第二步：跨站车次（越行/通过不停车，如 M6 金台路→郝家府）----
+                # ---- 第二步：跨站车次（越行/通过不停车）----
+                # 只允许跳过 1~2 站（k2-k ≤ 3）：长线路（如贯通后的 M1 36 站）上若放开
+                # 跨十几站的配对，松散的累计窗口（每跳 ±1 分钟）会把断链残时刻误拼成
+                # “复兴门→土桥”式的跨城假快车。
                 for k in range(n - 2):
                     for t1 in times[k]:
                         if (k, t1) in out_link:
                             continue
-                        for k2 in range(k + 2, n):
+                        for k2 in range(k + 2, min(n, k + 4)):
                             # 累计运行时分，允许每跳一站再浮动 ±1 分钟
                             expected = 0
                             valid = True
@@ -384,7 +474,7 @@ if __name__ == "__main__":
                         # 2) 正线终点折返匹配：反向发车 D 满足 到站+3 ≤ D ≤ 到站+12
                         term_d = None
                         if ok:
-                            rev_list = time_dict[seq[n - 1]].get(rev, {}).get(sche_type, [])
+                            rev_list = time_dict.get(seq[n - 1], {}).get(rev, {}).get(sche_type, [])
                             cand = [D for D in rev_list if TURN_MIN <= D - t_est <= TURN_MAX]
                             if cand:
                                 term_d = min(cand, key=lambda D: abs(D - t_est - (TURN_MIN + TURN_MAX) // 2))
@@ -419,8 +509,39 @@ if __name__ == "__main__":
                     max_gap = max((chain[j + 1][0] - chain[j][0] for j in range(len(chain) - 1)), default=0)
                     is_express = max_gap >= 3
 
+                    # ---- 链 -> 站点列表：跨过的“无数据站”（封站/数据缺失，如 M1 八角游乐园
+                    # 封站改造）按站间距插值补为“通过站”（stop:false），前端不停车直接划过 ----
+                    def chain_stops(chain_):
+                        res = []
+                        for idx in range(len(chain_)):
+                            k, t = chain_[idx]
+                            res.append((k, t, None))
+                            if idx + 1 < len(chain_):
+                                k2, t2 = chain_[idx + 1]
+                                # 中间全部无数据（封站/缺失），且时距足以按 1 分钟分辨率放下
+                                # 各中间站时才插值补站；间距过紧（如数据里古城→八宝山仅 1 分钟）
+                                # 时跳过补站，列车仍会沿几何直接划过。
+                                if (k2 - k > 1 and all(not times[kk] for kk in range(k + 1, k2))
+                                        and t2 - t >= k2 - k):
+                                    seg = []
+                                    for kk in range(k, k2):
+                                        if seq[kk] in pos and seq[kk + 1] in pos:
+                                            seg.append(hav_dist(pos[seq[kk]], pos[seq[kk + 1]]))
+                                        else:
+                                            seg.append(1.0)
+                                    tot = sum(seg) or 1.0
+                                    acc, pt = 0.0, t
+                                    for kk in range(k + 1, k2):
+                                        acc += seg[kk - k - 1]
+                                        tt = round(t + (t2 - t) * acc / tot)
+                                        tt = max(tt, pt + 1)
+                                        tt = min(tt, t2 - 1)          # 严格小于下一站真实时刻
+                                        pt = tt
+                                        res.append((kk, tt, {"stop": False, "estimated": True}))
+                        return res
+
                     train_id += 1
-                    stops = [{"station": seq[kk], "time": tt} for kk, tt in chain]
+                    stops = [{"station": seq[kk], "time": tt, **(ex or {})} for kk, tt, ex in chain_stops(chain)]
                     stops += [{"station": seq[kk], "time": tt, "estimated": True} for kk, tt in tail]
                     train: dict[str, object] = {"id": train_id, "stations": stops}
                     if short_turn_st:

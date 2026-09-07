@@ -630,43 +630,68 @@ function loadAllbaseline() {
 // ---------------------------
 // 时刻表加载与展示
 // ---------------------------
+/**
+ * 尝试按指定基础路径和ID加载JSON文件，若404则去掉末尾字母重试
+ * @param {string} basePath - 基础路径，如 './resource/timetable'
+ * @param {string} id - 原始线路ID，如 'M1E'
+ * @returns {Promise<object|null>} 成功返回解析后的JSON，失败返回null
+ */
+async function fetchWithFallback(basePath, id) {
+    const idsToTry = [];
+    let currentId = id;
+    while (true) {
+        idsToTry.push(currentId);
+        // 若末尾是数字+字母，则去掉末尾字母继续尝试
+        if (/[0-9][A-Za-z]$/.test(currentId))
+            currentId = currentId.slice(0, -1);
+        else
+            break;
+    }
+    for (const tryId of idsToTry) {
+        const url = `${basePath}/${tryId}.json`;
+        try {
+            const res = await fetch(url);
+            if(res.ok)
+                return await res.json();
+        } catch (e) {
+            console.warn(`加载${url}失败`, e);  // 网络错误等，继续尝试下一个ID
+        }
+    }
+    return null;
+}
 
 /** 加载时刻表 JSON */
 async function loadTimetable(lineId) {
     if(timetableCache[lineId])
         return timetableCache[lineId];
-    const url = `./resource/timetable/${lineId}.json`;
-    try {
-        const res = await fetch(url);
-        if (!res.ok)
-            throw new Error('Timetable not found');
-        const data = await res.json();
-        timetableCache[lineId] = data;
-        // 辅助函数：判断是否为普通对象（字典）
-        function isPlainObject(obj) {
-            return Object.prototype.toString.call(obj) === '[object Object]';
-        }
-        if(data.stations)
-            data.stations.forEach(item => {
-                ['up', 'down'].forEach(prop => {
-                    const obj = item[prop];
-                    if (obj && typeof obj === 'object') {
-                        Object.keys(obj).forEach(key => {
-                            const sub = obj[key];
-                            if(sub && typeof sub === 'object' && !Array.isArray(sub)) {
-                                const values = Object.values(sub);
-                                if(values.every(Array.isArray))
-                                    obj[key] = [].concat(...values);
-                            }
-                        });
-                    }
-                });
-            });
-        return data;
-    } catch (e) {
-        console.warn('加载时刻表失败:', lineId, e);
+    const data = await fetchWithFallback('./resource/timetable', lineId);
+    if (!data) {
+        console.warn('加载时刻表失败:', lineId);
         return null;
     }
+    // 辅助函数：判断是否为普通对象（字典）
+    function isPlainObject(obj) {
+        return Object.prototype.toString.call(obj) === '[object Object]';
+    }
+    if (data.stations) {
+        data.stations.forEach(item => {
+            ['up', 'down'].forEach(prop => {
+                const obj = item[prop];
+                if (obj && typeof obj === 'object') {
+                    Object.keys(obj).forEach(key => {
+                        const sub = obj[key];
+                        if (sub && typeof sub === 'object' && !Array.isArray(sub)) {
+                            const values = Object.values(sub);
+                            if (values.every(Array.isArray))
+                                obj[key] = [].concat(...values);
+                        }
+                    });
+                }
+            });
+        });
+    }
+    timetableCache[lineId] = data;
+    return data;
 }
 
 /** 加载并显示时刻表（点击站标时调用） */
@@ -710,6 +735,14 @@ function getTimetableHtml(stationName, lineName, data) {
     ];
 
     let html = "";
+    if (stationData.warn || stationData.info) {
+        html += `<div class="station-notice">`;
+        if (stationData.warn)
+            html += `<div class="notice-warn">${stationData.warn}</div>`;
+        if (stationData.info)
+            html += `<div class="notice-info">${stationData.info}</div>`;
+        html += `</div>`;
+    }
     for (const dir of directions) {
         const dirData = stationData[dir.key];
         if (!dirData) continue;
@@ -825,19 +858,12 @@ const TrainIcon = L.DivIcon.extend({
 /** 加载线路列车数据 */
 async function loadTrainData(lineId) {
     LoadingIndicator.show(`加载${lineId}列车数据...`);
-    const url = `./resource/train/${lineId}.json`;
-    try {
-        const res = await fetch(url);
-        if (!res.ok)
-            throw new Error('Train not found');
-        const data = await res.json();
+    const data = await fetchWithFallback('./resource/train', lineId);
+    if (data) {
         trainPosData[lineId] = data;
         LoadingIndicator.hide();
         return data;
-    } catch (e) {
-        // 部分线路没有列车数据，属正常情况
-        if (!/not found/i.test(e && e.message || ''))
-            console.warn('加载列车数据失败:', lineId, e);
+    } else {
         LoadingIndicator.hide();
         return null;
     }

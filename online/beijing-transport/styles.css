@@ -332,6 +332,47 @@ nav * {
     margin-bottom: 10px;
     line-height: 1.8;
 }
+/* 时刻表warn与info */
+.station-notice {
+    background: #fff8e1;
+    border-left: 4px solid #ffb300;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #5d4037;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.station-notice div {
+    margin-bottom: 0;
+}
+.notice-warn {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.notice-warn::before {
+    content: "⚠️";
+    flex-shrink: 0;
+}
+.notice-info {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #e0c48b;
+    font-size: 13px;
+    color: #6d4c41;
+    line-height: 1.5;
+}
+@media (max-width: 480px) {
+    .station-notice {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+    .notice-info {
+        font-size: 12px;
+    }
+}
+/* 时刻显示 */
 .drawer-content .time-list {
     display: flex;
     flex-wrap: wrap;
