@@ -1,5 +1,12 @@
 [
     {"id": "beijing-transport","title": "北京交通地图","type": "html","src": "https://67-99.github.io/online/beijing-transport/index.html","sandbox": "allow-scripts allow-same-origin allow-forms"},
     {"id": "purpose","title": "设计初衷","type": "markdown", "src": "purpose.md"},
-    {"id": "dats","title": "数据来源","type": "markdown", "src": "data.md"}
+    {"id": "dats", "title": "数据来源", "type": "markdown", "src": "data.md"},
+    {"id": "structure", "title": "项目结构", "type": "markdown", "src": "struct.md"},
+    {"id": "feature", "title": "功能与架构", "type": "markdown", "src": "feature.md"},
+    {"id":"download","title":"资源下载","type":"downloads",
+      "files":[
+        {"name":"配线图偏移数据","src":"resource/tracks.json"}
+    ]},
+    {"id": "ai-agent", "title": "AI Agent使用感悟", "type": "markdown", "src": "ai-agent.md"}
 ]

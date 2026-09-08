@@ -3,6 +3,12 @@
         "name": "在线项目",
         "projects": [
             {
+                "title": "北京公交地图",
+                "description": "这是一个有列车位置显示的地铁图，方便确认换乘与等车时间",
+                "name": "beijing-transport",
+                "ai": [2]
+            },
+            {
                 "title": "教室查询小程序",
                 "description": "一个可以根据课表文件显示教室占用情况的程序。<br><i>注：文件格式参考中南课表</i>",
                 "name": "classroom-check",
