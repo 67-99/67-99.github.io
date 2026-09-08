@@ -112,6 +112,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
     setFavicon("https://67-99.github.io/icon/Shade/web-icon.png");
+    // 动态设置导航栏高度变量--nav-height
+    const nav = document.querySelector('nav');
+    const navHeight = nav && window.getComputedStyle(nav).display !== 'none' ? nav.offsetHeight : 0;
+    document.documentElement.style.setProperty('--nav-height', navHeight + 'px');
 });
 
 const originalTitle = document.title;

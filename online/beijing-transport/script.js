@@ -1437,7 +1437,7 @@ function onLocationFound(latlng, accuracy) {
     const gcj = wgs84ToGcj02(latlng.lat, latlng.lng);
     const gcjLatLng = L.latLng(gcj.lat, gcj.lng);
     // 添加/更新标签
-    if (!locationMarker) {
+    if (!locationMarker)
         locationMarker = L.marker(gcjLatLng, {
             icon: L.divIcon({
                 className: 'location-marker',
@@ -1445,19 +1445,31 @@ function onLocationFound(latlng, accuracy) {
                 iconAnchor: [12, 30]
             })
         }).addTo(map);
-        locationCircle = L.circle(gcjLatLng, {
-            radius: accuracy || 50,
-            color: '#4d8aff',
-            fillColor: '#4d8aff',
-            fillOpacity: 0.15,
-            weight: 1,
-            dashArray: '5,5'
-        }).addTo(map);
-    } else {
+    else
         locationMarker.setLatLng(gcjLatLng);
-        if(locationCircle){
+    // 根据精度选择显示样式
+    const isPoorAccuracy = accuracy > 10000;
+    const markerElement = locationMarker.getElement();
+    if (markerElement)
+        markerElement.classList.toggle('poor-accuracy', isPoorAccuracy);
+    if (isPoorAccuracy) {
+        if (locationCircle) {
+            map.removeLayer(locationCircle);
+            locationCircle = null;
+        }
+    } else {
+        if (!locationCircle) {
+            locationCircle = L.circle(gcjLatLng, {
+                radius: accuracy || 50,
+                color: '#4d8aff',
+                fillColor: '#4d8aff',
+                fillOpacity: 0.15,
+                weight: 1,
+                dashArray: '5,5'
+            }).addTo(map);
+        } else {
             locationCircle.setLatLng(gcjLatLng);
-            if(accuracy)
+            if (accuracy)
                 locationCircle.setRadius(accuracy);
         }
     }

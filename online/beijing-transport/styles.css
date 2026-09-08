@@ -222,6 +222,21 @@ nav * {
     color: red;
     opacity: 0.75;
 }
+.location-marker.poor-accuracy i {
+    animation: poorAccuracyBlink 1.2s ease-in-out infinite;
+}
+@keyframes poorAccuracyBlink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .location-marker.poor-accuracy i {
+        /* 如果用户设备偏好减少动画，则关闭闪烁（无障碍设计） */
+        animation: none;
+    }
+}
+
 /* ===== 浮动按钮组（右上角） ===== */
 .float-buttons {
     position: absolute;
@@ -545,10 +560,10 @@ nav * {
 @media (min-width: 768px) {
     .drawer {
         bottom: auto;
-        top: 78px;
+        top: var(--nav-height, 78px);
         right: 0;
         left: auto;
-        height: calc(100% - 78px) !important;
+        height: calc(100% - var(--nav-height, 78px)) !important;
         width: 20px;
         border-radius: 0;
         border-left: 1px solid rgba(0, 0, 0, 0.06);
