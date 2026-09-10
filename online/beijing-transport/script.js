@@ -67,6 +67,7 @@ let tileLayer = null;    // 地图底图图层
 let isSatellite = true;  // 当前是否为卫星图
 
 const lineData = {};        // 线路信息
+let linkingData = null;     // 存储联络线信息
 let locationMarker = null;  // 定位标志
 let locationCircle = null;  // 定位范围
 let watchId = null;         // 定位追踪watcher
@@ -460,6 +461,16 @@ function buildtrackLayer() {
             });
         }
     }
+    // 添加联络线数据
+    if (linkingData && Array.isArray(linkingData))
+        for (const item of linkingData)
+            if (item.points && item.points.length >= 2)
+                drawTasks.push({
+                    type: 'line',
+                    priority: (item.priority || 0) -0.1,
+                    points: item.points,
+                    color: 'black',
+                });
     // 按priority升序排序后绘制
     drawTasks.sort((a, b) => a.priority - b.priority);
     for (const task of drawTasks) {
@@ -517,6 +528,32 @@ async function loadTrackFile(id) {
         LoadingIndicator.hide();
         return id;
     } catch(e) {
+        LoadingIndicator.hide();
+        return null;
+    }
+}
+
+/**
+ * 加载 linking.json（全局联络线/道岔）
+ * @returns {Promise<Array|null>} 解析后的数组或 null
+ */
+async function loadLinkingFile() {
+    LoadingIndicator.show('加载连接线数据...');
+    const url = './resource/track/linking.json';
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('linking.json not found');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+            linkingData = data;
+            LoadingIndicator.hide();
+            return data;
+        } else {
+            throw new Error('数据格式错误，应为数组');
+        }
+    } catch (e) {
+        console.warn('加载连接线数据失败:', e);
+        linkingData = null;
         LoadingIndicator.hide();
         return null;
     }
@@ -605,6 +642,7 @@ function loadAllbaseline() {
         })
         .then(ids => Promise.all(ids.map(id => loadLineFile(id))).then(() => ids))
         .then(ids => Promise.all(ids.map(id => loadTrackFile(id))))
+        .then(() => loadLinkingFile())
         .then(() => {
             buildtrackLayer();       // 生成配线图
             updateLineVisibility();  // 根据当前缩放决定是否显示
