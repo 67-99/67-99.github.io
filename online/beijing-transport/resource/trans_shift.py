@@ -11,7 +11,7 @@ if __name__ == "__main__":
     if not os.path.exists(getFilePath("baseline")):
         os.mkdir(getFilePath("baseline"))
     for name, commands in shift_data.items():
-        path = getFilePath("temp", f"{name}.json") if os.path.exists(getFilePath("temp", f"{name}.json")) else (
+        path = getFilePath("mid", f"{name}.json") if os.path.exists(getFilePath("mid", f"{name}.json")) else (
             getFilePath("lines", f"{name}.json") if os.path.exists(getFilePath("lines", f"{name}.json")) else None
         )
         if not path:
@@ -112,6 +112,6 @@ if __name__ == "__main__":
                 data.pop("path")
             with open(getFilePath("baseline", f"{name}.json"), 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4)
-    files = [name for name in os.listdir(getFilePath("temp")) if os.path.splitext(name)[0] not in shift_data]
+    files = [name for name in os.listdir(getFilePath("mid")) if os.path.splitext(name)[0] not in shift_data]
     for file in files:
-        shutil.copy(getFilePath("temp", file), getFilePath("baseline", file))
+        shutil.copy(getFilePath("mid", file), getFilePath("baseline", file))

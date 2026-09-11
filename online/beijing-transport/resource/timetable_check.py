@@ -13,7 +13,13 @@
 说明：小交路折返站之后、越行通过站的时刻数会合法偏少；两站对不上时
 报告会同时列出“A 多”与“B 缺”两种可能，需结合原始图判断。
 
-用法：python resource/data_check.py [线路ID...]    （不带参数=全部线路）
+已知局限：[时]/[重]/[缺]/[多]/[密] 都基于“时刻数/归属/总量”，无法发现
+“某小时块内部分数值抄错但趟数与邻站相同”的错误。这类问题（本项目 JSON
+中确实存在，且个别站整表疑似程序生成的等差数列填充）必须逐行对照原图
+核对；配套工具见 .workbuddy/scripts/（_crop.py 裁行放大、_probe.py 看数据）。
+
+用法：python resource/timetable_check.py [线路ID...]    （不带参数=全部线路）
+白名单默认读取 ../.workbuddy/data/check_whitelist.json，可通过环境变量 TIMETABLE_WHITELIST 覆盖。
 """
 import json
 import os
@@ -58,6 +64,33 @@ def main():
     else:
         lines = all_lines
 
+    # ---- 人工核对白名单：已对照原图确认"本就如此"的项，避免反复报告 ----
+    # 路径可在环境变量 TIMETABLE_WHITELIST 中覆盖，否则默认在 ../.workbuddy/data/
+    wl_path = os.environ.get("TIMETABLE_WHITELIST") or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", ".workbuddy", "data", "check_whitelist.json"
+    )
+    whitelist = []
+    if os.path.exists(wl_path):
+        try:
+            whitelist = json.load(open(wl_path, encoding="utf-8"))
+        except Exception as e:
+            print("  ! check_whitelist.json 解析失败：", e)
+
+    def whitelisted(line, severity, direc, sche, st):
+        for w in whitelist:
+            if w.get("line") not in (None, line):
+                continue
+            if w.get("tag") not in (None, severity):
+                continue
+            if w.get("direc") not in (None, direc):
+                continue
+            if w.get("sche") not in (None, sche):
+                continue
+            if w.get("station") not in (None, st):
+                continue
+            return w.get("note", "")
+        return None
+
     grand = Counter()
     for line in lines:
         fn = getFilePath("timetable", f"{line}.json")
@@ -66,6 +99,8 @@ def main():
         pause = raw.get("pause") or {}
         rep = []     # 每行一条问题
         def add(severity, direc, sche, st, msg):
+            if whitelisted(line, severity, direc, sche, st) is not None:
+                return
             rep.append((severity, direc, sche, st, msg))
 
         # td: {站: {方向: {sche: [原始时刻, 含重复]}}}
@@ -226,9 +261,24 @@ def main():
                     dup = {x: c for x, c in Counter(lst).items() if c > 1}
             # ---- [重] 跨小时块重复（去重后仍多的站）----
             for s in st_seq:
-                c = Counter(td[s][direc][sche])
+                raw = td[s][direc][sche]
+                c = Counter(raw)
+                repeated = [x for x, v in c.items() if v > 1]
+                if not repeated:
+                    continue
+                # 4号线/大兴线等线路把同一分钟用“双色/双列”标注两遍（相邻成对），属正常；
+                # 仅当存在“不相邻的重复”或重复次数 != 2 时才判为异常。
+                benign = True
+                for x in repeated:
+                    if c[x] != 2:
+                        benign = False
+                        break
+                    pos = [i for i, v in enumerate(raw) if v == x]
+                    if len(pos) != 2 or pos[1] - pos[0] != 1:
+                        benign = False
+                        break
                 dup_all = sum(v - 1 for v in c.values() if v > 1)
-                if dup_all >= 2:
+                if not benign and dup_all >= 2:
                     ex = "、".join(f"{x//60:02d}:{x%60:02d}×{v}" for x, v in [p for p in c.most_common() if p[1] > 1][:3])
                     add("重", direc, sche, s, f"共 {dup_all} 个重复时刻（如 {ex}）")
 
@@ -282,6 +332,22 @@ def main():
                     if have:
                         add("缺", direc, sche, s, f"{h}:00-{h}:59 整段无车（邻站 {'、'.join(have)} 各有≥5趟）")
 
+            # ---- [密] 某小时块车次远多于相邻站（疑似垃圾填充/整块错抄）----
+            for idx, s in enumerate(st_seq):
+                if s == end_term or s in station_warn or idx == 0:
+                    continue          # 起点站（车辆段放车）天然可能偏多，不判
+                for h in range(5, 24):
+                    nb_cnt = [len(hour_of.get((st_seq[j], h), []))
+                              for j in (idx - 1, idx + 1) if 0 <= j < n]
+                    if not nb_cnt:
+                        continue
+                    nbmax = max(nb_cnt)
+                    c = len(hour_of.get((s, h), []))
+                    # 只在“邻站几乎没车、本站却塞满”时才判，避免误报
+                    if c >= 8 and nbmax <= 3:
+                        add("密", direc, sche, s,
+                            f"{h}:00 块有 {c} 趟，邻站仅 {nbmax} 趟（疑似整块错抄/填充）")
+
             # ---- 相邻首尾对匹配（终点站数据洞检测：起源站时刻应都能延续）----
             # 线路不完整时该方向可能只剩 1 个有数据车站（n < 2），无从配对，直接跳过。
             if n >= 2:
@@ -320,7 +386,7 @@ def main():
             for sev, msg in items:
                 groups[sev].append(msg)
             parts = []
-            for sev in ("时", "重", "缺", "多", "键"):
+            for sev in ("时", "重", "密", "移", "缺", "多", "键"):
                 if groups[sev]:
                     msgs = groups[sev]
                     if len(msgs) > 3 and sev == "缺" and "整段无车" in msgs[0]:

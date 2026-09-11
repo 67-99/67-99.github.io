@@ -82383,126 +82383,82 @@
           },
           {
             "station": "中关村",
-            "time": 475
-          },
-          {
-            "station": "海淀黄庄",
             "time": 476
           },
           {
-            "station": "人民大学",
+            "station": "海淀黄庄",
             "time": 478
           },
           {
-            "station": "魏公村",
+            "station": "人民大学",
             "time": 480
           },
           {
-            "station": "国家图书馆",
+            "station": "魏公村",
             "time": 482
           },
           {
+            "station": "国家图书馆",
+            "time": 484
+          },
+          {
             "station": "动物园",
-            "time": 485
+            "time": 487
           },
           {
             "station": "西直门",
-            "time": 486
-          },
-          {
-            "station": "新街口",
             "time": 488
           },
           {
-            "station": "平安里",
+            "station": "新街口",
             "time": 490
           },
           {
-            "station": "西四",
+            "station": "平安里",
             "time": 492
           },
           {
-            "station": "灵境胡同",
+            "station": "西四",
             "time": 494
           },
           {
-            "station": "西单",
+            "station": "灵境胡同",
             "time": 496
           },
           {
-            "station": "宣武门",
+            "station": "西单",
             "time": 498
           },
           {
-            "station": "菜市口",
+            "station": "宣武门",
             "time": 500
           },
           {
+            "station": "菜市口",
+            "time": 502
+          },
+          {
             "station": "陶然亭",
-            "time": 503
+            "time": 505
           },
           {
             "station": "北京南站",
-            "time": 506
-          },
-          {
-            "station": "马家堡",
             "time": 508
           },
           {
-            "station": "角门西",
+            "station": "马家堡",
             "time": 510
           },
           {
-            "station": "公益西桥",
+            "station": "角门西",
             "time": 512
           },
           {
-            "station": "新宫",
-            "time": 516
-          },
-          {
-            "station": "西红门",
-            "time": 522
-          },
-          {
-            "station": "高米店北",
-            "time": 524
-          },
-          {
-            "station": "高米店南",
-            "time": 527
-          },
-          {
-            "station": "枣园",
-            "time": 529
-          },
-          {
-            "station": "清源路",
-            "time": 531
-          },
-          {
-            "station": "黄村西大街",
-            "time": 533
-          },
-          {
-            "station": "黄村火车站",
-            "time": 535
-          },
-          {
-            "station": "义和庄",
-            "time": 538
-          },
-          {
-            "station": "生物医药基地",
-            "time": 542
-          },
-          {
-            "station": "天宫院",
-            "time": 543,
-            "estimated": true
+            "station": "公益西桥",
+            "time": 514
           }
-        ]
+        ],
+        "short_turn": "公益西桥"
       },
       {
         "id": 851,
@@ -116207,88 +116163,6 @@
         "stations": [
           {
             "station": "中关村",
-            "time": 476
-          },
-          {
-            "station": "海淀黄庄",
-            "time": 478
-          },
-          {
-            "station": "人民大学",
-            "time": 480
-          },
-          {
-            "station": "魏公村",
-            "time": 482
-          },
-          {
-            "station": "国家图书馆",
-            "time": 484
-          },
-          {
-            "station": "动物园",
-            "time": 487
-          },
-          {
-            "station": "西直门",
-            "time": 488
-          },
-          {
-            "station": "新街口",
-            "time": 490
-          },
-          {
-            "station": "平安里",
-            "time": 492
-          },
-          {
-            "station": "西四",
-            "time": 494
-          },
-          {
-            "station": "灵境胡同",
-            "time": 496
-          },
-          {
-            "station": "西单",
-            "time": 498
-          },
-          {
-            "station": "宣武门",
-            "time": 500
-          },
-          {
-            "station": "菜市口",
-            "time": 502
-          },
-          {
-            "station": "陶然亭",
-            "time": 505
-          },
-          {
-            "station": "北京南站",
-            "time": 508
-          },
-          {
-            "station": "马家堡",
-            "time": 510
-          },
-          {
-            "station": "角门西",
-            "time": 512
-          },
-          {
-            "station": "公益西桥",
-            "time": 514
-          }
-        ],
-        "short_turn": "公益西桥"
-      },
-      {
-        "id": 1135,
-        "stations": [
-          {
-            "station": "中关村",
             "time": 549
           },
           {
@@ -116354,7 +116228,7 @@
         ]
       },
       {
-        "id": 1136,
+        "id": 1135,
         "stations": [
           {
             "station": "中关村",
@@ -116436,7 +116310,7 @@
         "short_turn": "公益西桥"
       },
       {
-        "id": 1137,
+        "id": 1136,
         "stations": [
           {
             "station": "海淀黄庄",
@@ -116553,6 +116427,128 @@
           {
             "station": "天宫院",
             "time": 539,
+            "estimated": true
+          }
+        ]
+      },
+      {
+        "id": 1137,
+        "stations": [
+          {
+            "station": "海淀黄庄",
+            "time": 476
+          },
+          {
+            "station": "人民大学",
+            "time": 478
+          },
+          {
+            "station": "魏公村",
+            "time": 480
+          },
+          {
+            "station": "国家图书馆",
+            "time": 482
+          },
+          {
+            "station": "动物园",
+            "time": 485
+          },
+          {
+            "station": "西直门",
+            "time": 486
+          },
+          {
+            "station": "新街口",
+            "time": 488
+          },
+          {
+            "station": "平安里",
+            "time": 490
+          },
+          {
+            "station": "西四",
+            "time": 492
+          },
+          {
+            "station": "灵境胡同",
+            "time": 494
+          },
+          {
+            "station": "西单",
+            "time": 496
+          },
+          {
+            "station": "宣武门",
+            "time": 498
+          },
+          {
+            "station": "菜市口",
+            "time": 500
+          },
+          {
+            "station": "陶然亭",
+            "time": 503
+          },
+          {
+            "station": "北京南站",
+            "time": 506
+          },
+          {
+            "station": "马家堡",
+            "time": 508
+          },
+          {
+            "station": "角门西",
+            "time": 510
+          },
+          {
+            "station": "公益西桥",
+            "time": 512
+          },
+          {
+            "station": "新宫",
+            "time": 516
+          },
+          {
+            "station": "西红门",
+            "time": 522
+          },
+          {
+            "station": "高米店北",
+            "time": 524
+          },
+          {
+            "station": "高米店南",
+            "time": 527
+          },
+          {
+            "station": "枣园",
+            "time": 529
+          },
+          {
+            "station": "清源路",
+            "time": 531
+          },
+          {
+            "station": "黄村西大街",
+            "time": 533
+          },
+          {
+            "station": "黄村火车站",
+            "time": 535
+          },
+          {
+            "station": "义和庄",
+            "time": 538
+          },
+          {
+            "station": "生物医药基地",
+            "time": 542
+          },
+          {
+            "station": "天宫院",
+            "time": 543,
             "estimated": true
           }
         ]
