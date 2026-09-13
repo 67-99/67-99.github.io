@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旧表情包</title>
+    <script src="../../base.js"></script>
+    <link rel="stylesheet" href="../main.css">
+    <link rel="stylesheet" href="../emoji.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container"></div>
+    </nav>
+
+    <main class="emoji-gallery-container">
+        <header class="emoji-header">
+            <h1>旧表情包</h1>
+            <p>旧版本表情包残留的几个，目前大多已弃用。</p>
+        </header>
+
+        <section class="emoji-grid" id="emoji-gallery">
+            <!-- 表情包卡片将通过JavaScript动态生成 -->
+        </section>
+        
+        <div class="back-container" style="text-align: center;">
+            <a href="../index.html" class="back-link">
+                <i class="fas fa-arrow-left"></i> 返回画廊
+            </a>
+        </div>
+    </main>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 表情包数据
+            const emojiData = [
+                { name: "疑惑", desc: "这个可以", img: "pic/疑惑1.png" },
+                { name: "摊手", desc: "", img: "pic/摊手.png" },
+                { name: "摊手（白点）", desc: "配合深色背景", img: "pic/摊手（白点）.png" },
+                { name: "摊手（黑点）", desc: "配合浅色背景", img: "pic/摊手（黑点）.png" },
+                { name: "打CALL", desc: "这个其实是临摹的，故弃用", img: "pic/打CALL.png" },
+                { name: "棒（正）", desc: "表情有些太夸张了", img: "pic/棒1.png" },
+                { name: "棒（斜）", desc: "可以，但是看起来有心虚的感觉，不合适", img: "pic/棒2.png" }
+            ];
+            
+            // 生成表情包卡片
+            const galleryContainer = document.getElementById('emoji-gallery');
+            
+            emojiData.forEach(emoji => {
+                const card = document.createElement('div');
+                card.className = 'emoji-card';
+                card.innerHTML = `
+                    <div class="emoji-img-container">
+                        <img src="${emoji.img}" alt="${emoji.name}" class="emoji-img" onerror="this.src='https://67-99.github.io/icon/blank.JPG'">
+                    </div>
+                    <div class="emoji-content">
+                        <h3>${emoji.name}</h3>
+                        ${emoji.desc? `<p>${emoji.desc}</p>`: ``}
+                    </div>
+                `;
+                galleryContainer.appendChild(card);
+            });
+            
+            // 图片加载错误处理
+            const images = document.querySelectorAll('.emoji-img');
+            images.forEach(img => {
+                img.addEventListener('error', function() {
+                    this.src = `https://67-99.github.io/icon/blank.JPG`;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
