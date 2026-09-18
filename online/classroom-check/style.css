@@ -248,8 +248,19 @@ button:hover {
     .control-group > * {
         width: 100%;
     }
+    #class-table thead, #class-table th {
+        display: none;
+    }
+    #class-table th, #class-table td {
+        min-width: 27px;
+    }
     /* 在移动设备上，加载页面高度可以稍小一些 */
     #loading-page {
         height: 300px;
+    }
+}
+@media (max-width: 480px) {
+    #class-table td:not(.room-cell) {
+        color: transparent;
     }
 }
