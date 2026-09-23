@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
     }
-    setFavicon("https://67-99.github.io/icon/Shade/icon.png");
+    setFavicon("https://67-99.github.io/icon/Shade/web-icon.png");
     // 动态设置导航栏高度变量--nav-height
     const nav = document.querySelector('nav');
     const navHeight = nav && window.getComputedStyle(nav).display !== 'none' ? nav.offsetHeight : 0;
@@ -124,12 +124,12 @@ document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'visible') {
         // 页面变为可见：启动 3 秒临时替换
         document.title = '欢迎回来！o(*≧▽≦)ブ';
-        setFavicon('https://67-99.github.io/icon/Shade/web-icon.png');
+        setFavicon('https://67-99.github.io/icon/Shade/icon.png');
         // 设定新定时器
         if(timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
             document.title = originalTitle;
-            setFavicon("https://67-99.github.io/icon/Shade/icon.png");
+            setFavicon("https://67-99.github.io/icon/Shade/web-icon.png");
             timeoutId = null;
         }, 3000);
     } else {
