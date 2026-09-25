@@ -1077,14 +1077,19 @@ function computeTrainPosition(geo, dirIdx, train, nowMin) {
     const sts = train.stations;
     if (!sts || sts.length < 2) return null;
     const stationDist = geo.stationDist[dirIdx];
-    const matched = [];  // 只保留能在轨道上定位的站点
+    const located = [];   // 能在轨道上定位的站点
+    const stopping = [];  // 其中真正停车的站点（通过站不参与时刻推算）
     for (const s of sts) {
         const dist = stationDist[s.station];
-        if (dist !== undefined) {
-            const isStop = !(s.stop === false || s.isStop === false || s.dwell === 0);
-            matched.push({ time: s.time, dist: dist, stop: isStop });
-        }
+        if (dist === undefined) continue;
+        // 判断是否停站：默认停站，若字段明确为 false 或 dwell 为 0 则视为通过
+        const isStop = !(s.stop === false || s.isStop === false || s.dwell === 0);
+        located.push({ time: s.time, dist: dist, stop: isStop });
+        // 通过站（封站改造，如 M1 八角游乐园）不按其时刻表运行，直接按前后两个停站的时刻走，中间按平均速度（距离线性）通过。
+        if (isStop) stopping.push({ time: s.time, dist: dist, stop: true });
     }
+    // 停站不足 2 个时退回全部定位站（理论上不会发生：首末站必停）
+    const matched = stopping.length >= 2 ? stopping : located;
     if (matched.length < 2) return null;
     const firstArrival = matched[0].time;
     const lastDeparture = matched[matched.length - 1].time + TRAIN_DWELL_MIN;
@@ -1214,7 +1219,8 @@ function showTrainSchedule(lineId, train) {
                     data-first="${firstTime}" 
                     data-last="${lastTime}" 
                     data-stop="${isStop ? 1 : 0}">`;
-        html += `<span class="train-schedule-time">${minutesToHHMM(st.time)}</span>`;
+        // 通过站（封站改造等）不显示具体时刻：它没有真实的发到时刻，列车按前后停站的时刻运行
+        html += `<span class="train-schedule-time">${isStop ? minutesToHHMM(st.time) : ''}</span>`;
         html += `<span class="train-schedule-station">${st.station}</span>`;
         html += '</div>';
     }

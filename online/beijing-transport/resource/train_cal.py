@@ -12,6 +12,10 @@ from collections import Counter
 # 另有极少数**无镜像对照**的低值（M14 3 个 / M16 2 个 / M4 12 个），本就该剔除。
 SERVICE_LO, SERVICE_HI = 200, 1660
 
+# 上下行运行时分核查结果：(线路, 时段标签, 站1, 站2, 上行分钟, 下行分钟)。
+# 逐线路收集，主流程结束时汇总打印并落盘 resource/train_runtime_diff.txt。
+RUNTIME_DIFFS: list[tuple[str, str, str, str, int, int]] = []
+
 def getFilePath(*path: list[str] | str):
     return os.path.join(os.path.dirname(__file__), *path)
 
@@ -250,6 +254,9 @@ if __name__ == "__main__":
         min_time_sched: dict[tuple[str, str, str], int] = {}
         min_time_list: dict[tuple[str, str], int] = {}
         est_votes: dict[tuple[str, str], Counter] = {}
+        # est_dir: (站1, 站2, 方向, 时段) -> 分钟。与 min_time_sched 同期写入，但**保留方向**，
+        # 供末尾的「上下行运行时分核查」判定哪一侧是上行、哪一侧是下行。
+        est_dir: dict[tuple[str, str, str, str], int] = {}
         pos = station_pos.get(id_, {})
         for i, direc in enumerate(("up", "down")):
             # 本方向参与配对的站序：原始序列 + （小环时）插入对侧额外站后的扩展序列
@@ -290,6 +297,7 @@ if __name__ == "__main__":
                         if est is None:
                             continue
                         min_time_sched[(st1, st2, sche)] = est
+                        est_dir[(st1, st2, direc, sche)] = est
                         # 跨时段兜底值：按「该时段两侧较短时刻数」加权投票取众数
                         est_votes.setdefault((st1, st2), Counter())[est] += min(len(l1), len(l2))
         for _pair, _c in est_votes.items():
@@ -344,10 +352,7 @@ if __name__ == "__main__":
                     a, b = stations[i][-1], stations[i][0]
                     if a in pos and b in pos:
                         min_time_list.setdefault((a, b), seam_t)
-        # 双方向核查：同一对站的上下行运行时分应一致（起终点站仅单方向有数据，无法核查）
-        for (st1, st2), t in sorted(min_time_list.items()):
-            if (st2, st1) in min_time_list and abs(min_time_list[(st2, st1)] - t) > 1:
-                tqdm.write(f"  警告 {id_} {st1}<->{st2}：上下行运行时分不一致 ({t} vs {min_time_list[(st2, st1)]})，请检查时刻表数据")
+        # 上下行运行时分核查已下移（见「洞口估值」段之后）——那里同时覆盖逐时段与跨时段兜底。
         # 全线“秒/公里”中位数：用于封站/无数据站跳连的直达运行时分估算（数据缺失站无法
         # 直接取众数——高密度行车下跨站差值会被 d=1 的跨车次巧合污染，距离法更稳）。
         if pos:
@@ -360,6 +365,72 @@ if __name__ == "__main__":
             line_sec_per_km = sorted(sec_per_km)[len(sec_per_km) // 2] if sec_per_km else 80.0
         else:
             line_sec_per_km = 80.0
+
+        # ---- 洞口（中间站无时刻表）估值：把洞两侧的有数据站**当作相邻站** ----
+        # 例：M1 八角游乐园 封站改造，up/down 都没有任何时刻 ⇒ 古城 与 八宝山 之间夹着一个
+        # 「无时刻表站」。旧实现只在配对时跨过该站，运行时分却只能落到距离法兜底（est 恒为
+        # 2、窗口 [1,3]），而两端站自己的时刻表给出的跨洞运行时分为 5~6 分钟 ⇒ 窗口装不下
+        # ⇒ 车次在洞两侧被切成两条链（八宝山因此成为大量车次的起点/终点）。
+        # 这里让跨洞的两端站与普通相邻站完全同口径：用它们各自的时刻表逐时段估运行时分。
+        # ⚠️ 只处理**两端都还有数据**的洞；洞口顶在线路端部时不构成站间对（如 M1 福寿岭尚未
+        # 开通、苹果园下行表为空，那是「正线终点」问题，由末尾的 tail 延伸处理）。
+        def _dir_has_data(st_: str, direc_: str) -> bool:
+            d_ = time_dict.get(st_, {}).get(direc_, {})
+            return isinstance(d_, dict) and any(d_.get(s_) for s_ in sches_all)
+
+        for i_ in (0, 1):
+            direc_ = ("up", "down")[i_]
+            seq_ = list(stations[i_])
+            j_ = 0
+            while j_ < len(seq_):
+                if _dir_has_data(seq_[j_], direc_):
+                    j_ += 1
+                    continue
+                k_ = j_ - 1
+                while j_ < len(seq_) and not _dir_has_data(seq_[j_], direc_):
+                    j_ += 1
+                if k_ < 0 or j_ >= len(seq_):
+                    continue                     # 洞口顶在线路端部 ⇒ 不构成站间对
+                a_, b_ = seq_[k_], seq_[j_]
+                hi_ = 30
+                if a_ in pos and b_ in pos:
+                    hi_ = min(max(1, math.ceil(hav_dist(pos[a_], pos[b_]) / 10 * 60)), 20)
+                for sche_ in sches_all:
+                    l1_ = sorted(time_dict.get(a_, {}).get(direc_, {}).get(sche_, []) or [])
+                    l2_ = sorted(time_dict.get(b_, {}).get(direc_, {}).get(sche_, []) or [])
+                    if not l1_ or not l2_:
+                        continue
+                    est_ = estimate_run_time(l1_, l2_, hi_)
+                    if est_ is None:
+                        continue
+                    min_time_sched.setdefault((a_, b_, sche_), est_)
+                    est_dir.setdefault((a_, b_, direc_, sche_), est_)
+                    est_votes.setdefault((a_, b_), Counter())[est_] += min(len(l1_), len(l2_))
+        for _pair, _c in est_votes.items():
+            min_time_list.setdefault(_pair, _c.most_common(1)[0][0])
+
+        # ---- 上下行运行时分核查（差 > 1 分钟即报）----
+        # 旅行时间与方向无关 ⇒ 同一对相邻站（含跨洞的两端站）、同一时段的上下行典型运行时分
+        # 应当一致；相差 2 分钟以上说明是**时刻表数据本身**的问题（逐时段估计的噪声不足以致此）。
+        # 逐时段优先；某站对在任一时段都没有双向数据时，才退回跨时段兜底值核对（避免重复报）。
+        _per_scheme_pairs: set[tuple[str, str]] = set()
+        for (a_, b_, _d_, _s_) in est_dir:
+            _per_scheme_pairs.add((a_, b_))
+        _up_est = {(a_, b_, s_): v_ for (a_, b_, d_, s_), v_ in est_dir.items() if d_ == "up"}
+        _dn_est = {(a_, b_, s_): v_ for (a_, b_, d_, s_), v_ in est_dir.items() if d_ == "down"}
+        _diff_local: list[tuple[str, str, str, str, int, int]] = []
+        for (a_, b_, s_), v_ in sorted(_up_est.items()):
+            w_ = _dn_est.get((b_, a_, s_))
+            if w_ is not None and abs(w_ - v_) > 1:
+                _diff_local.append((id_, s_, a_, b_, v_, w_))
+        for (a_, b_), v_ in sorted(min_time_list.items()):
+            if (a_, b_) in _per_scheme_pairs or (b_, a_) in _per_scheme_pairs:
+                continue                     # 已有逐时段结论，避免重复报告
+            w_ = min_time_list.get((b_, a_))
+            if w_ is not None and abs(w_ - v_) > 1:
+                _diff_local.append((id_, "跨时段兜底", a_, b_, v_, w_))
+        if _diff_local:
+            RUNTIME_DIFFS.extend(_diff_local)
 
         def line_min(st1: str, st2: str, sche: str | None = None) -> int | None:
             """取相邻站的典型运行时分；优先**该时段**估值，再试反方向，最后跨时段兜底
@@ -385,8 +456,7 @@ if __name__ == "__main__":
                 # ---- 大环（闭环线路）：一条车次 = 一环（一趟），不跨环缝续圈 ----
                 # （不套用直线线路的终点折返/延伸逻辑 —— 环线无终点）
                 for sche_type in sorted(sche_types):
-                    trains = gen_ring_direction(seq, direc, sche_type, time_dict, line_min,
-                                                pause_sets[i], train_id)
+                    trains = gen_ring_direction(seq, direc, sche_type, time_dict, line_min, pause_sets[i], train_id)
                     if trains:
                         result[i][sche_type] = trains
                         train_id += len(trains)
@@ -428,19 +498,23 @@ if __name__ == "__main__":
                         # 会把“停站时长波动 1 分钟”的真实后继挤出窗口（待避站再放宽 PAUSE_SLACK）
                         hi_w = m + (PAUSE_SLACK if seq[k2] in pause_sets[i] else 2) if m else None
                     else:
-                        # 下一站无数据：直接跨到其后第一个有数据的站（封站/数据缺失不停）
+                        # 下一站无数据（封站改造／中间站无时刻表，如 M1 八角游乐园）：
+                        # **忽略这些站**，直接跨到其后第一个有数据的站。跨洞两端站的运行时
+                        # 分已在上面的「洞口估值」段按相邻站估好，这里与普通相邻站同一口径：
+                        # 窗口 [m-1, m+2]（待避站再放宽）。旧实现用距离法兜底得到 m=2、
+                        # 窗口 [1,3]，装不下真实 5~6 分钟的跨洞运行时分 ⇒ 车次在洞两侧断成两条。
                         k2 = next_data[k]
                         if k2 is None:
                             continue
-                        est = min_time_list.get((seq[k], seq[k2]))
+                        est = line_min(seq[k], seq[k2], sche_type)
                         if est is None:
-                            # 直达运行时分缺失：按全线“秒/公里”中位数 × 站间距估算
+                            # 跨洞运行时分也估不出来（如两端站有一侧缺坐标）：退回距离法兜底
                             # （对两站直接取众数会被 d=1 的跨车次巧合污染，见上）
                             if seq[k] in pos and seq[k2] in pos:
                                 est = max(2, round(hav_dist(pos[seq[k]], pos[seq[k2]]) * line_sec_per_km / 60))
                             else:
                                 est = 3
-                        m, hi_w = est, est + 1
+                        m, hi_w = est, est + (PAUSE_SLACK if seq[k2] in pause_sets[i] else 2)
                     # 贪心「源按 t1 升序、各取窗口内最早未被占用的 t2」＝窗口区间二部图上的
                     # **最大匹配**，且天然**保序**（t1 增 ⇒ t2 增）——正是车次链需要的结构。
                     # 实测（M5 down weekday）它比「按 |d-m| 最近优先」多配 1~9% 的来源时刻：
@@ -534,45 +608,54 @@ if __name__ == "__main__":
                             t_est += m
                             legs.append((kk + 1, m))
                         # 2) 正线终点折返匹配：反向发车 D 满足 到站+3 ≤ D ≤ 到站+12
+                        #    ⚠️ 折返匹配必须落在**尾部实际算得出的最深一站** Z 上，而不是 seq[n-1]：
+                        #    正线终点之后常常还挂着无时刻表站（M1 下行 苹果园 之后的福寿岭 尚未
+                        #    开通，tracks.json 里福寿岭就在末位），按 seq[n-1] 取会拿到空表 ⇒ 永远
+                        #    匹配不上 ⇒ 真正跑到正线终点的车次被误判成「未折返」，苹果园从车次里
+                        #    凭空消失。Z 由已算出的 legs 决定（legs 为空时退回 seq[n-1]）。
+                        Z = legs[-1][0] if legs else (n - 1)
                         term_d = None
-                        if ok:
-                            rev_list = time_dict.get(seq[n - 1], {}).get(rev, {}).get(sche_type, [])
+                        if Z > k_end:
+                            rev_list = time_dict.get(seq[Z], {}).get(rev, {}).get(sche_type, [])
                             cand = [D for D in rev_list if TURN_MIN <= D - t_est <= TURN_MAX]
                             if cand:
                                 term_d = min(cand, key=lambda D: abs(D - t_est - (TURN_MIN + TURN_MAX) // 2))
                         if term_d is not None:
-                            # 大交路：在正线终点折返 => 延伸到正线终点。
-                            # 中间站按典型运行时分累计；末站到站时刻优先用实测运行时分（t_est，
-                            # 精确且保持单调），折返反推（D - 折返时长）作为运行时分缺失时的兜底。
+                            # 大交路：确有反向折返 ⇒ 该车次跑到正线终点 Z，延伸到 Z。
+                            # ⚠️ 折返匹配**只用来判定「到没到 Z」**，不用来反推时刻：
+                            # 反推要假设一个折返时长（旧实现取 (3+12)//2=7 分钟），那是拿
+                            # 常数去拟合数据。到站时刻一律由相邻站间运行时分累计得到
+                            # （legs 的最后一段正是「到 Z」那一段，其时分来自时刻表）。
                             tt = T
                             for kk, m in legs:
                                 tt += m
                                 tail.append((kk, tt))
-                            if not ok:
-                                arr = term_d - (TURN_MIN + TURN_MAX) // 2
-                                arr = max(arr, T + 1)             # 保持单调
-                                tail[-1] = (n - 1, arr)
                         else:
-                            # 未在正线终点折返（可能是小交路/进停车场，也可能是正线终点
-                            # 反向数据缺失——如金安桥上行 16:18 后截断）。小交路标记只依据
-                            # short_end 声明（反向折返匹配在密集数据下噪声太大，不作为依据）；
-                            # 未声明的按典型运行时分兜底延伸到正线终点。
+                            # 反向折返匹配不上（可能是小交路/进停车场，也可能是正线终点反向
+                            # 数据缺失——如金安桥上行 16:18 后截断）。小交路标记只依据
+                            # short_end 声明；未声明的按**已算出的**相邻站间时分兜底延伸：
+                            # legs 可能只是部分腿（尾部还挂着无时刻表站，有一段算不出时分），
+                            # 此时停在算得出的最后一站（旧实现要求全部腿都算得出、否则整段放弃）。
                             if seq[k_end] in short_end_sets[i]:
                                 short_turn_st = seq[k_end]       # 声明的小交路终点
-                            elif ok:
+                            elif legs:
                                 tt = T
                                 for kk, m in legs:
                                     tt += m
                                     tail.append((kk, tt))
-                    elif seq[k_end] in short_end_sets[i] and k_end < n - 1:
-                        # 链末站是声明的小交路终点（其后仍有数据、链在此断）：标记
+                    elif k_end < n - 1:
+                        # 链在中间站断（其后仍有数据）。**列车的终点只有两种：小交路折返站
+                        # 或线路两端** ⇒ 链末落在中间站时，该站必然是小交路折返站，直接标记。
+                        # （旧实现只在 short_end 声明里查 ⇒ 声明不全时真实折返站一律漏标；
+                        # 而反向折返匹配在中间站命中率 91%、判别力太弱，也不适合作判据。）
                         short_turn_st = seq[k_end]
                     # ---- 越行/快车识别：车次链跳站（通过不停车）----
                     max_gap = max((chain[j + 1][0] - chain[j][0] for j in range(len(chain) - 1)), default=0)
                     is_express = max_gap >= 3
 
-                    # ---- 链 -> 站点列表：跨过的“无数据站”（封站/数据缺失，如 M1 八角游乐园
-                    # 封站改造）按站间距插值补为“通过站”（stop:false），前端不停车直接划过 ----
+                    # ---- 链 -> 站点列表：跨过的「无时刻表中间站」（封站改造/缺数据，如 M1
+                    # 八角游乐园）**一律补进站点列表**，按站间距插值给时刻并标 stop:false
+                    # （前端据此渲染为“通过不停车”，dwell=0 直接划过）----
                     def chain_stops(chain_):
                         res = []
                         for idx in range(len(chain_)):
@@ -580,11 +663,12 @@ if __name__ == "__main__":
                             res.append((k, t, None))
                             if idx + 1 < len(chain_):
                                 k2, t2 = chain_[idx + 1]
-                                # 中间全部无数据（封站/缺失），且时距足以按 1 分钟分辨率放下
-                                # 各中间站时才插值补站；间距过紧（如数据里古城→八宝山仅 1 分钟）
-                                # 时跳过补站，列车仍会沿几何直接划过。
-                                if (k2 - k > 1 and all(not times[kk] for kk in range(k + 1, k2))
-                                        and t2 - t >= k2 - k):
+                                # 中间全部无数据（封站/缺失）⇒ 补站。
+                                # ⚠️ 旧实现还要 t2-t ≥ 站数（1 分钟分辨率下放得下才补），
+                                # 时距过紧时**整站丢弃** ⇒ 该站在车次里凭空消失（站表里看不到
+                                # 八角游乐园）。现改为一律补站：时距够就用严格递增时刻，不够
+                                # （数据本身只有 1 分钟分辨率）时允许并列同一分钟。
+                                if k2 - k > 1 and all(not times[kk] for kk in range(k + 1, k2)):
                                     seg = []
                                     for kk in range(k, k2):
                                         if seq[kk] in pos and seq[kk + 1] in pos:
@@ -592,12 +676,13 @@ if __name__ == "__main__":
                                         else:
                                             seg.append(1.0)
                                     tot = sum(seg) or 1.0
+                                    strict = t2 - t >= k2 - k
                                     acc, pt = 0.0, t
                                     for kk in range(k + 1, k2):
                                         acc += seg[kk - k - 1]
                                         tt = round(t + (t2 - t) * acc / tot)
-                                        tt = max(tt, pt + 1)
-                                        tt = min(tt, t2 - 1)          # 严格小于下一站真实时刻
+                                        tt = max(tt, pt + 1) if strict else max(tt, pt)
+                                        tt = min(tt, t2 - 1) if strict else min(tt, t2)
                                         pt = tt
                                         res.append((kk, tt, {"stop": False, "estimated": True}))
                         return res
@@ -619,3 +704,11 @@ if __name__ == "__main__":
     if stats["src"]:
         tqdm.write("  [自检] 孤立时刻=%d  配对成功率=%.1f%%  零链接站间对=%d"
                    % (stats["isolated"], 100.0 * stats["linked"] / stats["src"], stats["dead_pairs"]))
+    # 上下行运行时分核查报告：直接打印到输出（不落盘）
+    if RUNTIME_DIFFS:
+        tqdm.write("  [核查] 上下行运行时分不一致（>1 分钟）共 %d 处：" % len(RUNTIME_DIFFS))
+        for _r in RUNTIME_DIFFS:
+            tqdm.write("      %-5s %-12s %s <-> %s：上行 %d / 下行 %d 分钟（差 %d）"
+                       % (_r[0], _r[1], _r[2], _r[3], _r[4], _r[5], abs(_r[4] - _r[5])))
+    else:
+        tqdm.write("  [核查] 上下行运行时分不一致（>1 分钟）：0 处")
