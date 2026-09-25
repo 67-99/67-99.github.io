@@ -302,6 +302,7 @@ function buildtrackLayer() {
 
     // ---------- 收集绘制任务 ----------
     const drawTasks = [];
+    const labelMap = new Map();
     for (const [id, info] of Object.entries(lineData)) {
         const color = info.color || '#808080';
         if (info.hasTrack) {
@@ -327,18 +328,18 @@ function buildtrackLayer() {
                 }
             });
             // 站台
-            (info.trackStations || []).forEach(st => {
+            (info.platforms || []).forEach(st => {
                 if (st.rect && st.rect.length === 4) {
                     drawTasks.push({
-                        type: 'stationRect',
+                        type: 'platform',
                         priority: st.priority || 0,
                         rect: st.rect,
-                        color: color
+                        color: color,
+                        unused: st.unused || false
                     });
                 }
                 if (st.center) {
-                    drawTasks.push({
-                        type: 'stationLabel',
+                    labelMap.set(`${id}\u0000${st.n || ''}`, {
                         priority: st.priority || 0,
                         center: st.center,
                         name: st.n || '',
@@ -438,18 +439,17 @@ function buildtrackLayer() {
                 const latlngs = corners.map(p => unproject(p));
                 // 收集站台任务
                 drawTasks.push({
-                    type: 'stationRect',
+                    type: 'platform',
                     priority: bestPriority || 0,
                     rect: latlngs,
                     color: color
                 });
-                drawTasks.push({
-                    type: 'stationLabel',
+                labelMap.set(`${id}\u0000${st.n || ''}`, {
                     priority: bestPriority || 0,
                     center: [bestProj[0], bestProj[1]],
                     name: st.n || '',
                     lineId: id
-                });
+                })
             }
             // 收集轨道任务 ----
             segments.forEach(([priority, pts]) => {
@@ -473,35 +473,47 @@ function buildtrackLayer() {
                 });
     // 按priority升序排序后绘制
     drawTasks.sort((a, b) => a.priority - b.priority);
+    const labelTasks = [...labelMap.values()].sort((a, b) => a.priority - b.priority);
     for (const task of drawTasks) {
         if (task.type === 'line') {
             addLineWithBg(task.points, task.color);
-        } else if (task.type === 'stationRect') {
-            L.polygon(task.rect, {
-                color: task.color,
-                weight: 1,
-                fillColor: task.color,
-                fillOpacity: 0.25,
-                interactive: false
-            }).addTo(trackLayer);
-        } else if (task.type === 'stationLabel') {
-            const w = (12 * task.name?.length || 0) + 20
-            const h = 20.8
-            const labelIcon = L.divIcon({
-                className: 'station-label',
-                html: `<span class="station-label-text" style="margin: ${h / 2}px ${w / 2}px">${task.name}</span>`,
-                iconSize: [w, h]
-            });
-            const marker = L.marker(task.center, {
-                icon: labelIcon,
-                interactive: true,
-                keyboard: false
-            });
-            marker.on('click', function () {
-                loadAndShowTimetable(task.lineId, task.name);
-            });
-            marker.addTo(trackLayer);
-        }
+        } else if (task.type === 'platform') {
+            if(task.unused)
+                L.polygon(task.rect, {
+                    color: task.color,
+                    weight: 1,
+                    dashArray: '5,5',
+                    fillColor: task.color,
+                    fillOpacity: 0.2,
+                    interactive: false
+                }).addTo(trackLayer);
+            else
+                L.polygon(task.rect, {
+                    color: task.color,
+                    weight: 1,
+                    fillColor: task.color,
+                    fillOpacity: 0.4,
+                    interactive: false
+                }).addTo(trackLayer);
+        } 
+    }
+    for (const task of labelTasks) {
+        const w = (12 * task.name?.length || 0) + 20
+        const h = 20.8
+        const labelIcon = L.divIcon({
+            className: 'station-label',
+            html: `<span class="station-label-text" style="margin: ${h / 2}px ${w / 2}px">${task.name}</span>`,
+            iconSize: [w, h]
+        });
+        const marker = L.marker(task.center, {
+            icon: labelIcon,
+            interactive: true,
+            keyboard: false
+        });
+        marker.on('click', function () {
+            loadAndShowTimetable(task.lineId, task.name);
+        });
+        marker.addTo(trackLayer);
     }
     LoadingIndicator.hide();
 }
@@ -522,7 +534,10 @@ async function loadTrackFile(id) {
         if(!lineData[id])
             lineData[id] = { name: id, color: '#808080' };
         lineData[id].trackMain = data.main;          // [[上行分段], [下行分段]]
-        lineData[id].trackStations = data.stations;  // 含 rect、center
+        lineData[id].platforms = data.stations;  // 含 rect、center
+        data.stations_u?.forEach(item => {
+            lineData[id].platforms.push({ ...item, unused: true });
+        });
         lineData[id].hasTrack = true;
         if (data.color) lineData[id].color = data.color;
         LoadingIndicator.hide();
@@ -965,7 +980,7 @@ function prepareTrainGeometry(lineId) {
     const main = info.trackMain;
     if (!Array.isArray(main) || main.length < 2) return false;
     LoadingIndicator.show(`绘制${lineId}列车中...`);
-    const trackStations = info.trackStations || [];
+    const platforms = info.platforms || [];
     const geo = {
         polylines: [[], []],
         cumDists: [[], []],
@@ -993,7 +1008,7 @@ function prepareTrainGeometry(lineId) {
         // 站点投影（按站名去重）
         const distMap = {};
         const seen = new Set();
-        for (const st of trackStations) {
+        for (const st of platforms) {
             if (!st || !st.n || seen.has(st.n)) continue;
             seen.add(st.n);
             distMap[st.n] = projectToPolyline(st.center, points, cum);
