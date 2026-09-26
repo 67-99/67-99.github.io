@@ -471,6 +471,17 @@ function buildtrackLayer() {
                     points: item.points,
                     color: 'black',
                 });
+    // 添加配线（sub）数据：与联络线同样处理（priority - 0.1、缺省黑色）
+    for (const info of Object.values(lineData))
+        (info.sub || []).forEach(item => {
+            if (item && Array.isArray(item.points) && item.points.length >= 2)
+                drawTasks.push({
+                    type: 'line',
+                    priority: (item.priority || 0) - 0.1,
+                    points: item.points,
+                    color: item.color || 'black',
+                });
+        });
     // 按priority升序排序后绘制
     drawTasks.sort((a, b) => a.priority - b.priority);
     const labelTasks = [...labelMap.values()].sort((a, b) => a.priority - b.priority);
@@ -538,6 +549,7 @@ async function loadTrackFile(id) {
         data.stations_u?.forEach(item => {
             lineData[id].platforms.push({ ...item, unused: true });
         });
+        lineData[id].sub = Array.isArray(data.sub) ? data.sub : [];
         lineData[id].hasTrack = true;
         if (data.color) lineData[id].color = data.color;
         LoadingIndicator.hide();
