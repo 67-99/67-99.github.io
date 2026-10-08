@@ -1,11 +1,7 @@
 // ===========================
 // 工具函数
 // ===========================
-function isIOS() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-// WGS84 转 GCJ-02 (火星坐标系)
+/** WGS84 转 GCJ-02 (火星坐标系) */
 function wgs84ToGcj02(wgsLat, wgsLon) {
     const a = 6378245.0;
     const ee = 0.00669342162296594323;
@@ -59,6 +55,8 @@ function showToast(message, duration = 0) {
 // 全局状态
 // ===========================
 const UNIT = 0.0001;  // 配线图单位宽度 (°)
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isVSCode = /\b(Code|VSCode)\/[\d.]+/i.test(navigator.userAgent);  // 匹配 Code/1.137.0 或 VSCode/1.94.0
 
 let map;                 // 全局地图，各脚本共享
 let lineLayer;           // 在大视图下的地铁图
@@ -1609,6 +1607,7 @@ function stopLocationTracking() {
 // 天气模块
 // ===========================
 const WEATHER_CACHE_KEY = 'beijing_weather_cache';
+const WEATHER_CACHE_TTL = 6 * 60 * 60 * 1000;  // 缓存有效期6小时
 
 /** 获取当天日期的字符串，用于判断缓存是否过期 */
 function getTodayDateStr() {
@@ -1697,16 +1696,51 @@ function getAllergyInfo(allergy, pollen) {
     };
 }
 
+/** 获取当前城市 */
+async function fetchCurrentCity() {
+    try {
+        // 根据ip获取城市，详见https://www.ip9.com.cn/?source=api
+        const res = await fetch('https://ip9.com.cn/get');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        // ip9 返回结构：{ ret: 200, data: { city, prov, area, ... } }
+        if (json.ret !== 200 || !json.data)
+            throw new Error('IP 定位返回异常');
+        return {
+            city: json.data.city || '',       // 城市名，如"北京"
+            province: json.data.prov || '',   // 省份
+            area: json.data.area || '',       // 区县
+            fullName: [json.data.prov, json.data.city, json.data.area]
+                .filter(Boolean)
+                .join(''),                       // 如"北京东城"
+        };
+    } catch (err) {
+        console.warn('[ip9] 城市获取失败:', err.message);
+        return null; // 失败时返回 null，由上层降级处理
+    }
+}
+
 /** 获取并显示天气 */
 async function fetchAndDisplayWeather() {
-    /** 获取缓存的天气数据（按天缓存） */
+    const currentLocation = await fetchCurrentCity();
+    /** 获取缓存的天气数据 */
     function getCachedWeather() {
         try {
             const cached = localStorage.getItem(WEATHER_CACHE_KEY);
             if (!cached) return null;
             const data = JSON.parse(cached);
-            // 检查缓存日期是否为今天
-            if (data.cacheDate !== getTodayDateStr()) {
+            // 兼容旧结构：缺少 timestamp/location 视为失效
+            if (!data.timestamp || !('location' in data)) {
+                localStorage.removeItem(WEATHER_CACHE_KEY);
+                return null;
+            }
+            // 超过 6 小时则失效
+            if (Date.now() - data.timestamp > WEATHER_CACHE_TTL) {
+                localStorage.removeItem(WEATHER_CACHE_KEY);
+                return null;
+            }
+            // 地点变化则失效
+            if (currentLocation?.fullName && data.location !== currentLocation.fullName) {
                 localStorage.removeItem(WEATHER_CACHE_KEY);
                 return null;
             }
@@ -1756,11 +1790,21 @@ async function fetchAndDisplayWeather() {
             // 保留原始指数供扩展
             _raw: { allergy, pollen }
         };
+        // 与 uapis.cn 返回地址交叉验证（不一致仅告警，不阻断）
+        const uapisFullName = [data.city, data.district].filter(Boolean).join('');
+        if (currentLocation?.fullName && uapisFullName &&
+            !uapisFullName.includes(currentLocation.city) &&
+            !currentLocation.city?.includes(data.city)) {
+            console.warn('定位不一致:', currentLocation.fullName, uapisFullName);
+        }
         // 缓存数据
         try {
             localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({
                 weather: weatherInfo,
-                cacheDate: getTodayDateStr()
+                cacheDate: getTodayDateStr(),                          // 兼容旧字段
+                location: currentLocation?.fullName || uapisFullName,  // 地点标识
+                uapisLocation: uapisFullName,                          // 备用校验
+                timestamp: Date.now()                                  // 精确时间戳
             }));
         } catch (e) {
             console.warn('缓存天气数据失败:', e);
@@ -1852,9 +1896,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // ---- 浮动按钮事件 ----
     document.getElementById('map-type-btn').addEventListener('click', toggleMapType);
     document.getElementById('map-type-btn').classList.add('active-type'); // 初始卫星
-    // 设置debug按钮
+    // 设置debug按钮，非VSCode环境不显示
     const debugBtn = document.getElementById('debug-btn');
-    if (window.innerWidth > 768 && typeof toggleDebug === 'function') {
+    if (isVSCode && typeof toggleDebug === 'function') {
         // debug.js 已成功加载，显示按钮并绑定事件
         debugBtn.style.display = '';
         debugBtn.addEventListener('click', toggleDebug);
@@ -1863,6 +1907,8 @@ document.addEventListener('DOMContentLoaded', function() {
         debugBtn.style.display = 'none';
     }
     // 定位按钮
+    if(isVSCode)
+        focusOnLocation = false;  // 跳过位置跳转
     document.getElementById('locate-btn').addEventListener('click', function() {
         if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
