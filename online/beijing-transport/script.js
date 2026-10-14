@@ -1,6 +1,29 @@
 // ===========================
 // 工具函数
 // ===========================
+/**
+ * HTML 转义：把不可信文本安全地拼进 innerHTML / 属性值
+ * 注意：与「div.textContent → div.innerHTML」的写法不同，这里会额外转义引号，
+ * 因此可以直接用在 value="${...}" / data-x="${...}" 这类属性位置。
+ * @param {*} text - 任意值（null / undefined 返回空串）
+ * @returns {string}
+ */
+function escapeHtml(text) {
+    if (text === null || text === undefined)
+        return '';
+    return String(text).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+/** 毫秒时间戳 → 'YYYY-MM-DD HH:MM' */
+function stampToStr(ts) {
+    const d = new Date(Number(ts));
+    if (Number.isNaN(d.getTime())) return '';
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 /** WGS84 转 GCJ-02 (火星坐标系) */
 function wgs84ToGcj02(wgsLat, wgsLon) {
     const a = 6378245.0;
@@ -1606,8 +1629,9 @@ function stopLocationTracking() {
 // ===========================
 // 天气模块
 // ===========================
-const WEATHER_CACHE_KEY = 'beijing_weather_cache';
+const WEATHER_CACHE_KEY = 'weather_cache';
 const WEATHER_CACHE_TTL = 6 * 60 * 60 * 1000;  // 缓存有效期6小时
+try { localStorage.removeItem('beijing_weather_cache'); } catch (e) { /* ignore */ }  // 清理 v1 旧缓存（humidity 等字段为带单位的字符串，结构不兼容）
 
 /** 获取当天日期的字符串，用于判断缓存是否过期 */
 function getTodayDateStr() {
@@ -1739,12 +1763,18 @@ async function fetchAndDisplayWeather() {
                 localStorage.removeItem(WEATHER_CACHE_KEY);
                 return null;
             }
+            // 跨天失效（昨天缓存的数据不能用于今天）
+            if (data.cacheDate !== getTodayDateStr()) {
+                localStorage.removeItem(WEATHER_CACHE_KEY);
+                return null;
+            }
             // 地点变化则失效
             if (currentLocation?.fullName && data.location !== currentLocation.fullName) {
                 localStorage.removeItem(WEATHER_CACHE_KEY);
                 return null;
             }
-            return data.weather;
+            // 注入缓存写入时刻，供「数据时间」显示
+            return Object.assign({}, data.weather, { fetchedAt: data.timestamp });
         } catch {
             return null;
         }
@@ -1775,17 +1805,40 @@ async function fetchAndDisplayWeather() {
         const lifeIndices = data.life_indices || {};
         const allergy = lifeIndices.allergy || null;   // 过敏指数
         const pollen = lifeIndices.pollen || null;     // 花粉指数
+        const pollutants = data.air_pollutants || {};          // 空气污染物分项
         const weatherInfo = {
             city: data.city || '未知',                          // 城市名
+            province: data.province || '',                     // 省份
             district: data.district || '',                     // 区县
-            weather: data.weather || '--',                     // 天气状况
-            tempMax: todayForecast.temp_max || data.temp_max || '--', // 当日最高温
-            tempMin: todayForecast.temp_min || data.temp_min || '--', // 当日最低温
-            humidity: `${data.humidity}%` || '--%',                  // 湿度
-            aqi: data.aqi || '--',                             // AQI
-            aqiCategory: data.aqi_category || '--',            // AQI等级描述
-            pm25: data.air_pollutants?.pm25 || '--',           // PM2.5
-            reportTime: data.report_time || '',                // 数据更新时间
+            weather: data.weather || '',                       // 天气状况
+            temperature: data.temperature,                     // 实时温度
+            tempMax: todayForecast.temp_max ?? data.temp_max,  // 当日最高温
+            tempMin: todayForecast.temp_min ?? data.temp_min,  // 当日最低温
+            humidity: data.humidity,                           // 湿度 %
+            windDirection: data.wind_direction || '',          // 风向
+            windPower: data.wind_power || '',                  // 风力
+            feelsLike: data.feels_like,                        // 体感温度
+            visibility: data.visibility,                       // 能见度 km
+            pressure: data.pressure,                           // 气压 hPa
+            uv: data.uv,                                       // 紫外线指数
+            precipitation: data.precipitation,                 // 降水量 mm
+            cloud: data.cloud,                                 // 云量 %
+            aqi: data.aqi,                                     // AQI
+            aqiLevel: data.aqi_level,                          // AQI 等级（1-6）
+            aqiCategory: data.aqi_category || '',              // AQI等级描述
+            aqiPrimary: data.aqi_primary || '',                // 首要污染物
+            pollutants: {                                      // 污染物分项数据
+                pm25: pollutants.pm25,
+                pm10: pollutants.pm10,
+                o3: pollutants.o3,
+                no2: pollutants.no2,
+                so2: pollutants.so2,
+                co: pollutants.co
+            },
+            alerts: Array.isArray(data.alerts) ? data.alerts : [], // 气象预警
+            lifeIndices: lifeIndices,                          // 18 项生活指数（原始）
+            reportTime: data.report_time || '',                // 上游数据更新时间（可能是相对文案）
+            fetchedAt: Date.now(),                             // 本地获取时刻（缓存时间，用于显示）
             allergy: getAllergyInfo(allergy, pollen),          // 过敏信息（含花粉综合）
             // 保留原始指数供扩展
             _raw: { allergy, pollen }
@@ -1824,39 +1877,234 @@ async function fetchAndDisplayWeather() {
     }
 }
 
+// ===== 天气 UI 辅助 =====
+/** 值是否有效（排除 null/undefined/空串/占位符） */
+function weatherHasValue(v) {
+    if (v === null || v === undefined) return false;
+    if (typeof v === 'number') return Number.isFinite(v);
+    const s = String(v).trim();
+    return s !== '' && s !== '--' && s !== 'null' && s !== 'undefined' && s !== 'NaN';
+}
+
+/** 空气质量等级配色（国标六档） */
+const WEATHER_AQI_COLORS = {
+    '优': '#43A047',
+    '良': '#F9A825',
+    '轻度污染': '#EF6C00',
+    '中度污染': '#D32F2F',
+    '重度污染': '#8E24AA',
+    '严重污染': '#6D1B1B'
+};
+function weatherAqiColor(info) {
+    if (info.aqiCategory && WEATHER_AQI_COLORS[info.aqiCategory])
+        return WEATHER_AQI_COLORS[info.aqiCategory];
+    const a = Number(info.aqi);
+    if (!Number.isFinite(a)) return '#9E9E9E';
+    if (a <= 50) return WEATHER_AQI_COLORS['优'];
+    if (a <= 100) return WEATHER_AQI_COLORS['良'];
+    if (a <= 150) return WEATHER_AQI_COLORS['轻度污染'];
+    if (a <= 200) return WEATHER_AQI_COLORS['中度污染'];
+    if (a <= 300) return WEATHER_AQI_COLORS['重度污染'];
+    return WEATHER_AQI_COLORS['严重污染'];
+}
+
+/** 生活指数中文名（键 → 显示名） */
+const WEATHER_LIFE_NAMES = {
+    clothing: '穿衣', uv: '紫外线', car_wash: '洗车', drying: '晾晒',
+    air_conditioner: '空调', cold_risk: '感冒', exercise: '运动', comfort: '舒适度',
+    travel: '出行', fishing: '钓鱼', allergy: '过敏', sunscreen: '防晒',
+    mood: '心情', beer: '啤酒', umbrella: '雨伞', traffic: '交通',
+    air_purifier: '净化器', pollen: '花粉'
+};
+
+/** 温度区间文本 */
+function weatherTempRange(info) {
+    const tMin = weatherHasValue(info.tempMin) ? info.tempMin : null;
+    const tMax = weatherHasValue(info.tempMax) ? info.tempMax : null;
+    if (tMin !== null && tMax !== null) return `${tMin}~${tMax}°C`;
+    if (tMax !== null) return `${tMax}°C`;
+    if (tMin !== null) return `${tMin}°C`;
+    if (weatherHasValue(info.temperature)) return `${Math.round(info.temperature)}°C`;
+    return '--';
+}
+
 /** 更新天气UI（显示在左上角） */
 function updateWeatherUI(info) {
     const container = document.getElementById('weather-display');
     if (!container) return;
-    const allergy = info.allergy;
-    const tempRange = `${info.tempMin}~${info.tempMax}°C`;
+    const allergy = info.allergy || {};
+    const tempRange = weatherTempRange(info);
+    // 第二行：湿度 / AQI / 污染 —— 强制同一行
+    const detailParts = [];
+    if (weatherHasValue(info.humidity))
+        detailParts.push(`<span class="weather-humidity">💧 ${escapeHtml(info.humidity)}%</span>`);
+    if (weatherHasValue(info.aqi))
+        detailParts.push(`<span class="weather-aqi" style="color:${weatherAqiColor(info)}">AQI ${escapeHtml(info.aqi)}</span>`);
+    const pm25 = info.pollutants?.pm25 ?? info.pm25;
+    const aqiCat = info.aqiCategory;
+    if (weatherHasValue(pm25) || weatherHasValue(aqiCat)) {
+        const pmParts = [];
+        if (weatherHasValue(pm25))
+            pmParts.push(`<span class="weather-pm-value">PM2.5 ${escapeHtml(pm25)}</span>`);
+        if (weatherHasValue(aqiCat))
+            pmParts.push(`<span class="weather-pm-cat" style="--aqi-color:${weatherAqiColor(info)}">${escapeHtml(aqiCat)}</span>`);
+        detailParts.push(`<span class="weather-pm">${pmParts.join('')}</span>`);
+    }
     container.innerHTML = `
         <div class="weather-widget">
             <div class="weather-main">
-                <span class="weather-city">${info.city}</span>
-                <span class="weather-temp">${tempRange}</span>
-                <span class="weather-type">${info.weather}</span>
+                <span class="weather-city">${escapeHtml(info.city)}</span>
+                <span class="weather-temp">${escapeHtml(tempRange)}</span>
+                ${weatherHasValue(info.weather) ? `<span class="weather-type">${escapeHtml(info.weather)}</span>` : ''}
             </div>
-            <div class="weather-detail">
-                <span class="weather-humidity">💧 ${info.humidity}</span>
-                <span class="weather-aqi">AQI ${info.aqi}</span>
-                <span class="weather-pm">PM${info.pm25}</span>
-                <span>· ${info.aqiCategory}</span>
-            </div>
+            ${detailParts.length ? `<div class="weather-detail">${detailParts.join('')}</div>` : ''}
             <div class="weather-allergy">
-                <span class="allergy-dot" style="background:${allergy.color}"></span>
-                <span class="allergy-label">过敏 ${allergy.level}</span>
-                <span class="allergy-advice" title="${allergy.advice}">${allergy.advice}</span>
+                <span class="allergy-dot" style="background:${escapeHtml(allergy.color || '#9E9E9E')}"></span>
+                <span class="allergy-label">过敏 ${escapeHtml(allergy.level || '--')}</span>
+                ${weatherHasValue(allergy.advice) ? `<span class="allergy-advice" title="${escapeHtml(allergy.advice)}">${escapeHtml(allergy.advice)}</span>` : ''}
             </div>
-            <div class="weather-update">更新 ${info.reportTime}</div>
         </div>
     `;
-    // 将更新时间放到 title 属性中（鼠标悬停可见）
-    container.title = `数据更新于 ${info.reportTime}`;
+    // 同步填充弹层内容
+    const popup = document.getElementById('weather-popup');
+    if (!popup) return;
+    const content = buildWeatherPopupHTML(info, weatherTempRange(info));
+    popup.querySelector('.wp-head').innerHTML = content.head;
+    popup.querySelector('.wp-body').innerHTML = content.body;
+    container.title = '点击查看天气详情';
+}
+
+/**
+ * 构建详情弹窗 HTML（只渲染有值的字段）
+ * @param {object} info - weatherInfo
+ * @param {string} tempRange - 温度区间文本
+ */
+function buildWeatherPopupHTML(info, tempRange) {
+    const allergy = info.allergy || {};
+    const P = info.pollutants || {};
+    const L = info.lifeIndices || {};
+    /** 一行「键 : 值」，值为空则不渲染；wide=true 时独占整行 */
+    const row = (k, v, wide) => weatherHasValue(v)
+        ? `<div class="wp-item${wide ? ' wp-item-wide' : ''}"><span class="wp-key">${escapeHtml(k)}</span><span class="wp-val">${v}</span></div>`
+        : '';
+    const grid = (rows) => rows.some(Boolean) ? `<div class="wp-grid">${rows.join('')}</div>` : '';
+    const section = (title, inner) => inner
+        ? `<div class="wp-section"><div class="wp-section-title">${escapeHtml(title)}</div>${inner}</div>`
+        : '';
+    // —— 头部：城市 / 天气 / 温度 ——
+    const place = [info.city, (weatherHasValue(info.district) && info.district !== info.city) ? info.district : '']
+        .filter(weatherHasValue).join(' ');
+    let timeText = weatherHasValue(info.reportTime)? info.reportTime: '';
+    if(weatherHasValue(info.fetchedAt)){
+        const s = stampToStr(info.fetchedAt);
+        if(s)
+            timeText = s;
+    }
+    const head = `
+        <div class="wp-head-city">${escapeHtml(place || '未知')}</div>
+        <div class="wp-head-temp">${escapeHtml(tempRange)}</div>
+        <div class="wp-head-sub">${escapeHtml([info.weather, info.windDirection, info.windPower].filter(weatherHasValue).join(' · ') || '--')}</div>
+        ${timeText ? `<div class="wp-head-time">数据时间 ${escapeHtml(timeText)}</div>` : ''}`;
+    // —— 空气质量 ——
+    const aqiInner = grid([
+        row('AQI', weatherHasValue(info.aqi)
+            ? `<span class="wp-dot" style="background:${weatherAqiColor(info)}"></span>${escapeHtml(info.aqi)}${weatherHasValue(info.aqiCategory) ? ' ' + escapeHtml(info.aqiCategory) : ''}`
+            : null),
+        row('首要污染物', weatherHasValue(info.aqiPrimary) ? escapeHtml(info.aqiPrimary) : null),
+        row('PM2.5', weatherHasValue(P.pm25) ? `${escapeHtml(P.pm25)} μg/m³` : null),
+        row('PM10', weatherHasValue(P.pm10) ? `${escapeHtml(P.pm10)} μg/m³` : null),
+        row('O₃', weatherHasValue(P.o3) ? `${escapeHtml(P.o3)} μg/m³` : null),
+        row('NO₂', weatherHasValue(P.no2) ? `${escapeHtml(P.no2)} μg/m³` : null),
+        row('SO₂', weatherHasValue(P.so2) ? `${escapeHtml(P.so2)} μg/m³` : null),
+        row('CO', weatherHasValue(P.co) ? `${escapeHtml(P.co)} mg/m³` : null)
+    ]);
+    // —— 气象（按天口径：不展示实时温度 / 体感温度这类瞬时值，避免与「数据时间」混淆）——
+    const windText = [info.windDirection, info.windPower].filter(weatherHasValue).join(' ');
+    const weatherInner = grid([
+        row('湿度', weatherHasValue(info.humidity) ? `${escapeHtml(info.humidity)}%` : null),
+        row('风力', weatherHasValue(windText) ? escapeHtml(windText) : null),
+        row('能见度', weatherHasValue(info.visibility) ? `${escapeHtml(info.visibility)} km` : null),
+        row('气压', weatherHasValue(info.pressure) ? `${escapeHtml(info.pressure)} hPa` : null),
+        row('紫外线', weatherHasValue(info.uv) ? escapeHtml(info.uv) : null),
+        row('降水量', weatherHasValue(info.precipitation) ? `${escapeHtml(info.precipitation)} mm` : null),
+        row('云量', weatherHasValue(info.cloud) ? `${escapeHtml(info.cloud)}%` : null)
+    ]);
+    // —— 过敏 / 花粉 ——
+    const pollen = L.pollen || {};
+    const allergyRows = [
+        row('过敏指数', `<span class="wp-dot" style="background:${escapeHtml(allergy.color || '#9E9E9E')}"></span>${escapeHtml(allergy.level || '--')}`),
+        row('花粉指数', weatherHasValue(pollen.level) ? escapeHtml(pollen.level) : null),
+        row('过敏建议', weatherHasValue(allergy.advice) ? escapeHtml(allergy.advice) : null, true),
+        row('花粉建议', weatherHasValue(pollen.advice) ? escapeHtml(pollen.advice) : null, true)
+    ].filter(Boolean);
+    const allergyBlock = allergyRows.length
+        ? `<div class="wp-section"><div class="wp-section-title">过敏 / 花粉</div><div class="wp-grid">${allergyRows.join('')}</div></div>`
+        : '';
+    // —— 生活指数（除过敏 / 花粉外）——
+    const lifeItems = Object.keys(WEATHER_LIFE_NAMES)
+        .filter(k => k !== 'allergy' && k !== 'pollen')
+        .filter(k => L[k] && weatherHasValue(L[k].level))
+        .map(k => `<div class="wp-life" title="${escapeHtml(L[k].advice || '')}">
+                <span class="wp-life-name">${escapeHtml(WEATHER_LIFE_NAMES[k])}</span>
+                <span class="wp-life-level">${escapeHtml(L[k].level)}</span>
+            </div>`)
+        .join('');
+    const lifeSection = lifeItems
+        ? `<div class="wp-section"><div class="wp-section-title">生活指数</div><div class="wp-life-grid">${lifeItems}</div></div>`
+        : '';
+    // —— 气象预警 ——
+    const alerts = (info.alerts || []).filter(a => a && (a.title || a.text));
+    const alertSection = alerts.length
+        ? `<div class="wp-section"><div class="wp-section-title">预警</div>${alerts.map(a => `
+                <div class="wp-alert">
+                    <div class="wp-alert-head">
+                        <span class="wp-alert-title">${escapeHtml(a.title || a.type || '预警')}</span>
+                        ${weatherHasValue(a.level) ? `<span class="wp-alert-level">${escapeHtml(a.level)}</span>` : ''}
+                    </div>
+                    ${weatherHasValue(a.text) ? `<div class="wp-alert-text">${escapeHtml(a.text)}</div>` : ''}
+                </div>`).join('')}</div>`
+        : '';
+    // —— 页脚
+    const foot = `<div class="wp-foot">
+            <span>数据来源 uapis.cn</span>
+        </div>`;
+    const body = section('空气质量', aqiInner)
+        + section('气象', weatherInner)
+        + allergyBlock
+        + lifeSection
+        + alertSection
+        + foot;
+    return { head, body };
+}
+
+/** 弹出天气详情（居中浮层，背景虚化） */
+function openWeatherPopup() {
+    const mask = document.getElementById('weather-popup-mask');
+    if (!mask)
+        return;
+    const body = mask.querySelector('.wp-body');
+    if (!body || !body.innerHTML.trim())
+        return;   // 无有效数据时不弹
+    mask.hidden = false;
+}
+
+/** 关闭天气详情弹窗 */
+function closeWeatherPopup() {
+    const mask = document.getElementById('weather-popup-mask');
+    if(!mask || mask.hidden)
+        return;
+    mask.hidden = true;
 }
 
 // 创建天气显示DOM元素（注入到左上角）
 function initWeather() {
+    // 弹层关闭交互（弹层骨架静态写在 index.html 中）
+    const popupMask = document.getElementById('weather-popup-mask');
+    if(popupMask)  // 点击遮罩空白处或关闭按钮收起（点弹窗内部不关）
+        popupMask.addEventListener('click', (e) => {
+            if (e.target === popupMask || e.target.closest('.wp-close'))
+                closeWeatherPopup();
+        });
     // 检查是否已存在
     if (document.getElementById('weather-display'))
         return;
@@ -1869,6 +2117,7 @@ function initWeather() {
         mapContainer.appendChild(widget);
     else
         document.body.appendChild(widget);
+    widget.addEventListener('click', openWeatherPopup);  // 绑定天气卡片交互
     fetchAndDisplayWeather();
 }
 
