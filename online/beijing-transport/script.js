@@ -1744,8 +1744,11 @@ async function fetchCurrentCity() {
     }
 }
 
-/** 获取并显示天气 */
-async function fetchAndDisplayWeather() {
+/** 
+ * 获取并显示天气，默认强制刷新
+ * @param {boolean} force - 是否强制生成/刷新显示
+ */
+async function fetchAndDisplayWeather(force = false) {
     const currentLocation = await fetchCurrentCity();
     /** 获取缓存的天气数据 */
     function getCachedWeather() {
@@ -1781,8 +1784,9 @@ async function fetchAndDisplayWeather() {
     }
     // 尝试读取缓存
     const cached = getCachedWeather();
-    if (cached) {
-        updateWeatherUI(cached);
+    if(cached){
+        if(force)
+            updateWeatherUI(cached);
         return;
     }
     // 缓存失效或无缓存，发起网络请求
@@ -2167,6 +2171,8 @@ document.addEventListener('DOMContentLoaded', function() {
         startLocationTracking();
     });
     startLocationTracking();
+    // 回到页面时若缓存过期则重新加载天气
+    document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') fetchAndDisplayWeather(false); });
     // 页面卸载时停止定位
     window.addEventListener('beforeunload', stopLocationTracking);
     // 换乘站时刻表按钮监听
