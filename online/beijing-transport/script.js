@@ -1748,7 +1748,7 @@ async function fetchCurrentCity() {
  * 获取并显示天气，默认强制刷新
  * @param {boolean} force - 是否强制生成/刷新显示
  */
-async function fetchAndDisplayWeather(force = false) {
+async function fetchAndDisplayWeather(force = true) {
     const currentLocation = await fetchCurrentCity();
     /** 获取缓存的天气数据 */
     function getCachedWeather() {
