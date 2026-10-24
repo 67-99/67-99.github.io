@@ -688,8 +688,8 @@ function loadAllbaseline() {
             LoadingIndicator.hide();
             return res.json();
         })
-        .then(ids => Promise.all(ids.map(id => loadLineFile(id))).then(() => ids))
-        .then(ids => Promise.all(ids.map(id => loadTrackFile(id))))
+        // 每条线baseline到位后立刻取它的配线
+        .then(ids => Promise.all(ids.map(id => loadLineFile(id).then(() => loadTrackFile(id)))))
         .then(() => loadLinkingFile())
         .then(() => {
             buildtrackLayer();       // 生成配线图
@@ -1281,15 +1281,28 @@ function showTrainSchedule(lineId, train) {
     }, 50);
 }
 
+/** 列车数据并发路数 */
+const TRAIN_CONCURRENCY = 6;
+
 /** 初始化列车显示：加载各线路列车数据并定时更新位置 */
 async function initTrainDisplay() {
-    for (const id of Object.keys(lineData)) {
-        const info = lineData[id];
-        if (!info || !info.hasTrack) continue;
-        const data = await loadTrainData(id);
-        if (data)
-            prepareTrainGeometry(id);
-    }
+    const ids = Object.keys(lineData).filter(id => lineData[id] && lineData[id].hasTrack);
+    // 各线的loadTrainData/prepareTrainGeometry彼此无依赖，可以并发
+    let cursor = 0;
+    const worker = async () => {
+        while (cursor < ids.length) {
+            const id = ids[cursor++];
+            const data = await loadTrainData(id);
+            if (data)
+                prepareTrainGeometry(id);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(TRAIN_CONCURRENCY, ids.length) }, worker));
+    // 并发完成后按 lineData 顺序重整键序
+    const ordered = {};
+    for (const id of Object.keys(lineData))
+        if (trainPosData[id]) ordered[id] = trainPosData[id];
+    trainPosData = ordered;
     if (trainUpdateTimer)
         clearInterval(trainUpdateTimer);
     trainUpdateTimer = setInterval(updateTrainPositions, 1000);
