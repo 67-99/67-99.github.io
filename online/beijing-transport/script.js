@@ -84,6 +84,18 @@ const isVSCode = /\b(Code|VSCode)\/[\d.]+/i.test(navigator.userAgent);  // 匹�
 let map;                 // 全局地图，各脚本共享
 let lineLayer;           // 在大视图下的地铁图
 let trackLayer = null;   // 在小视图下的配线图
+
+// 线名后缀样式（只改 dash，线宽/透明度沿用默认）
+//   _U 未启用：实 7 空 5
+//   _C 建设中：实 3 空 9
+const STYLE_BY_SUFFIX = {
+    U: { dashArray: '7,5' },
+    C: { dashArray: '3,9' }
+};
+function styleOf(id) {
+    const suf = (String(id).match(/_([A-Z])$/) || [])[1] || '';
+    return STYLE_BY_SUFFIX[suf] || null;
+}
 let tileLayer = null;    // 地图底图图层
 let isSatellite = true;  // 当前是否为卫星图
 
@@ -300,7 +312,7 @@ function buildtrackLayer() {
      * @param {number} bgWeight - 底衬线条粗细（通常比主线条大）
      * @param {number} bgOpacity - 底衬透明度（白色）
      */
-    function addLineWithBg(latlngs, color, weight = 3, opacity = 0.9, bgWeight = UNIT * 111320, bgOpacity = 0.5) {
+    function addLineWithBg(latlngs, color, weight = 3, opacity = 0.9, bgWeight = UNIT * 111320, bgOpacity = 0.5, style = null) {
         // 先绘制白色半透明底衬
         const bgLine = L.polyline(latlngs, {
             color: 'rgba(255,255,255,' + bgOpacity + ')',
@@ -311,13 +323,13 @@ function buildtrackLayer() {
         });
         trackLayer.addLayer(bgLine);
         // 再绘制主线条
-        const mainLine = L.polyline(latlngs, {
+        const mainLine = L.polyline(latlngs, Object.assign({
             color: color,
             weight: weight,
             opacity: opacity,
             interactive: false,
             smoothFactor: 1
-        });
+        }, style || {}));
         trackLayer.addLayer(mainLine);
     }
 
@@ -334,7 +346,8 @@ function buildtrackLayer() {
                         type: 'line',
                         priority: seg.priority,
                         points: seg.points,
-                        color: color
+                        color: color,
+                        style: styleOf(id)
                     });
                 }
             });
@@ -344,7 +357,8 @@ function buildtrackLayer() {
                         type: 'line',
                         priority: seg.priority,
                         points: seg.points,
-                        color: color
+                        color: color,
+                        style: styleOf(id)
                     });
                 }
             });
@@ -372,6 +386,20 @@ function buildtrackLayer() {
             const stations = info.stations || [];
             const segments = info.segments || [];
             if (!segments.length) continue;
+            if (!stations.length) {
+                // 无站点数据：不画双股（双股偏移是绕站台中轴算的），按原位置画一条 _U / _C 用虚线，普通线实线
+                segments.forEach(([priority, pts]) => {
+                    if (!pts || pts.length < 2) return;
+                    drawTasks.push({
+                        type: 'line',
+                        priority: priority,
+                        points: pts,
+                        color: color,
+                        style: styleOf(id)
+                    });
+                });
+                continue;
+            }
             // ---- 计算站台并收集任务 ----
             for (const st of stations) {
                 const sl = st.sl;
@@ -477,8 +505,8 @@ function buildtrackLayer() {
                 if (pts.length < 2) return;
                 const upPts = offsetPointsMeters(pts, trackOffsetMeters);
                 const downPts = offsetPointsMeters(pts, -trackOffsetMeters);
-                drawTasks.push({ type: 'line', priority: priority, points: upPts, color: color });
-                drawTasks.push({ type: 'line', priority: priority, points: downPts, color: color });
+                drawTasks.push({ type: 'line', priority: priority, points: upPts, color: color, style: styleOf(id) });
+                drawTasks.push({ type: 'line', priority: priority, points: downPts, color: color, style: styleOf(id) });
             });
         }
     }
@@ -508,7 +536,7 @@ function buildtrackLayer() {
     const labelTasks = [...labelMap.values()].sort((a, b) => a.priority - b.priority);
     for (const task of drawTasks) {
         if (task.type === 'line') {
-            addLineWithBg(task.points, task.color);
+            addLineWithBg(task.points, task.color, 3, 0.9, undefined, undefined, task.style);
         } else if (task.type === 'platform') {
             if(task.unused)
                 L.polygon(task.rect, {
@@ -633,13 +661,13 @@ async function loadLineFile(id){
             LoadingIndicator.show(`绘制${id}线路...`);
             segments.forEach(([priority, pts]) => {
                 if (!pts || pts.length < 2) return;
-                const polyline = L.polyline(pts, {
+                const polyline = L.polyline(pts, Object.assign({
                     color: color,
                     weight: 4,
                     opacity: 0.8,
                     smoothFactor: 1,
                     priority: priority
-                });
+                }, styleOf(id) || {}));
                 group.addLayer(polyline);
                 layers.push(polyline);
             });
