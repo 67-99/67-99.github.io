@@ -10,6 +10,7 @@ body {
     color: #333;
     line-height: 1.6;
     min-height: 100vh;
+    min-height: 100dvh;  /* iOS Safari 的 100vh 是「大视口」，会让贴底的绝对定位元素被挤出屏幕 → 用 dvh 兜住 */
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -125,7 +126,7 @@ nav * {
 }
 .locate-btn {
     position: absolute;
-    bottom: 30px;
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));   /* 躲开 iOS 底部安全区 */
     left: 15px;
     z-index: 1000;
     background: rgba(255, 255, 255, 0.95);
@@ -555,6 +556,28 @@ nav * {
 }
 .train-schedule-row.next-stop {
     background: #e7f3ff;
+}
+@media (max-width: 768px) {
+    .leaflet-bottom.leaflet-right {
+        bottom: 20px;
+    }
+    #map .leaflet-control-attribution {
+        background: transparent;
+        color: #fff;
+        font-size: 10px;
+        line-height: 1.5;
+        padding: 0 2px;
+        margin: 0 8px 6px 0;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 5px rgba(0, 0, 0, 0.7);
+    }
+    #map .leaflet-control-attribution a {
+        color: inherit;
+        text-decoration: none;
+    }
+    #map.road-mode .leaflet-control-attribution {
+        color: #3a3f45;  /* 路网模式是浅色底，字反色成深灰 */
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.95), 0 0 5px rgba(255, 255, 255, 0.8);
+    }
 }
 /* 桌面端抽屉变侧栏 */
 @media (min-width: 768px) {
