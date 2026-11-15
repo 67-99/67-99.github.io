@@ -3041,6 +3041,7 @@
     },
     {
       "station_name": "通州北关",
+      "info": "通州北关站将更名为运河商务区站：<br><a href=\"https://yewu.ghzrzyw.beijing.gov.cn/gwxxfb/cxghdmgg/index.html\" target=\"_blank\" rel=\"noopener noreferrer\">2026（通）地名命字0010号</a>",
       "up": {
         "weekday": {
           "5": [327, 335, 343, 350],

@@ -348,20 +348,23 @@ nav * {
     margin-bottom: 10px;
     line-height: 1.8;
 }
-/* 时刻表warn与info */
 .station-notice {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+}
+.station-notice div {
+    margin-bottom: 0;
+    line-height: 1.6;
+}
+.notice-warn {
     background: #fff8e1;
     border-left: 4px solid #ffb300;
     padding: 6px;
     border-radius: 4px;
-    font-size: 14px;
     color: #5d4037;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-.station-notice div {
-    margin-bottom: 0;
-}
-.notice-warn {
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -372,20 +375,28 @@ nav * {
     flex-shrink: 0;
 }
 .notice-info {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed #e0c48b;
-    font-size: 13px;
-    color: #6d4c41;
-    line-height: 1.5;
+    background: #e8f3fd;
+    border-left: 4px solid #2196f3;
+    padding: 6px;
+    border-radius: 4px;
+    color: #0d47a1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.notice-info a {
+    color: #0b5cab;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    word-break: break-word;
+}
+.notice-info a:hover {
+    color: #083d75;
+    text-decoration-thickness: 2px;
 }
 @media (max-width: 480px) {
     .station-notice {
         font-size: 13px;
         padding: 8px 12px;
-    }
-    .notice-info {
-        font-size: 12px;
     }
 }
 /* 时刻显示 */
