@@ -163,40 +163,63 @@ const LoadingIndicator = {
     textList: [],
 
     // 创建 DOM 元素（页面加载后调用一次）
-    init() {
-        if (this.element) return;
-        const div = document.createElement('div');
-        div.id = 'loading-indicator';
-        div.innerHTML = `
-            <i class="fas fa-circle-notch fa-spin"></i>
-            <span class="loading-text">加载中...</span>
-        `;
-        document.body.appendChild(div);
+    init(){
+        if(this.element)
+            return;
+        let div = document.getElementById('loading-indicator');
+        if(!div){
+            div = document.createElement('div');
+            div.id = 'loading-indicator';
+            div.innerHTML = `
+                <i class="fas fa-circle-notch fa-spin"></i>
+                <span class="loading-text">加载中...</span>
+            `;
+            document.body.appendChild(div);
+        }
         this.element = div;
         this.textSpan = div.querySelector('.loading-text');
     },
 
     // 显示加载指示器，可指定文本
-    show(text) {
+    show(text){
         this.init();
         this.textList.push(text || "加载中...");
         this.textSpan.textContent = this.textList[this.textList.length - 1];
         this.element.classList.add('show');
     },
 
+    /** 在加载指示器栈底压入文本 */
+    showBase(text){
+        this.init();
+        text = text || "加载中...";
+        if(!this.textList.includes(text))
+            this.textList.unshift(text);
+        if(this.textSpan && this.textList.length === 1)
+            this.textSpan.textContent = text;
+        this.element.classList.add('show');
+    },
+
     // 隐藏（计数器减一，归零时隐藏）
-    hide(text = null) {
+    hide(text = null){
+        if(this.textList.length === 0){
+            if(this.element)
+                this.element.classList.remove('show');
+            return;
+        }
         if(text === undefined || text === null)
             this.textList.pop();
         else
             this.textList = this.textList.filter(item => item !== text);
-        this.textSpan.textContent = this.textList[this.textList.length - 1];
-        if(this.textList.length === 0 && this.element)
-            this.element.classList.remove('show');
+        if(this.element){
+            if(this.textList.length === 0)
+                this.element.classList.remove('show');
+            else if(this.textSpan)
+                this.textSpan.textContent = this.textList[this.textList.length - 1];
+        }
     },
 
     // 更新文本
-    setText(text) {
+    setText(text){
         if(this.textList.length === 0 || !text)
             return;
         this.textList[this.textList.length - 1] = text;
@@ -575,7 +598,7 @@ function buildtrackLayer() {
         });
         marker.addTo(trackLayer);
     }
-    LoadingIndicator.hide();
+    LoadingIndicator.hide('绘制配线中...');
 }
 
 /**
@@ -601,10 +624,10 @@ async function loadTrackFile(id) {
         lineData[id].sub = Array.isArray(data.sub) ? data.sub : [];
         lineData[id].hasTrack = true;
         if (data.color) lineData[id].color = data.color;
-        LoadingIndicator.hide();
+        LoadingIndicator.hide(`加载${id}配线数据...`);
         return id;
     } catch(e) {
-        LoadingIndicator.hide();
+        LoadingIndicator.hide(`加载${id}配线数据...`);
         return null;
     }
 }
@@ -622,7 +645,7 @@ async function loadLinkingFile() {
         const data = await res.json();
         if (Array.isArray(data)) {
             linkingData = data;
-            LoadingIndicator.hide();
+            LoadingIndicator.hide('加载连接线数据...');
             return data;
         } else {
             throw new Error('数据格式错误，应为数组');
@@ -630,7 +653,7 @@ async function loadLinkingFile() {
     } catch (e) {
         console.warn('加载连接线数据失败:', e);
         linkingData = null;
-        LoadingIndicator.hide();
+        LoadingIndicator.hide('加载连接线数据...');
         return null;
     }
 }
@@ -653,6 +676,7 @@ async function loadLineFile(id){
             const segments = data.points;
             if (!segments || segments.length === 0) {
                 console.warn('线路无有效段', id);
+                LoadingIndicator.hide(`加载${id}线路数据...`);
                 return;
             }
             const color = data.color || '#808080';
@@ -671,9 +695,10 @@ async function loadLineFile(id){
                 group.addLayer(polyline);
                 layers.push(polyline);
             });
-            LoadingIndicator.hide();
+            LoadingIndicator.hide(`绘制${id}线路...`);
             if (layers.length === 0) {
                 console.warn('线路无有效折线段', id);
+                LoadingIndicator.hide(`加载${id}线路数据...`);
                 return;
             }
             const bounds = group.getBounds();
@@ -695,25 +720,24 @@ async function loadLineFile(id){
                     }
                 });
             lineLayer.addLayer(group);
-            LoadingIndicator.hide();
+            LoadingIndicator.hide(`加载${id}线路数据...`);
             return id;
         })
         .catch(err => {
             console.error(err);
-            LoadingIndicator.hide();
+            // 走到 catch 时不一定停在哪个 show 之后，两个都按文本撤（不存在则无操作）
+            LoadingIndicator.hide(`加载${id}线路数据...`);
+            LoadingIndicator.hide(`绘制${id}线路...`);
         });
 }
 
 /** 加载全部线路 */
 function loadAllbaseline() {
-    LoadingIndicator.show('加载线路列表...');
+    LoadingIndicator.showBase('加载线路数据…');
     fetch('./resource/baseline/lines.json')
         .then(res => {
-            if(!res.ok){
-                LoadingIndicator.hide();
+            if(!res.ok)
                 throw new Error('baseline 不存在');
-            }
-            LoadingIndicator.hide();
             return res.json();
         })
         // 每条线baseline到位后立刻取它的配线
@@ -724,21 +748,18 @@ function loadAllbaseline() {
             updateLineVisibility();  // 根据当前缩放决定是否显示
             if(debugVisible)
                 refreshDebug();
-            initTrainDisplay();      // 加载列车数据并开始实时显示
-        })
-        .then(() => {
-            LoadingIndicator.hide();  // 所有加载完成，隐藏指示器
+            return initTrainDisplay();   // 等列车出图，常驻条目才撤
         })
         .catch((e) => {
             console.warn('未找到 baseline，使用默认线路', e);
-            LoadingIndicator.hide();
             const ids = ['M1', 'M2'];
-            Promise.all(ids.map(id => loadLineFile(id))).then(() => {
+            return Promise.all(ids.map(id => loadLineFile(id))).then(() => {
                 if(debugVisible)
                     refreshDebug();
-                initTrainDisplay();
+                return initTrainDisplay();
             });
-        });
+        })
+        .finally(() => LoadingIndicator.hide('加载线路数据…'));
 }
 
 // ---------------------------
@@ -975,10 +996,10 @@ async function loadTrainData(lineId) {
     const data = await fetchWithFallback('./resource/train', lineId);
     if (data) {
         trainPosData[lineId] = data;
-        LoadingIndicator.hide();
+        LoadingIndicator.hide(`加载${lineId}列车数据...`);
         return data;
     } else {
-        LoadingIndicator.hide();
+        LoadingIndicator.hide(`加载${lineId}列车数据...`);
         return null;
     }
 }
@@ -1053,7 +1074,7 @@ function prepareTrainGeometry(lineId) {
     for (let d = 0; d < 2; d++) {
         const segs = main[d];
         if (!Array.isArray(segs)){
-            LoadingIndicator.hide();
+            LoadingIndicator.hide(`绘制${lineId}列车中...`);
             return false;
         }
         let points = [];
@@ -1062,7 +1083,7 @@ function prepareTrainGeometry(lineId) {
                 for (const p of seg.points) points.push([p[0], p[1]]);
         }
         if (points.length < 2){
-            LoadingIndicator.hide();
+            LoadingIndicator.hide(`绘制${lineId}列车中...`);
             return false;
         }
         let cum = buildCumulativeDistances(points);
@@ -1124,7 +1145,7 @@ function prepareTrainGeometry(lineId) {
             Math.abs(points[0][1] - points[points.length - 1][1]) < 1e-6;
     }
     trainGeoData[lineId] = geo;
-    LoadingIndicator.hide();
+    LoadingIndicator.hide(`绘制${lineId}列车中...`);
     return true;
 }
 
@@ -1320,9 +1341,13 @@ async function initTrainDisplay() {
     const worker = async () => {
         while (cursor < ids.length) {
             const id = ids[cursor++];
-            const data = await loadTrainData(id);
-            if (data)
-                prepareTrainGeometry(id);
+            try {
+                const data = await loadTrainData(id);
+                if (data)
+                    prepareTrainGeometry(id);
+            } catch (e) {
+                console.warn(`列车数据 ${id} 初始化失败:`, e);
+            }
         }
     };
     await Promise.all(Array.from({ length: Math.min(TRAIN_CONCURRENCY, ids.length) }, worker));
