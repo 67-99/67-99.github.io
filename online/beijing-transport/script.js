@@ -1787,26 +1787,23 @@ function getAllergyInfo(allergy, pollen) {
 }
 
 /** 获取当前城市 */
-async function fetchCurrentCity() {
-    try {
-        // 根据ip获取城市，详见https://www.ip9.com.cn/?source=api
-        const res = await fetch('https://ip9.com.cn/get');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+async function fetchCurrentCity(){
+    try{
+        // 带lang才返回中文城市名，详见https://ipwhois.io/documentation
+        const res = await fetch('https://ipwho.is/?lang=zh-CN');
+        if(!res.ok)
+            throw new Error(`HTTP ${res.status}`);  // 429 等一律当"判不出来"
         const json = await res.json();
-        // ip9 返回结构：{ ret: 200, data: { city, prov, area, ... } }
-        if (json.ret !== 200 || !json.data)
+        if(!json || json.success === false || !json.city)
             throw new Error('IP 定位返回异常');
         return {
-            city: json.data.city || '',       // 城市名，如"北京"
-            province: json.data.prov || '',   // 省份
-            area: json.data.area || '',       // 区县
-            fullName: [json.data.prov, json.data.city, json.data.area]
-                .filter(Boolean)
-                .join(''),                       // 如"北京东城"
+            city: json.city,          // 如"长沙"
+            lat: json.latitude,
+            lng: json.longitude
         };
-    } catch (err) {
-        console.warn('[ip9] 城市获取失败:', err.message);
-        return null; // 失败时返回 null，由上层降级处理
+    }catch(err){
+        console.warn('[ipwho] 城市获取失败:', err.message);
+        return null;   // 失败返回 null，上层就不比较城市
     }
 }
 
@@ -1822,8 +1819,8 @@ async function fetchAndDisplayWeather(force = true) {
             const cached = localStorage.getItem(WEATHER_CACHE_KEY);
             if (!cached) return null;
             const data = JSON.parse(cached);
-            // 兼容旧结构：缺少 timestamp/location 视为失效
-            if (!data.timestamp || !('location' in data)) {
+            // 兼容旧结构：缺少 timestamp/city 视为失效
+            if (!data?.timestamp || !('city' in data)) {
                 localStorage.removeItem(WEATHER_CACHE_KEY);
                 return null;
             }
@@ -1837,8 +1834,8 @@ async function fetchAndDisplayWeather(force = true) {
                 localStorage.removeItem(WEATHER_CACHE_KEY);
                 return null;
             }
-            // 地点变化则失效
-            if (currentLocation?.fullName && data.location !== currentLocation.fullName) {
+            // 城市变化则失效
+            if(currentLocation?.city && data.city && data.city !== currentLocation.city){
                 localStorage.removeItem(WEATHER_CACHE_KEY);
                 return null;
             }
@@ -1856,9 +1853,6 @@ async function fetchAndDisplayWeather(force = true) {
         return;
     }
     // 缓存失效或无缓存，发起网络请求
-    const weatherContainer = document.getElementById('weather-display');
-    if (weatherContainer)
-        weatherContainer.innerHTML = '<span class="weather-loading">⏳ 加载中...</span>';
     try {
         // 不传city参数，API自动根据客户端IP定位，详见https://uapis.cn/docs/api-reference/get-misc-weather
         const url = 'https://uapis.cn/api/v1/misc/weather?indices=true&extended=true&forecast=true';
@@ -1915,18 +1909,14 @@ async function fetchAndDisplayWeather(force = true) {
         };
         // 与 uapis.cn 返回地址交叉验证（不一致仅告警，不阻断）
         const uapisFullName = [data.city, data.district].filter(Boolean).join('');
-        if (currentLocation?.fullName && uapisFullName &&
-            !uapisFullName.includes(currentLocation.city) &&
-            !currentLocation.city?.includes(data.city)) {
-            console.warn('定位不一致:', currentLocation.fullName, uapisFullName);
-        }
+        if(currentLocation?.city && uapisFullName && !uapisFullName.includes(currentLocation.city))
+            console.warn('定位不一致:', currentLocation.city, uapisFullName);
         // 缓存数据
         try {
             localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({
                 weather: weatherInfo,
                 cacheDate: getTodayDateStr(),                          // 兼容旧字段
-                location: currentLocation?.fullName || uapisFullName,  // 地点标识
-                uapisLocation: uapisFullName,                          // 备用校验
+                city: currentLocation ? currentLocation.city : '',     // 取数时的城市
                 timestamp: Date.now()                                  // 精确时间戳
             }));
         } catch (e) {
@@ -2181,6 +2171,7 @@ function initWeather() {
     const widget = document.createElement('div');
     widget.id = 'weather-display';
     widget.className = 'weather-widget-container';
+    widget.innerHTML = '<span class="weather-loading">⏳ 加载中...</span>';  // 先占位，否则卡片会空白
     // 插入到地图容器左上角（在map容器内）
     const mapContainer = document.getElementById('map');
     if(mapContainer)

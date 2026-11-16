@@ -176,6 +176,31 @@ nav * {
     color: #11998e;
     font-size: 14px;
 }
+/* CSS 转圈图标 */
+#loading-indicator .loading-indicator-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+#loading-indicator .loading-spinner {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    border: 2px solid rgba(17, 153, 142, 0.25);
+    border-top-color: #11998e;
+    border-radius: 50%;
+    animation: loadingSpin 0.8s linear infinite;
+}
+#loading-indicator .loading-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@keyframes loadingSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 /* 站名标签 */
 .station-label-text {
     position: absolute;
